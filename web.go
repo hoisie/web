@@ -3,9 +3,12 @@ package web
 import (
 	"bytes";
 	"http";
+	"io/ioutil";
 	"log";
+	"os";
 	"reflect";
 	"regexp";
+	"template";
 )
 
 var compiledRoutes = map[*regexp.Regexp]*reflect.FuncValue{}
@@ -44,6 +47,25 @@ func routeHandler(c *http.Conn, req *http.Request) {
 		}
 	}
 
+}
+
+func Render(filename string, context interface{}) (string, os.Error) {
+	var templateBytes []uint8;
+	var err os.Error;
+
+	if templateBytes, err = ioutil.ReadFile(filename); err != nil {
+		return "", err
+	}
+
+	var templ *template.Template;
+	if templ, err = template.Parse(string(templateBytes), nil); err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer;
+
+	templ.Execute(context, &buf);
+	return buf.String(), nil;
 }
 
 func Run(urls map[string]interface{}, addr string) {

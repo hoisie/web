@@ -5,7 +5,27 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
 TARG=web
+WEBGO=webgo
 GOFILES=\
 	web.go\
 
 include $(GOROOT)/src/Make.pkg
+
+all:	wg
+
+wg:
+	8g webgo.go
+	8l -o webgo webgo.8
+	chmod +x webgo
+
+install: wginstall
+
+
+wginstall:
+	! test -f "$(GOBIN)"/$(WEBGO) || chmod u+w "$(GOBIN)"/$(WEBGO)
+	cp $(WEBGO) "$(GOBIN)"/$(WEBGO)
+	
+clean:	wgclean
+
+wgclean:
+	rm -rf webgo.8 webgo

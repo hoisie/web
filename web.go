@@ -2,12 +2,14 @@ package web
 
 import (
 	"bytes";
+	"fmt";
 	"http";
 	"io/ioutil";
 	"log";
 	"os";
 	"reflect";
 	"regexp";
+	"strings";
 	"template";
 )
 
@@ -26,6 +28,15 @@ func compileRoutes(urls map[string]interface{}) {
 
 func routeHandler(c *http.Conn, req *http.Request) {
 	println(req.RawURL);
+
+	//try to serve a static file
+	if strings.HasPrefix(req.RawURL, "/static/") {
+		staticFile := req.RawURL[8:];
+		if len(staticFile) > 0 {
+			http.ServeFile(c, req, "static/"+staticFile)
+		}
+	}
+
 	var route string = req.RawURL;
 	for r, fv := range compiledRoutes {
 		if !r.MatchString(route) {
@@ -37,6 +48,16 @@ func routeHandler(c *http.Conn, req *http.Request) {
 				continue
 			}
 			args := make([]reflect.Value, len(match)-1);
+
+			expectedIn := fv.Type().(*reflect.FuncType).NumIn();
+			actualIn := len(match) - 1;
+
+			if expectedIn != actualIn {
+				message := fmt.Sprintf("%s - Incorrect number of arguments", req.RawURL);
+				println(message);
+				return;
+			}
+
 			for i, arg := range match[1:] {
 				args[i] = reflect.NewValue(arg)
 			}

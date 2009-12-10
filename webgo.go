@@ -11,7 +11,7 @@ func printHelp()	{ println("Commands: create, serve") }
 
 func exists(path string) bool {
 	_, err := os.Lstat(path);
-  return err == nil;
+	return err == nil;
 }
 
 func createProject(name string) {
@@ -20,20 +20,20 @@ func createProject(name string) {
 
 	if exists(projectDir) {
 		println("Project directory already exists");
-    os.Exit(0);
+		os.Exit(0);
 	}
 
 	println("Creating directory ", projectDir);
 	if err := os.Mkdir(projectDir, 0744); err != nil {
 		println(err.String());
-    os.Exit(0);
+		os.Exit(0);
 	}
 
 	var buffer bytes.Buffer;
 	buffer.WriteString(tmpl);
-  
-  filename := path.Join(projectDir, name+".go");
-  println("Creating template ", filename);  
+
+	filename := path.Join(projectDir, name+".go");
+	println("Creating template ", filename);
 	if err := ioutil.WriteFile(filename, buffer.Bytes(), 0644); err != nil {
 		println(err.String());
 		os.Exit(0);

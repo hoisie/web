@@ -14,7 +14,8 @@ include $(GOROOT)/src/Make.pkg
 all:	wg
 
 wg:
-	8g webgo.go
+	8g ini.go
+	8g -I . webgo.go
 	8l -o webgo webgo.8
 	chmod +x webgo
 

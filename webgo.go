@@ -3,68 +3,24 @@ package main
 import (
 	"bytes";
 	"fmt";
+	"ini";
+	"io";
 	"io/ioutil";
 	"os";
 	"path";
-	"strings";
 )
 
-func clean(line string) string {
-	var i int;
-	for i = 0; i < len(line); i++ {
-		if line[i] == ';' {
-			break
-		}
-	}
-	line = line[0:i];
+func writeFile(contents string, filename string) os.Error {
+	var buf bytes.Buffer;
 
-	return strings.TrimSpace(line);
-}
+	buf.WriteString(contents);
 
-type LineError string
-
-func (err LineError) String() string	{ return fmt.Sprintf("Error parsing line %q", err) }
-
-func parseIni(contents string) (map[string]map[string]string, os.Error) {
-	lines := strings.Split(contents, "\n", 0);
-
-	parsed := make(map[string]map[string]string);
-	var cur *map[string]string;
-
-	for _, line := range (lines) {
-		cleaned := clean(line);
-		if cleaned == "" {
-			continue
-		} else if cleaned[0] == '[' && cleaned[len(cleaned)-1] == ']' {
-			name := cleaned[1 : len(cleaned)-1];
-			ns := make(map[string]string);
-			parsed[name] = ns;
-			cur = &ns;
-		} else if strings.Index(cleaned, "=") != -1 {
-			a := strings.Split(line, "=", 0);
-			key, value := strings.TrimSpace(a[0]), strings.TrimSpace(a[1]);
-			(*cur)[key] = value;
-		} else {
-			return nil, LineError(line)
-		}
+	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
+		return err
 	}
 
-	return parsed, nil;
+	return nil;
 }
-
-func ParseString(contents string) (map[string]map[string]string, os.Error) {
-	return parseIni(contents)
-}
-
-func ParseFile(filename string) (map[string]map[string]string, os.Error) {
-	contents, err := ioutil.ReadFile(filename);
-	if err != nil {
-		return nil, err
-	}
-
-	return parseIni(string(contents));
-}
-
 
 func printHelp()	{ println("Commands: create, serve") }
 
@@ -88,15 +44,89 @@ func createProject(name string) {
 		os.Exit(0);
 	}
 
-	var buffer bytes.Buffer;
-	buffer.WriteString(tmpl);
+	appfile := path.Join(projectDir, name+".go");
+	appcontents := fmt.Sprintf(apptmpl, name);
+	println("Creating application file", appfile);
+	writeFile(appcontents, appfile);
 
-	filename := path.Join(projectDir, name+".go");
-	println("Creating template ", filename);
-	if err := ioutil.WriteFile(filename, buffer.Bytes(), 0644); err != nil {
-		println(err.String());
-		os.Exit(0);
+	inifile := path.Join(projectDir, "default.ini");
+	inicontents := fmt.Sprintf(initmpl, name);
+	println("Creating config file", inifile);
+	writeFile(inicontents, inifile);
+
+}
+
+func getOutput(command string, args []string) (string, os.Error) {
+	r, w, err := os.Pipe();
+	if err != nil {
+		return "", err
 	}
+	args2 := make([]string, len(args)+1);
+	args2[0] = command;
+	copy(args2[1:], args);
+	pid, err := os.ForkExec(command, args2, os.Environ(), "", []*os.File{nil, w, w});
+
+	if err != nil {
+		return "", err
+	}
+
+	w.Close();
+
+	var b bytes.Buffer;
+	io.Copy(&b, r);
+	output := b.String();
+	os.Wait(pid, 0);
+
+	return output, nil;
+}
+
+func serveProject(inifile string) {
+	cwd := os.Getenv("PWD");
+	inifile = path.Join(cwd, inifile);
+	datadir := path.Join(cwd, "data/");
+
+	if !exists(datadir) {
+		if err := os.Mkdir(datadir, 0744); err != nil {
+			println(err.String());
+			os.Exit(0);
+		}
+	}
+
+	config, err := ini.ParseFile(inifile);
+
+	if err != nil {
+		println("Error parsing config", err.String())
+	}
+
+	app := config["main"]["application"];
+
+	println("Serving application", app);
+
+	address := fmt.Sprintf("%s:%s", config["main"]["bind_address"], config["main"]["port"]);
+	gobin := os.Getenv("GOBIN");
+
+	compiler := path.Join(gobin, "8g");
+	println("compiler", compiler);
+
+	if err != nil {
+		println("Error parsing config", err.String())
+	} else {
+		println(address)
+	}
+
+	appSrc := path.Join(cwd, app+".go");
+	appObj := path.Join(datadir, app+".8");
+
+	compoutput, err := getOutput(compiler, []string{"-o", appObj, appSrc});
+
+	if err == nil {
+		println("Compiling", compoutput)
+	}
+
+	//8g -o data/hello.8 hello.go
+	//8g -I data runner.go
+	//8l -o data/hello data/hello.8 data/runner.8
+
 }
 
 func main() {
@@ -112,7 +142,7 @@ func main() {
 		createProject(os.Args[2])
 
 	case "serve":
-		println("serving!")
+		serveProject(os.Args[2])
 
 	case "help":
 		printHelp()
@@ -122,21 +152,35 @@ func main() {
 	}
 }
 
-var tmpl = `package main
+var apptmpl = `package %s
 
 import (
-  "web";
+  //"web";
 )
 
-var urls = map[string] interface {} {
+var Routes = map[string] interface {} {
   "/(.*)" : hello,
 }
 
 func hello (val string) string {
  return "hello "+val;
 }
+`
+
+var initmpl = `[main]
+application = %s
+bind_address = 0.0.0.0
+port = 9999
+`
+var runnertmpl = `package main
+
+import (
+        "{application}";
+        "web";
+)
 
 func main() {
-  web.Run(urls, "0.0.0.0:9999");
+        web.Run(hello.Routes, {address});
 }
+
 `

@@ -70,7 +70,23 @@ func routeHandler(c *http.Conn, req *http.Request) {
 
 }
 
-func Render(filename string, context interface{}) (string, os.Error) {
+func render(tmplString string, context interface {} ) (string, os.Error) {
+
+	var tmpl *template.Template;
+  var err os.Error;
+  
+	if tmpl, err = template.Parse(tmplString, nil); err != nil {
+		return "", err;
+	}
+
+	var buf bytes.Buffer;
+
+	tmpl.Execute(context, &buf);
+	return buf.String(), nil;  
+}
+
+
+func RenderFile(filename string, context interface{}) (string, os.Error) {
 	var templateBytes []uint8;
 	var err os.Error;
 
@@ -78,15 +94,11 @@ func Render(filename string, context interface{}) (string, os.Error) {
 		return "", err
 	}
 
-	var templ *template.Template;
-	if templ, err = template.Parse(string(templateBytes), nil); err != nil {
-		return "", err
-	}
+  return render( string(templateBytes), context);
+}
 
-	var buf bytes.Buffer;
-
-	templ.Execute(context, &buf);
-	return buf.String(), nil;
+func RenderString(tmplString string, context interface {} ) (string, os.Error) {
+  return render(tmplString, context);
 }
 
 func Run(urls map[string]interface{}, addr string) {

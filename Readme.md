@@ -10,23 +10,39 @@ web.go is the simplest way to write web applications in the Go programming langu
 
 ## Example
 
-    package main
 
-    import (
-      "web";
-    )
+### Creating a project 
 
-    var urls = map[string] interface {} {
-      "/(.*)" : hello,
-    }
+ 1. webgo create hello
+ 2. cd hello
+ 3. webgo serve default.ini
+ 4. open your browser to http://127.0.0.1:9999
 
-    func hello (val string) string {
-     return "hello "+val;
-    }
 
-    func main() {
-      web.Run(urls, "0.0.0.0:9999");
-    }
+### Adding route handlers
+
+Modify hello.go to look like the following:
+
+      package hello
+
+      import (
+        "time";
+      )
+
+      var Routes = map[string] interface {} {
+        "/today" : today,
+        "/(.*)" : hello,
+      }
+
+      func hello (val string) string {
+       return "hello "+val;
+      }
+
+      func today () string {
+       return "The time is currently "+time.LocalTime().Asctime();
+      }
+
+Then stop the application and re-run 'webgo serve default.ini'. You can point your browser to http://localhost:9999/today to see the new route. 
 
 ## About
 

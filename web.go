@@ -65,6 +65,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
             var buf bytes.Buffer;
             buf.WriteString(ret);
             c.Write(buf.Bytes());
+            return;
         }
     }
 

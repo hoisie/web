@@ -95,14 +95,15 @@ func serveProject(inifile string) {
     if !exists(datadir) {
         if err := os.Mkdir(datadir, 0744); err != nil {
             println(err.String());
-            os.Exit(0);
+            return;
         }
     }
 
     config, err := ini.ParseFile(inifile);
 
     if err != nil {
-        println("Error parsing config", err.String())
+        println("Error parsing config", err.String());
+        return;
     }
 
     app := config["main"]["application"];
@@ -113,27 +114,54 @@ func serveProject(inifile string) {
     gobin := os.Getenv("GOBIN");
 
     compiler := path.Join(gobin, "8g");
-    println("compiler", compiler);
-
-    if err != nil {
-        println("Error parsing config", err.String())
-    } else {
-        println(address)
-    }
+    linker := path.Join(gobin, "8l");
 
     appSrc := path.Join(cwd, app+".go");
     appObj := path.Join(datadir, app+".8");
 
-    compoutput, err := getOutput(compiler, []string{"-o", appObj, appSrc});
+    output, err := getOutput(compiler, []string{"-o", appObj, appSrc});
 
-    if err == nil {
-        println("Compiling", compoutput)
+    if err != nil {
+        println("Error executing compiler", err.String());
+        return;
     }
 
-    //8g -o data/hello.8 hello.go
-    //8g -I data runner.go
-    //8l -o data/hello data/hello.8 data/runner.8
+    if output != "" {
+        println("Error compiling web application");
+        println(output);
+        return;
+    }
 
+    //generate runner.go
+
+    runnerSrc := path.Join(datadir, "runner.go");
+    runnerObj := path.Join(datadir, "runner.8");
+
+    writeTemplate(runnertmpl, map[string]string{"app": app, "address": address}, runnerSrc);
+
+    output, err = getOutput(compiler, []string{"-o", runnerObj, "-I", datadir, runnerSrc});
+
+    if err != nil {
+        println("Error Compiling", runnerSrc, output);
+        return;
+    }
+
+    //link the web program
+
+    obj := path.Join(cwd, app);
+    output, err = getOutput(linker, []string{"-o", obj, runnerObj, appObj});
+
+    if err != nil {
+        println("Error Linking", output);
+        return;
+    }
+
+    pid, err := os.ForkExec(obj, []string{}, os.Environ(), "", []*os.File{nil, os.Stdout, os.Stdout});
+
+    if err == nil {
+        println("Serving on address", address);
+        os.Wait(pid, 0);
+    }
 }
 
 func main() {
@@ -182,12 +210,12 @@ port = 9999
 var runnertmpl = `package main
 
 import (
-        "{application}";
+        "{{app}}";
         "web";
 )
 
 func main() {
-        web.Run(hello.Routes, {address});
+        web.Run(hello.Routes, "{{address}}");
 }
 
 `

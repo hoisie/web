@@ -12,6 +12,7 @@ web.go should be familiar to people who've developed websites with higher-level 
 4. web applications are compiled to native code, which means very fast page render times (order-of-magnitude improvement over python or ruby frameworks)
 
 Future releases will support:
+
 1. automatic reloading when source or template files are changed
 2. fcgi, scgi, and proxying support
 3. executing route handlers through goroutines for multicore systems

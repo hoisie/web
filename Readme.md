@@ -30,4 +30,5 @@ web.go is the simplest way to write web applications in the Go programming langu
 
 ## About
 
-web.go was written by Michael Hoisie. Follow me on [http://www.twitter.com/hoisie](Twitter)!. 
+web.go was written by Michael Hoisie. Follow me on [Twitter](http://www.twitter.com/hoisie)!
+

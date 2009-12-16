@@ -142,7 +142,13 @@ func serve(inifile string) {
     output, err = getOutput(compiler, []string{"-o", runnerObj, "-I", datadir, runnerSrc})
 
     if err != nil {
-        println("Error Compiling", runnerSrc, output)
+        println("Error Compiling", runnerSrc, err.String())
+        return
+    }
+
+    if output != "" {
+        println("Error compiling runner application")
+        println(output)
         return
     }
 
@@ -152,7 +158,13 @@ func serve(inifile string) {
     output, err = getOutput(linker, []string{"-o", obj, runnerObj, appObj})
 
     if err != nil {
-        println("Error Linking", output)
+        println("Error Linking", err.String())
+        return
+    }
+
+    if output != "" {
+        println("Error linking")
+        println(output)
         return
     }
 
@@ -259,7 +271,7 @@ import (
 )
 
 func main() {
-        web.Run(hello.Routes, "{{address}}");
+        web.Run({{app}}.Routes, "{{address}}");
 }
 
 `

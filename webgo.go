@@ -8,12 +8,21 @@ import (
     "io/ioutil";
     "os";
     "path";
+    "template";
 )
 
-func writeFile(contents string, filename string) os.Error {
+func writeTemplate(tmplString string, data interface{}, filename string) os.Error {
+    var err os.Error;
+    tmpl := template.New(nil);
+    tmpl.SetDelims("{{", "}}");
+
+    if err = tmpl.Parse(tmplString); err != nil {
+        return err
+    }
+
     var buf bytes.Buffer;
 
-    buf.WriteString(contents);
+    tmpl.Execute(data, &buf);
 
     if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
         return err
@@ -45,14 +54,12 @@ func createProject(name string) {
     }
 
     appfile := path.Join(projectDir, name+".go");
-    appcontents := fmt.Sprintf(apptmpl, name);
     println("Creating application file", appfile);
-    writeFile(appcontents, appfile);
+    writeTemplate(apptmpl, map[string]string{"app": name}, appfile);
 
     inifile := path.Join(projectDir, "default.ini");
-    inicontents := fmt.Sprintf(initmpl, name);
     println("Creating config file", inifile);
-    writeFile(inicontents, inifile);
+    writeTemplate(initmpl, map[string]string{"app": name}, inifile);
 
 }
 
@@ -152,7 +159,7 @@ func main() {
     }
 }
 
-var apptmpl = `package %s
+var apptmpl = `package {{app}}
 
 import (
   //"web";
@@ -168,7 +175,7 @@ func hello (val string) string {
 `
 
 var initmpl = `[main]
-application = %s
+application = {{app}}
 bind_address = 0.0.0.0
 port = 9999
 `

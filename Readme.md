@@ -19,7 +19,7 @@ Future releases will support:
 
 ## Installation
 
-1. Make sure you have Go installed and your environment is set up correctly: $GOROOT, $GOARCH, $GOBIN, etc.
+1. Make sure you have the latest Go sources (hg sync in the go tree), and your environment is set up correctly: $GOROOT, $GOARCH, $GOBIN, etc.
 2. Checkout the code
 3. cd web.go && make install
 

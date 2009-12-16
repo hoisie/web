@@ -38,7 +38,7 @@ func exists(path string) bool {
     return err == nil
 }
 
-func createProject(name string) {
+func create(name string) {
     cwd := os.Getenv("PWD")
     projectDir := path.Join(cwd, name)
 
@@ -87,7 +87,7 @@ func getOutput(command string, args []string) (string, os.Error) {
     return output, nil
 }
 
-func serveProject(inifile string) {
+func serve(inifile string) {
     cwd := os.Getenv("PWD")
     inifile = path.Join(cwd, inifile)
     datadir := path.Join(cwd, "data/")
@@ -165,20 +165,63 @@ func serveProject(inifile string) {
     os.Wait(pid, 0)
 }
 
+func clean(inifile string) {
+    cwd := os.Getenv("PWD")
+    inifile = path.Join(cwd, inifile)
+    datadir := path.Join(cwd, "data/")
+
+    config, err := ini.ParseFile(inifile)
+
+    if err != nil {
+        println("Error parsing config file", err.String())
+        return
+    }
+
+    app := config["main"]["application"]
+
+    if len(app) == 0 {
+        println("Invalid application name")
+        return
+    }
+
+    obj := path.Join(cwd, app)
+
+    if exists(obj) {
+        println("Removing", obj)
+        pid, _ := os.ForkExec("/bin/rm", []string{"/bin/rm", obj}, os.Environ(), "", []*os.File{nil, os.Stdout, os.Stdout})
+        os.Wait(pid, 0)
+    }
+
+    if exists(datadir) {
+        println("Removing", datadir)
+        pid, _ := os.ForkExec("/bin/rm", []string{"/bin/rm", "-rf", datadir}, os.Environ(), "", []*os.File{nil, os.Stdout, os.Stdout})
+        os.Wait(pid, 0)
+    }
+}
+
 func main() {
     if len(os.Args) <= 1 {
         printHelp()
         os.Exit(0)
     }
-
+    inifile := "default.ini"
     command := os.Args[1]
 
     switch command {
     case "create":
-        createProject(os.Args[2])
+        create(os.Args[2])
 
     case "serve":
-        serveProject(os.Args[2])
+        if len(os.Args) == 3 {
+            inifile = os.Args[2]
+        }
+        serve(inifile)
+
+    case "clean":
+        if len(os.Args) == 3 {
+            inifile = os.Args[2]
+        }
+        clean(inifile)
 
     case "help":
         printHelp()

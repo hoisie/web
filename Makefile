@@ -30,3 +30,8 @@ clean:	wgclean
 
 wgclean:
 	rm -rf webgo.8 webgo
+
+format:
+	gofmt -spaces=true -tabindent=false -tabwidth=4 -w ini.go
+	gofmt -spaces=true -tabindent=false -tabwidth=4 -w web.go
+	gofmt -spaces=true -tabindent=false -tabwidth=4 -w webgo.go

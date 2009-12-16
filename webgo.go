@@ -7,9 +7,7 @@ import (
     "io"
     "io/ioutil"
     "os"
-    "os/signal"
     "path"
-    "syscall"
     "template"
 )
 
@@ -159,17 +157,12 @@ func serveProject(inifile string) {
     }
 
     pid, err := os.ForkExec(obj, []string{}, os.Environ(), "", []*os.File{nil, os.Stdout, os.Stdout})
+
     if err == nil {
         println("Serving on address", address)
-        for true {
-            sig := (<-signal.Incoming).(signal.UnixSignal)
-            if sig == 2 || sig == 15 || sig == 9 {
-                syscall.Kill(pid, 9)
-                os.Wait(pid, 0)
-                break
-            }
-        }
     }
+
+    os.Wait(pid, 0)
 }
 
 func main() {

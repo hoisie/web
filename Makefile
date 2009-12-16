@@ -23,8 +23,8 @@ install: wginstall
 
 
 wginstall:
-	! test -f "$(GOBIN)"/$(WEBGO) || chmod u+w "$(GOBIN)"/$(WEBGO)
-	cp $(WEBGO) "$(GOBIN)"/$(WEBGO)
+	! test -f $(GOBIN)/$(WEBGO) || chmod u+w $(GOBIN)/$(WEBGO)
+	cp $(WEBGO) $(GOBIN)/$(WEBGO)
 	
 clean:	wgclean
 

@@ -13,6 +13,8 @@ import (
     "template"
 )
 
+var toolext = map[string]string{"386": "8", "amd64": "6", "arm": "5"}
+
 func writeTemplate(tmplString string, data interface{}, filename string) os.Error {
     var err os.Error
     tmpl := template.New(nil)
@@ -114,12 +116,13 @@ func serve(inifile string) {
 
     address := fmt.Sprintf("%s:%s", config["main"]["bind_address"], config["main"]["port"])
     gobin := os.Getenv("GOBIN")
-
-    compiler := path.Join(gobin, "8g")
-    linker := path.Join(gobin, "8l")
+    goarch := os.Getenv("GOARCH")
+    ext := toolext[goarch]
+    compiler := path.Join(gobin,  ext+"g")
+    linker := path.Join(gobin, ext+"l")
 
     appSrc := path.Join(cwd, app+".go")
-    appObj := path.Join(datadir, app+".8")
+    appObj := path.Join(datadir, app+"."+ext)
 
     output, err := getOutput(compiler, []string{"-o", appObj, appSrc})
 
@@ -137,7 +140,7 @@ func serve(inifile string) {
     //generate runner.go
 
     runnerSrc := path.Join(datadir, "runner.go")
-    runnerObj := path.Join(datadir, "runner.8")
+    runnerObj := path.Join(datadir, "runner."+ext)
 
     writeTemplate(runnertmpl, map[string]string{"app": app, "address": address}, runnerSrc)
 
@@ -194,7 +197,6 @@ func serve(inifile string) {
 }
 
 func waitProcess(waitchan chan int, pid int) {
-    println("waiting for process!")
     os.Wait(pid, 0)
     waitchan <- 0
 }

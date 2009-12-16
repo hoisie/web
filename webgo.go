@@ -174,7 +174,21 @@ func serve(inifile string) {
         println("Serving on address", address)
     }
 
+    waitchan := make(chan int, 0)
+
+    go waitProcess(waitchan, pid)
+
+    select {
+    case _ = <-waitchan:
+        println("Server process terminated")
+    }
+
+}
+
+func waitProcess(waitchan chan int, pid int) {
+    println("waiting for process!")
     os.Wait(pid, 0)
+    waitchan <- 0
 }
 
 func clean(inifile string) {

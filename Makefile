@@ -14,17 +14,16 @@ include $(GOROOT)/src/Make.pkg
 all:	wg
 
 wg:
-	8g ini.go
-	8g -I . webgo.go
-	8l -o webgo webgo.8
-	chmod +x webgo
+	$(GC) ini.go
+	$(GC) -I . webgo.go
+	$(LD) -o webgo webgo.$(O)
 
 install: wginstall
 
 
 wginstall:
 	! test -f $(GOBIN)/$(WEBGO) || chmod u+w $(GOBIN)/$(WEBGO)
-	cp $(WEBGO) $(GOBIN)/$(WEBGO)
+	install -m 0755 $(WEBGO) $(GOBIN)
 	
 clean:	wgclean
 

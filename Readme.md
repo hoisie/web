@@ -38,24 +38,26 @@ Future releases will support:
 
 Modify hello.go to look like the following:
 
-      package hello
-
-      import (
-        "time";
-      )
-
-      var Routes = map[string] interface {} {
-        "/today" : today,
-        "/(.*)" : hello,
-      }
-
-      func hello (val string) string {
-       return "hello "+val;
-      }
-
-      func today () string {
-       return "The time is currently "+time.LocalTime().Asctime();
-      }
+    package hello
+    
+    import (
+        "fmt"
+        "time"
+    )
+    
+    var Routes = map[string]interface{}{
+        "/today": today,
+        "/(.*)": hello,
+    }
+    
+    func hello(val string) string { 
+        return fmt.Sprintf("hello %s", val) 
+    }
+    
+    func today() string {
+        return fmt.Sprintf("The time is currently %s", time.LocalTime().Asctime())
+    }
+    
 
 Then stop the application and re-run 'webgo serve default.ini'. You can point your browser to http://localhost:9999/today to see the new route. 
 

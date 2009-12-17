@@ -261,15 +261,15 @@ func main() {
 var apptmpl = `package {{app}}
 
 import (
-  //"web";
+    "fmt"
 )
 
-var Routes = map[string] interface {} {
-  "/(.*)" : hello,
+var Routes = map[string]interface{}{
+    "/(.*)": hello,
 }
 
-func hello (val string) string {
- return "hello "+val;
+func hello(val string) string {
+    return fmt.Sprintf("hello %s", val)
 }
 `
 
@@ -278,15 +278,13 @@ application = {{app}}
 bind_address = 0.0.0.0
 port = 9999
 `
+
 var runnertmpl = `package main
 
 import (
-        "{{app}}";
-        "web";
+    "{{app}}"
+    "web"
 )
 
-func main() {
-        web.Run({{app}}.Routes, "{{address}}");
-}
-
+func main() { web.Run({{app}}.Routes, "{{address}}") }
 `

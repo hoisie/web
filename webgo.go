@@ -7,9 +7,7 @@ import (
     "io"
     "io/ioutil"
     "os"
-    "os/signal"
     "path"
-    "syscall"
     "template"
 )
 
@@ -118,7 +116,7 @@ func serve(inifile string) {
     gobin := os.Getenv("GOBIN")
     goarch := os.Getenv("GOARCH")
     ext := toolext[goarch]
-    compiler := path.Join(gobin,  ext+"g")
+    compiler := path.Join(gobin, ext+"g")
     linker := path.Join(gobin, ext+"l")
 
     appSrc := path.Join(cwd, app+".go")
@@ -180,36 +178,18 @@ func serve(inifile string) {
     }
 
     waitchan := make(chan int, 0)
-    sigchan := make(chan int, 0)
 
     go waitProcess(waitchan, pid)
 
-    go waitSignal(sigchan)
     select {
     case _ = <-waitchan:
         println("Server process terminated")
-    case _ = <-sigchan:
-        println("Received kill signal")
-        syscall.Kill(pid, 9)
-        os.Wait(pid, 0)
     }
-
 }
 
 func waitProcess(waitchan chan int, pid int) {
     os.Wait(pid, 0)
     waitchan <- 0
-}
-
-//temporary fix for being able to kill webgo process until the language is fixed
-func waitSignal(sigchan chan int) {
-    for true {
-        sig := (<-signal.Incoming).(signal.UnixSignal)
-        if sig == 2 || sig == 15 || sig == 9 {
-            sigchan <- 0
-            break
-        }
-    }
 }
 
 func clean(inifile string) {

@@ -13,6 +13,8 @@ import (
     "template"
 )
 
+type Request http.Request
+
 var compiledRoutes = map[*regexp.Regexp]*reflect.FuncValue{}
 
 func compileRoutes(urls map[string]interface{}) {
@@ -28,7 +30,6 @@ func compileRoutes(urls map[string]interface{}) {
 
 func routeHandler(c *http.Conn, req *http.Request) {
     println(req.RawURL)
-
     //try to serve a static file
     if strings.HasPrefix(req.RawURL, "/static/") {
         staticFile := req.RawURL[8:]
@@ -37,7 +38,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
         }
     }
 
-    var route string = req.RawURL
+    var route string = req.URL.Path
     for r, fv := range compiledRoutes {
         if !r.MatchString(route) {
             continue
@@ -47,19 +48,35 @@ func routeHandler(c *http.Conn, req *http.Request) {
             if len(match[0]) != len(route) {
                 continue
             }
-            args := make([]reflect.Value, len(match)-1)
+            ai := 0
+            routeHandler := fv.Type().(*reflect.FuncType)
+            expectedIn := routeHandler.NumIn()
+            args := make([]reflect.Value, expectedIn)
 
-            expectedIn := fv.Type().(*reflect.FuncType).NumIn()
+            if expectedIn > 0 {
+                a0 := routeHandler.In(0)
+                ptyp, ok := a0.(*reflect.PtrType)
+                if ok {
+                    typ := ptyp.Elem()
+                    if typ.PkgPath() == "web" && typ.Name() == "Request" {
+                        req.ParseForm()
+                        wr := (*Request)(req)
+                        args[ai] = reflect.NewValue(wr)
+                        ai += 1
+                        expectedIn -= 1
+                    }
+                }
+            }
+
             actualIn := len(match) - 1
-
             if expectedIn != actualIn {
                 message := fmt.Sprintf("%s - Incorrect number of arguments", req.RawURL)
                 println(message)
                 return
             }
 
-            for i, arg := range match[1:] {
-                args[i] = reflect.NewValue(arg)
+            for _, arg := range match[1:] {
+                args[ai] = reflect.NewValue(arg)
             }
             ret := fv.Call(args)[0].(*reflect.StringValue).Get()
             var buf bytes.Buffer
@@ -68,7 +85,6 @@ func routeHandler(c *http.Conn, req *http.Request) {
             return
         }
     }
-
 }
 
 func render(tmplString string, context interface{}) (string, os.Error) {

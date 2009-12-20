@@ -7,13 +7,11 @@ web.go is the simplest way to write web applications in the Go programming langu
 web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra, pylons, or web.py. It is designed to be a lightweight web framework that doesn't impose too much scaffolding on the code. Some features include:
 
 * routing to url handlers based on regular expressions
-* easy project creation and administration
 * helper methods for rendering templates
 * web applications are compiled to native code, which means very fast page render times (order-of-magnitude improvement over python or ruby frameworks)
 
 Future releases will support:
 
-* automatic reloading when source or template files are changed
 * fcgi, scgi, and proxying support
 * executing route handlers with goroutines for multicore systems
 * ability to use asynchronous handlers (for long-polling)

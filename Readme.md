@@ -4,17 +4,13 @@ web.go is the simplest way to write web applications in the Go programming langu
 
 ## Overview
 
-web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra, pylons, or web.py. It is designed to be a lightweight web framework that doesn't impose too much scaffolding on the code. Some features include:
+web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra, pylons, or web.py. It is designed to be a lightweight web framework that doesn't impose any scaffolding on the user. Some features include:
 
 * routing to url handlers based on regular expressions
 * helper methods for rendering templates
 * web applications are compiled to native code, which means very fast page render times (order-of-magnitude improvement over python or ruby frameworks)
 
-Future releases will support:
-
-* fcgi, scgi, and proxying support
-* executing route handlers with goroutines for multicore systems
-* ability to use asynchronous handlers (for long-polling)
+To use web.go, simply install it and import the "web" package. You then need to map url routes to function handlers using web.Get, web.Post, etc.. Finally, you need to call web.Run with the address of the host. (see the example below)
 
 ## Installation
 
@@ -70,6 +66,14 @@ We add a handler that matches the url path "/today". This will return the curren
     }
     
 Then stop the application and recompile it . You can point your browser to http://localhost:9999/today to see the new route. 
+
+## Roadmap
+
+Future releases will support:
+
+* fcgi, scgi, and proxying support
+* executing route handlers with goroutines for multicore systems
+* ability to use asynchronous handlers (for long-polling)
 
 ## About
 

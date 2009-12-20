@@ -31,7 +31,6 @@ To use web.go, simply install it and import the "web" package. You then need to 
         return fmt.Sprintf("hello %s", val) 
     }
     
-    
     func main() {
         web.Get("/(.*)", hello)
         web.Run("0.0.0.0:9999")
@@ -57,7 +56,6 @@ We add a handler that matches the url path "/today". This will return the curren
     func today() string {
         return fmt.Sprintf("The time is currently %s", time.LocalTime().Asctime())
     }
-    
     
     func main() {
         web.Get("/today", today)

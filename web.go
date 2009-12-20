@@ -95,6 +95,9 @@ func routeHandler(c *http.Conn, req *http.Request) {
             return
         }
     }
+    
+    // return a 404
+    http.NotFound(c, req)
 }
 
 func render(tmplString string, context interface{}) (string, os.Error) {

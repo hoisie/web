@@ -25,41 +25,53 @@ Future releases will support:
 3. cd web.go && make install
 
 ## Example
-
-### Creating a project 
-
- 1. webgo create hello
- 2. cd hello
- 3. webgo serve default.ini
- 4. open your browser to http://127.0.0.1:9999
-
-
-### Adding route handlers
-
-Modify hello.go to look like the following:
-
-    package hello
+    
+    package main
     
     import (
         "fmt"
-        "time"
+        "web"
     )
-    
-    var Routes = map[string]interface{}{
-        "/today": today,
-        "/(.*)": hello,
-    }
     
     func hello(val string) string { 
         return fmt.Sprintf("hello %s", val) 
     }
     
+    
+    func main() {
+        web.Get("/(.*)", hello)
+        web.Run("0.0.0.0:9999")
+    }
+
+
+### Adding route handlers
+
+We add a handler that matches the url path "/today". This will return the current url path. 
+
+    package main
+    
+    import (
+        "fmt"
+        "time"
+        "web"
+    )
+
+    func index() string {
+        return "Welcome!"
+    }
+
     func today() string {
         return fmt.Sprintf("The time is currently %s", time.LocalTime().Asctime())
     }
     
-
-Then stop the application and re-run 'webgo serve default.ini'. You can point your browser to http://localhost:9999/today to see the new route. 
+    
+    func main() {
+        web.Get("/today", today)
+        web.Get("/", index)
+        web.Run("0.0.0.0:9999")
+    }
+    
+Then stop the application and recompile it . You can point your browser to http://localhost:9999/today to see the new route. 
 
 ## About
 

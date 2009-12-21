@@ -44,6 +44,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
         staticFile := path[8:]
         if len(staticFile) > 0 {
             http.ServeFile(c, req, "static/"+staticFile)
+            return
         }
     }
 

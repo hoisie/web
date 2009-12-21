@@ -14,6 +14,12 @@ import (
 
 type Request http.Request
 
+var requestType reflect.Type
+
+func init() {
+    var r Request
+    requestType = reflect.Typeof(r)
+}
 
 type route struct {
     r       string
@@ -69,7 +75,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
                 ptyp, ok := a0.(*reflect.PtrType)
                 if ok {
                     typ := ptyp.Elem()
-                    if typ.PkgPath() == "web" && typ.Name() == "Request" {
+                    if typ == requestType {
                         req.ParseForm()
                         wr := (*Request)(req)
                         args[ai] = reflect.NewValue(wr)

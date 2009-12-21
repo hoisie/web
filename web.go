@@ -2,7 +2,6 @@ package web
 
 import (
     "bytes"
-    "fmt"
     "http"
     "io/ioutil"
     "log"
@@ -28,7 +27,7 @@ var routes = make(map[*regexp.Regexp]route)
 func addRoute(r string, method string, handler interface{}) {
     cr, err := regexp.Compile(r)
     if err != nil {
-        fmt.Printf("Error in route regex %q\n", r)
+        log.Stderrf("Error in route regex %q\n", r)
         return
     }
     fv := reflect.NewValue(handler).(*reflect.FuncValue)
@@ -36,7 +35,7 @@ func addRoute(r string, method string, handler interface{}) {
 }
 
 func routeHandler(c *http.Conn, req *http.Request) {
-    println(req.RawURL)
+    log.Stdout(req.RawURL)
     //try to serve a static file
     var path string = req.URL.Path
 
@@ -82,7 +81,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
 
             actualIn := len(match) - 1
             if expectedIn != actualIn {
-                fmt.Printf("%s - Incorrect number of arguments\n", path)
+                log.Stderrf("Incorrect number of arguments for %s\n", path)
                 return
             }
 
@@ -96,7 +95,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
             return
         }
     }
-    
+
     // return a 404
     http.NotFound(c, req)
 }

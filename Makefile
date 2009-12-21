@@ -7,8 +7,10 @@ include $(GOROOT)/src/Make.$(GOARCH)
 TARG=web
 GOFILES=\
 	web.go\
+	scgi.go\
 
 include $(GOROOT)/src/Make.pkg
 
 format:
 	gofmt -spaces=true -tabindent=false -tabwidth=4 -w web.go
+	gofmt -spaces=true -tabindent=false -tabwidth=4 -w scgi.go

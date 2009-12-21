@@ -3,6 +3,7 @@ package web
 import (
     "bytes"
     "http"
+    "io"
     "io/ioutil"
     "log"
     "os"
@@ -13,6 +14,32 @@ import (
 )
 
 type Request http.Request
+
+func (r *Request) ParseForm() (err os.Error) {
+    req := (*http.Request)(r)
+    return req.ParseForm()
+}
+
+type Response struct {
+    Status     string
+    StatusCode int
+    Header     map[string]string
+    Body       io.Reader
+}
+
+var servererror = Response{
+    Status: "500 Internal Server Error",
+    StatusCode: 500,
+    Header: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
+    Body: bytes.NewBufferString("Internal Server Error"),
+}
+
+var notfound = Response{
+    Status: "404 Not Found",
+    StatusCode: 404,
+    Header: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
+    Body: bytes.NewBufferString("Page Not Found"),
+}
 
 var requestType reflect.Type
 
@@ -40,11 +67,10 @@ func addRoute(r string, method string, handler interface{}) {
     routes[cr] = route{r, cr, method, fv}
 }
 
-func routeHandler(c *http.Conn, req *http.Request) {
-    log.Stdout(req.RawURL)
-    //try to serve a static file
-    var path string = req.URL.Path
+func httpHandler(c *http.Conn, req *http.Request) {
+    path := req.URL.Path
 
+    //try to serve a static file
     if strings.HasPrefix(path, "/static/") {
         staticFile := path[8:]
         if len(staticFile) > 0 {
@@ -53,6 +79,18 @@ func routeHandler(c *http.Conn, req *http.Request) {
         }
     }
 
+    req.ParseForm()
+    resp := routeHandler((*Request)(req))
+    c.WriteHeader(resp.StatusCode)
+    if resp.Body != nil {
+        body, _ := ioutil.ReadAll(resp.Body)
+        c.Write(body)
+    }
+}
+
+func routeHandler(req *Request) Response {
+    log.Stdout(req.RawURL)
+    path := req.URL.Path
     for cr, route := range routes {
         if !cr.MatchString(path) {
             continue
@@ -76,9 +114,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
                 if ok {
                     typ := ptyp.Elem()
                     if typ == requestType {
-                        req.ParseForm()
-                        wr := (*Request)(req)
-                        args[ai] = reflect.NewValue(wr)
+                        args[ai] = reflect.NewValue(req)
                         ai += 1
                         expectedIn -= 1
                     }
@@ -88,7 +124,7 @@ func routeHandler(c *http.Conn, req *http.Request) {
             actualIn := len(match) - 1
             if expectedIn != actualIn {
                 log.Stderrf("Incorrect number of arguments for %s\n", path)
-                return
+                return servererror
             }
 
             for _, arg := range match[1:] {
@@ -97,13 +133,16 @@ func routeHandler(c *http.Conn, req *http.Request) {
             ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
             var buf bytes.Buffer
             buf.WriteString(ret)
-            c.Write(buf.Bytes())
-            return
+
+            return Response{Status: "200 OK",
+                StatusCode: 200,
+                Header: make(map[string]string),
+                Body: &buf,
+            }
         }
     }
 
-    // return a 404
-    http.NotFound(c, req)
+    return notfound
 }
 
 func render(tmplString string, context interface{}) (string, os.Error) {
@@ -138,13 +177,15 @@ func RenderString(tmplString string, context interface{}) (string, os.Error) {
 }
 
 func Run(addr string) {
-    http.Handle("/", http.HandlerFunc(routeHandler))
+    http.Handle("/", http.HandlerFunc(httpHandler))
 
     err := http.ListenAndServe(addr, nil)
     if err != nil {
         log.Exit("ListenAndServe:", err)
     }
 }
+
+func RunScgi(addr string) { listenAndServeScgi(addr) }
 
 func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }
 

@@ -10,8 +10,8 @@ var tmpl = `<form action="say" method="POST"><input name="said"><input type="sub
 
 func main() {
     web.Get("/said", func() string { return tmpl })
-    web.Post("/say", func(req *web.Request) string {
-        input = req.Form["said"][0]
+    web.Post("/say", func(ctx *web.Context) string {
+        input = ctx.Request.Form["said"][0]
         return `<a href="/final">Click Here</a>`
     })
     web.Get("/final", func() string { return "You said " + input })

@@ -9,7 +9,7 @@ import (
     "strconv"
 )
 
-func handleScgiRequest(buf *bytes.Buffer) Request {
+func readScgiRequest(buf *bytes.Buffer) Request {
     headers := make(map[string]string)
 
     content := buf.Bytes()
@@ -53,24 +53,12 @@ func handleScgiRequest(buf *bytes.Buffer) Request {
     return req
 }
 
-func listenAndServeScgi(addr string) {
-    l, err := net.Listen("tcp", addr)
-    if err != nil {
-        log.Stderrf(err.String())
-        return
-    }
-
-    for {
-        fd, err := l.Accept()
-        if err != nil {
-            log.Stderrf(err.String())
-            break
-        }
+func handleScgiRequest(fd net.Conn) {
         var buf bytes.Buffer
         var tmp [1024]byte
         n, err := fd.Read(&tmp)
         if err != nil || n == 0 {
-            continue
+            return;
         }
 
         colonPos := bytes.IndexByte(tmp[0:], ':')
@@ -88,7 +76,7 @@ func listenAndServeScgi(addr string) {
             read += n
         }
 
-        req := handleScgiRequest(&buf)
+        req := readScgiRequest(&buf)
         perr := req.ParseForm()
         if perr != nil {
             log.Stderrf("Failed to parse form data %q", req.Body)
@@ -104,5 +92,22 @@ func listenAndServeScgi(addr string) {
             fd.Write(body)
         }
         fd.Close()
+}
+
+func listenAndServeScgi(addr string) {
+    l, err := net.Listen("tcp", addr)
+    if err != nil {
+        log.Stderrf(err.String())
+        return
+    }
+
+    for {
+        fd, err := l.Accept()
+        if err != nil {
+            log.Stderrf(err.String())
+            break
+        }
+        go handleScgiRequest(fd);
+        
     }
 }

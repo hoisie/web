@@ -51,16 +51,17 @@ func (ctx *Context) Abort(code int, message string) {
     ctx.Response = newResponse(code, message)
 }
 
-var requestType reflect.Type
+var contextType reflect.Type
 var templateDir string
 var staticDir string
 
-func init() {
-    requestType = reflect.Typeof(Context{})
+//hashset for static files
+var staticFiles = map[string]int{}
 
-    cwd := os.Getenv("CWD")
-    templateDir = path.Join(cwd, "templates")
-    staticDir = path.Join(cwd, "static")
+func init() {
+    contextType = reflect.Typeof(Context{})
+    SetTemplateDir("templates")
+    SetStaticDir("static")
 }
 
 type route struct {
@@ -83,15 +84,13 @@ func addRoute(r string, method string, handler interface{}) {
 }
 
 func httpHandler(c *http.Conn, req *http.Request) {
-    path := req.URL.Path
+    requestPath := req.URL.Path
 
     //try to serve a static file
-    if strings.HasPrefix(path, "/static/") {
-        staticFile := path[8:]
-        if len(staticFile) > 0 {
-            http.ServeFile(c, req, "static/"+staticFile)
-            return
-        }
+    staticFile := path.Join(staticDir, requestPath)
+    if _, static := staticFiles[staticFile]; static {
+        http.ServeFile(c, req, staticFile)
+        return
     }
 
     req.ParseForm()
@@ -105,17 +104,17 @@ func httpHandler(c *http.Conn, req *http.Request) {
 
 func routeHandler(req *Request) *Response {
     log.Stdout(req.RawURL)
-    path := req.URL.Path
+    requestPath := req.URL.Path
 
     ctx := Context{req, newResponse(200, "")}
 
     for cr, route := range routes {
-        if !cr.MatchString(path) {
+        if !cr.MatchString(requestPath) {
             continue
         }
-        match := cr.MatchStrings(path)
+        match := cr.MatchStrings(requestPath)
         if len(match) > 0 {
-            if len(match[0]) != len(path) {
+            if len(match[0]) != len(requestPath) {
                 continue
             }
             if req.Method != route.method {
@@ -131,7 +130,7 @@ func routeHandler(req *Request) *Response {
                 ptyp, ok := a0.(*reflect.PtrType)
                 if ok {
                     typ := ptyp.Elem()
-                    if typ == requestType {
+                    if typ == contextType {
                         args[ai] = reflect.NewValue(&ctx)
                         ai += 1
                         expectedIn -= 1
@@ -141,7 +140,7 @@ func routeHandler(req *Request) *Response {
 
             actualIn := len(match) - 1
             if expectedIn != actualIn {
-                log.Stderrf("Incorrect number of arguments for %s\n", path)
+                log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
                 return newResponse(500, "")
             }
 
@@ -220,6 +219,57 @@ func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
 
 func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
+}
+
+func dirExists(dir string) bool {
+    d, e := os.Stat(dir)
+    switch {
+    case e != nil:
+        return false
+    case !d.IsDirectory():
+        return false
+    }
+
+    return true
+}
+
+func getCwd() string { return os.Getenv("PWD") }
+
+type dirError string
+
+func (path dirError) String() string { return "Failed to set directory " + string(path) }
+
+type staticVisitor struct{}
+
+func (v staticVisitor) VisitDir(path string, d *os.Dir) bool {
+    return true
+}
+
+func (v staticVisitor) VisitFile(path string, d *os.Dir) {
+    staticFiles[path] = 1
+}
+
+func SetStaticDir(dir string) os.Error {
+    cwd := getCwd()
+    sd := path.Join(cwd, dir)
+    if !dirExists(sd) {
+        return dirError(sd)
+    }
+    staticDir = sd
+    staticFiles = map[string]int{}
+    path.Walk(sd, staticVisitor{}, nil)
+
+    return nil
+}
+
+func SetTemplateDir(dir string) os.Error {
+    cwd := getCwd()
+    td := path.Join(cwd, dir)
+    if !dirExists(td) {
+        return dirError(td)
+    }
+    templateDir = td
+    return nil
 }
 
 //copied from go's http package, because it's not public

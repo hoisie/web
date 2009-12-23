@@ -54,11 +54,13 @@ func (ctx *Context) Abort(code int, message string) {
 var contextType reflect.Type
 var templateDir string
 var staticDir string
+var staticRoute *regexp.Regexp
 
 func init() {
     contextType = reflect.Typeof(Context{})
 
     SetTemplateDir("templates")
+    SetStaticRoute("/static/(.*)")
     SetStaticDir("static")
 }
 
@@ -85,12 +87,15 @@ func httpHandler(c *http.Conn, req *http.Request) {
     requestPath := req.URL.Path
 
     //try to serve a static file
-    if strings.HasPrefix(requestPath, "/static/") {
-        staticFile := requestPath[8:]
-        if len(staticFile) > 0 {
-            http.ServeFile(c, req, path.Join(staticDir, staticFile))
-            return
-        }
+    if staticRoute.MatchString(requestPath) {
+        match := staticRoute.MatchStrings(requestPath)
+	if len(match) > 0 {
+            staticFile := match[1]
+            if len(staticFile) > 0 {
+                http.ServeFile(c, req, path.Join(staticDir, staticFile))
+                return
+            }
+	}
     }
 
     req.ParseForm()
@@ -245,6 +250,15 @@ func SetStaticDir(dir string) {
     cwd := currentDirectory()
     staticDir = path.Join(cwd, dir)
     checkDirectory(staticDir)
+}
+
+func SetStaticRoute(route string) {
+    cr, err := regexp.Compile(route)
+    if err != nil {
+        log.Stderrf("Error in static route regex %q\n", route)
+    } else {
+        staticRoute = cr
+    }
 }
 
 //copied from go's http package, because it's not public

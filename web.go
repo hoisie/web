@@ -162,10 +162,10 @@ func routeHandler(req *Request) *Response {
 
 func render(tmplString string, context interface{}) (string, os.Error) {
 
-    var tmpl *template.Template
-    var err os.Error
+    tmpl := template.New(nil)
+    tmpl.SetDelims("{{","}}")
 
-    if tmpl, err = template.Parse(tmplString, nil); err != nil {
+    if err := tmpl.Parse(tmplString); err != nil {
         return "", err
     }
 

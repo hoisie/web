@@ -254,9 +254,12 @@ func SetStaticDir(dir string) {
 
 func SetStaticRoute(route string) {
     cr, err := regexp.Compile(route)
-    if err != nil {
+    switch {
+    case err != nil:
         log.Stderrf("Error in static route regex %q\n", route)
-    } else {
+    case cr.NumberOfSubexpressions() != 1:
+        log.Stderrf("Static route %q must have exactly one subexpression\n", route)
+    default:
         staticRoute = cr
     }
 }

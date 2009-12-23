@@ -51,12 +51,12 @@ func (ctx *Context) Abort(code int, message string) {
     ctx.Response = newResponse(code, message)
 }
 
-var requestType reflect.Type
+var contextType reflect.Type
 var templateDir string
 var staticDir string
 
 func init() {
-    requestType = reflect.Typeof(Context{})
+    contextType = reflect.Typeof(Context{})
 
     cwd := os.Getenv("CWD")
     templateDir = path.Join(cwd, "templates")
@@ -131,7 +131,7 @@ func routeHandler(req *Request) *Response {
                 ptyp, ok := a0.(*reflect.PtrType)
                 if ok {
                     typ := ptyp.Elem()
-                    if typ == requestType {
+                    if typ == contextType {
                         args[ai] = reflect.NewValue(&ctx)
                         ai += 1
                         expectedIn -= 1

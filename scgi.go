@@ -64,10 +64,10 @@ func handleScgiRequest(fd net.Conn) {
         colonPos := bytes.IndexByte(tmp[0:], ':')
 
         read := n
-        len, _ := strconv.Atoi(string(tmp[0:colonPos]))
+        length, _ := strconv.Atoi(string(tmp[0:colonPos]))
         buf.Write(tmp[0:n])
 
-        for read < len {
+        for read < length {
             n, err := fd.Read(&tmp)
             if err != nil || n == 0 {
                 break

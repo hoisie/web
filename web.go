@@ -58,9 +58,8 @@ var staticDir string
 func init() {
     contextType = reflect.Typeof(Context{})
 
-    cwd := os.Getenv("PWD")
-    templateDir = path.Join(cwd, "templates")
-    staticDir = path.Join(cwd, "static")
+    SetTemplateDir("templates")
+    SetStaticDir("static")
 }
 
 type route struct {
@@ -83,13 +82,13 @@ func addRoute(r string, method string, handler interface{}) {
 }
 
 func httpHandler(c *http.Conn, req *http.Request) {
-    path := req.URL.Path
+    requestPath := req.URL.Path
 
     //try to serve a static file
-    if strings.HasPrefix(path, "/static/") {
-        staticFile := path[8:]
+    if strings.HasPrefix(requestPath, "/static/") {
+        staticFile := requestPath[8:]
         if len(staticFile) > 0 {
-            http.ServeFile(c, req, "static/"+staticFile)
+            http.ServeFile(c, req, path.Join(staticDir, staticFile))
             return
         }
     }
@@ -105,17 +104,17 @@ func httpHandler(c *http.Conn, req *http.Request) {
 
 func routeHandler(req *Request) *Response {
     log.Stdout(req.RawURL)
-    path := req.URL.Path
+    requestPath := req.URL.Path
 
     ctx := Context{req, newResponse(200, "")}
 
     for cr, route := range routes {
-        if !cr.MatchString(path) {
+        if !cr.MatchString(requestPath) {
             continue
         }
-        match := cr.MatchStrings(path)
+        match := cr.MatchStrings(requestPath)
         if len(match) > 0 {
-            if len(match[0]) != len(path) {
+            if len(match[0]) != len(requestPath) {
                 continue
             }
             if req.Method != route.method {
@@ -141,7 +140,7 @@ func routeHandler(req *Request) *Response {
 
             actualIn := len(match) - 1
             if expectedIn != actualIn {
-                log.Stderrf("Incorrect number of arguments for %s\n", path)
+                log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
                 return newResponse(500, "")
             }
 
@@ -220,6 +219,32 @@ func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
 
 func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
+}
+
+func currentDirectory() string {
+    return os.Getenv("PWD")
+}
+
+func checkDirectory(dir string) {
+    d, e := os.Stat(dir)
+    switch {
+    case e != nil:
+        log.Stderr(e)
+    case !d.IsDirectory():
+        log.Stderrf("%s is not a directory", dir)
+    }
+}
+
+func SetTemplateDir(dir string) {
+    cwd := currentDirectory()
+    templateDir = path.Join(cwd, dir)
+    checkDirectory(templateDir)
+}
+
+func SetStaticDir(dir string) {
+    cwd := currentDirectory()
+    staticDir = path.Join(cwd, dir)
+    checkDirectory(staticDir)
 }
 
 //copied from go's http package, because it's not public

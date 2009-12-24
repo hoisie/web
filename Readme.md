@@ -69,9 +69,10 @@ Then stop the application and recompile it . You can point your browser to http:
 
 Future releases will support:
 
-* fcgi, scgi, and proxying support
-* executing route handlers with goroutines for multicore systems
-* ability to use asynchronous handlers (for long-polling)
+* scgi, and proxying support
+* an interface to write real-time applications (for long-polling)
+* a template system that's useful for website templates
+* cookie-based session system, including session storage
 
 ## About
 

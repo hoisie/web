@@ -54,13 +54,13 @@ func (ctx *Context) Abort(code int, message string) {
 var contextType reflect.Type
 var templateDir string
 var staticDir string
-var staticRoute *regexp.Regexp
+
+//hashset for static files
+var staticFiles = map[string]int{}
 
 func init() {
     contextType = reflect.Typeof(Context{})
-
     SetTemplateDir("templates")
-    SetStaticRoute("/static/(.*)")
     SetStaticDir("static")
 }
 
@@ -87,15 +87,10 @@ func httpHandler(c *http.Conn, req *http.Request) {
     requestPath := req.URL.Path
 
     //try to serve a static file
-    if staticRoute.MatchString(requestPath) {
-        match := staticRoute.MatchStrings(requestPath)
-	if len(match) > 0 {
-            staticFile := match[1]
-            if len(staticFile) > 0 {
-                http.ServeFile(c, req, path.Join(staticDir, staticFile))
-                return
-            }
-	}
+    staticFile := path.Join(staticDir, requestPath)
+    if _, static := staticFiles[staticFile]; static {
+        http.ServeFile(c, req, staticFile)
+        return
     }
 
     req.ParseForm()
@@ -226,42 +221,55 @@ func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
 }
 
-func currentDirectory() string {
-    return os.Getenv("PWD")
-}
-
-func checkDirectory(dir string) {
+func dirExists(dir string) bool {
     d, e := os.Stat(dir)
     switch {
     case e != nil:
-        log.Stderr(e)
+        return false
     case !d.IsDirectory():
-        log.Stderrf("%s is not a directory", dir)
+        return false
     }
+
+    return true
 }
 
-func SetTemplateDir(dir string) {
-    cwd := currentDirectory()
-    templateDir = path.Join(cwd, dir)
-    checkDirectory(templateDir)
+func getCwd() string { return os.Getenv("PWD") }
+
+type dirError string
+
+func (path dirError) String() string { return "Failed to set directory " + string(path) }
+
+type staticVisitor struct{}
+
+func (v staticVisitor) VisitDir(path string, d *os.Dir) bool {
+    return true
 }
 
-func SetStaticDir(dir string) {
-    cwd := currentDirectory()
-    staticDir = path.Join(cwd, dir)
-    checkDirectory(staticDir)
+func (v staticVisitor) VisitFile(path string, d *os.Dir) {
+    staticFiles[path] = 1
 }
 
-func SetStaticRoute(route string) {
-    cr, err := regexp.Compile(route)
-    switch {
-    case err != nil:
-        log.Stderrf("Error in static route regex %q\n", route)
-    case cr.NumSubexp() != 1:
-        log.Stderrf("Static route %q must have exactly one subexpression\n", route)
-    default:
-        staticRoute = cr
+func SetStaticDir(dir string) os.Error {
+    cwd := getCwd()
+    sd := path.Join(cwd, dir)
+    if !dirExists(sd) {
+        return dirError(sd)
     }
+    staticDir = sd
+    staticFiles = map[string]int{}
+    path.Walk(sd, staticVisitor{}, nil)
+
+    return nil
+}
+
+func SetTemplateDir(dir string) os.Error {
+    cwd := getCwd()
+    td := path.Join(cwd, dir)
+    if !dirExists(td) {
+        return dirError(td)
+    }
+    templateDir = td
+    return nil
 }
 
 //copied from go's http package, because it's not public

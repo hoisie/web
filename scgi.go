@@ -54,44 +54,44 @@ func readScgiRequest(buf *bytes.Buffer) Request {
 }
 
 func handleScgiRequest(fd net.Conn) {
-        var buf bytes.Buffer
-        var tmp [1024]byte
+    var buf bytes.Buffer
+    var tmp [1024]byte
+    n, err := fd.Read(&tmp)
+    if err != nil || n == 0 {
+        return
+    }
+
+    colonPos := bytes.IndexByte(tmp[0:], ':')
+
+    read := n
+    length, _ := strconv.Atoi(string(tmp[0:colonPos]))
+    buf.Write(tmp[0:n])
+
+    for read < length {
         n, err := fd.Read(&tmp)
         if err != nil || n == 0 {
-            return;
+            break
         }
-
-        colonPos := bytes.IndexByte(tmp[0:], ':')
-
-        read := n
-        length, _ := strconv.Atoi(string(tmp[0:colonPos]))
         buf.Write(tmp[0:n])
+        read += n
+    }
 
-        for read < length {
-            n, err := fd.Read(&tmp)
-            if err != nil || n == 0 {
-                break
-            }
-            buf.Write(tmp[0:n])
-            read += n
-        }
+    req := readScgiRequest(&buf)
+    perr := req.ParseForm()
+    if perr != nil {
+        log.Stderrf("Failed to parse form data %q", req.Body)
+    }
+    resp := routeHandler(&req)
 
-        req := readScgiRequest(&buf)
-        perr := req.ParseForm()
-        if perr != nil {
-            log.Stderrf("Failed to parse form data %q", req.Body)
-        }
-        resp := routeHandler(&req)
-
-        var scgiResp bytes.Buffer
-        scgiResp.WriteString("Status: " + resp.Status + "\r\n")
-        scgiResp.WriteString("Content-Type: text/html\r\n\r\n")
-        fd.Write(scgiResp.Bytes())
-        if resp.Body != nil {
-            body, _ := ioutil.ReadAll(resp.Body)
-            fd.Write(body)
-        }
-        fd.Close()
+    var scgiResp bytes.Buffer
+    scgiResp.WriteString("Status: " + resp.Status + "\r\n")
+    scgiResp.WriteString("Content-Type: text/html\r\n\r\n")
+    fd.Write(scgiResp.Bytes())
+    if resp.Body != nil {
+        body, _ := ioutil.ReadAll(resp.Body)
+        fd.Write(body)
+    }
+    fd.Close()
 }
 
 func listenAndServeScgi(addr string) {
@@ -107,7 +107,7 @@ func listenAndServeScgi(addr string) {
             log.Stderrf(err.String())
             break
         }
-        go handleScgiRequest(fd);
-        
+        go handleScgiRequest(fd)
+
     }
 }

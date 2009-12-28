@@ -147,11 +147,14 @@ func readFcgiParams(data []byte) {
 func handleFcgiRequest(fd net.Conn) {
 
     br := bufio.NewReader(fd)
+
+    var fc *fcgiConn
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
         if err != nil {
             log.Stderrf(err.String())
+            break
         }
         content := make([]byte, h.ContentLength)
         n, err := br.Read(content)
@@ -164,17 +167,17 @@ func handleFcgiRequest(fd net.Conn) {
 
         switch h.Type {
         case FcgiBeginRequest:
-            println("begin request!")
+            fc = &fcgiConn{h.RequestId, fd}
         case FcgiParams:
             readFcgiParams(content)
         case FcgiStdin:
-            println("stdin")
+            fc.WriteString("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nHello")
+            fc.Close()
         case FcgiData:
             println("data!")
         case FcgiAbortRequest:
             println("abort!")
         }
-
     }
 }
 

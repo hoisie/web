@@ -6,31 +6,112 @@ import (
     "encoding/binary"
     "log"
     "net"
+    "os"
 )
 
 const (
-    FcgiRequestComplete = 0
-    FcgiBeginRequest    = 1
-    FcgiAbortRequest    = 2
-    FcgiEndRequest      = 3
-    FcgiParams          = 4
-    FcgiStdin           = 5
-    FcgiStdout          = 6
-    FcgiStderr          = 7
-    FcgiData            = 8
-    FcgiGetValues       = 9
-    FcgiGetValuesResult = 10
-    FcgiUnknownType     = 11
-    FcgiMaxType         = FcgiUnknownType
+    FcgiBeginRequest = iota + 1
+    FcgiAbortRequest
+    FcgiEndRequest
+    FcgiParams
+    FcgiStdin
+    FcgiStdout
+    FcgiStderr
+    FcgiData
+    FcgiGetValues
+    FcgiGetValuesResult
+    FcgiUnknownType
+    FcgiMaxType = FcgiUnknownType
 )
 
-type FcgiHeader struct {
+const (
+    FcgiRequestComplete = iota
+    FcgiCantMpxConn
+    FcgiOverloaded
+    FcgiUnknownRole
+)
+
+type fcgiHeader struct {
     Version       uint8
     Type          uint8
     RequestId     uint16
     ContentLength uint16
     PaddingLength uint8
     Reserved      uint8
+}
+
+func (h fcgiHeader) bytes() []byte {
+    order := binary.BigEndian
+    buf := make([]byte, 8)
+    buf[0] = h.Version
+    buf[1] = h.Type
+    order.PutUint16(buf[2:4], h.RequestId)
+    order.PutUint16(buf[4:6], h.ContentLength)
+    buf[6] = h.PaddingLength
+    buf[7] = h.Reserved
+    return buf
+}
+
+type fcgiEndRequest struct {
+    appStatus      uint32
+    protocolStatus uint8
+    reserved       [3]uint8
+}
+
+func (er fcgiEndRequest) bytes() []byte {
+    buf := make([]byte, 8)
+    binary.BigEndian.PutUint32(buf, er.appStatus)
+    buf[4] = er.protocolStatus
+    return buf
+}
+
+type fcgiConn struct {
+    requestId uint16
+    fd        net.Conn
+}
+
+func (conn *fcgiConn) WriteString(s string) os.Error {
+    content := bytes.NewBufferString(s).Bytes()
+    l := len(content)
+    // round to the nearest 8
+    padding := make([]byte, uint8(-l&7))
+    hdr := fcgiHeader{
+        Version: 1,
+        Type: FcgiStdout,
+        RequestId: conn.requestId,
+        ContentLength: uint16(l),
+        PaddingLength: uint8(len(padding)),
+    }
+
+    conn.fd.Write(hdr.bytes())
+    conn.fd.Write(content)
+    conn.fd.Write(padding)
+
+    return nil
+}
+
+func (conn *fcgiConn) StartResponse(status int) os.Error {
+    return nil
+}
+
+func (conn *fcgiConn) Close() os.Error {
+    content := fcgiEndRequest{appStatus: 200, protocolStatus: FcgiRequestComplete}.bytes()
+    l := len(content)
+
+    hdr := fcgiHeader{
+        Version: 1,
+        Type: FcgiEndRequest,
+        RequestId: uint16(conn.requestId),
+        ContentLength: uint16(l),
+        PaddingLength: 0,
+    }
+
+    conn.fd.Write(hdr.bytes())
+    conn.fd.Write(content)
+
+    conn.fd.Close()
+
+    return nil
 }
 
 func readFcgiParams(data []byte) {
@@ -67,7 +148,7 @@ func handleFcgiRequest(fd net.Conn) {
 
     br := bufio.NewReader(fd)
     for {
-        var h FcgiHeader
+        var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
         if err != nil {
             log.Stderrf(err.String())
@@ -82,8 +163,8 @@ func handleFcgiRequest(fd net.Conn) {
         }
 
         switch h.Type {
-        //case FcgiBeginRequest:
-        //  println("begin request!");
+        case FcgiBeginRequest:
+            println("begin request!")
         case FcgiParams:
             readFcgiParams(content)
         case FcgiStdin:
@@ -93,6 +174,7 @@ func handleFcgiRequest(fd net.Conn) {
         case FcgiAbortRequest:
             println("abort!")
         }
+
     }
 }
 

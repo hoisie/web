@@ -50,7 +50,7 @@ type Context struct {
 type Conn interface {
     StartResponse(status int) os.Error
     SetHeader(hdr string, val string) os.Error
-    Write(data string) os.Error
+    WriteString(content string) os.Error
     Close() os.Error
 }
 

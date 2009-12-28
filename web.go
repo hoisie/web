@@ -47,6 +47,13 @@ type Context struct {
     *Response
 }
 
+type Conn interface {
+    StartResponse(status int) os.Error
+    SetHeader(hdr string, val string) os.Error
+    Write(data string) os.Error
+    Close() os.Error
+}
+
 func (ctx *Context) Abort(code int, message string) {
     ctx.Response = newResponse(code, message)
 }
@@ -207,6 +214,11 @@ func Run(addr string) {
 func RunScgi(addr string) {
     log.Stdoutf("web.go serving scgi %s", addr)
     listenAndServeScgi(addr)
+}
+
+func RunFcgi(addr string) {
+    log.Stdoutf("web.go serving fcgi %s", addr)
+    listenAndServeFcgi(addr)
 }
 
 func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }

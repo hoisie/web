@@ -2,12 +2,52 @@ package web
 
 import (
     "bytes"
+    "fmt"
     "http"
-    "io/ioutil"
     "log"
     "net"
+    "os"
     "strconv"
 )
+
+type scgiConn struct {
+    fd           *net.Conn
+    headers      map[string]string
+    wroteHeaders bool
+}
+
+func (conn *scgiConn) StartResponse(status int) {
+    var buf bytes.Buffer
+    text := statusText[status]
+    fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
+    conn.fd.Write(buf.Bytes())
+}
+
+func (conn *scgiConn) SetHeader(hdr string, val string) {
+    conn.headers[hdr] = val
+}
+
+func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
+    if !conn.wroteHeaders {
+        conn.wroteHeaders = true
+        var buf bytes.Buffer
+        for k, v := range conn.headers {
+            buf.WriteString(k + ": " + v + "\r\n")
+        }
+        buf.WriteString("\r\n")
+        conn.fd.Write(buf.Bytes())
+    }
+
+    return conn.fd.Write(data)
+}
+
+func (conn *scgiConn) WriteString(data string) {
+    var buf bytes.Buffer
+    buf.WriteString(data)
+    conn.Write(buf.Bytes())
+}
+
+func (conn *scgiConn) Close() { conn.fd.Close() }
 
 func readScgiRequest(buf *bytes.Buffer) Request {
     headers := make(map[string]string)
@@ -81,16 +121,9 @@ func handleScgiRequest(fd net.Conn) {
     if perr != nil {
         log.Stderrf("Failed to parse form data %q", req.Body)
     }
-    resp := routeHandler(&req)
 
-    var scgiResp bytes.Buffer
-    scgiResp.WriteString("Status: " + resp.Status + "\r\n")
-    scgiResp.WriteString("Content-Type: text/html\r\n\r\n")
-    fd.Write(scgiResp.Bytes())
-    if resp.Body != nil {
-        body, _ := ioutil.ReadAll(resp.Body)
-        fd.Write(body)
-    }
+    sc := scgiConn{&fd, make(map[string]string), false}
+    routeHandler(&req, &sc)
     fd.Close()
 }
 

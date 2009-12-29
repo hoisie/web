@@ -30,7 +30,7 @@ type Conn interface {
 
 type Context struct {
     *Request
-    conn Conn
+    Conn
 }
 
 func (ctx *Context) Error(status int, body string) {

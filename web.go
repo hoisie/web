@@ -86,7 +86,6 @@ func (c *httpConn) Write(content []byte) (n int, err os.Error) {
 }
 
 func (c *httpConn) Close() {
-    println("close called!")
     rwc, buf, _ := c.conn.Hijack()
     if buf != nil {
         buf.Flush()
@@ -108,8 +107,14 @@ func error(conn Conn, code int, body string) {
 }
 
 func routeHandler(req *Request, conn Conn) {
-    log.Stdout(req.RawURL)
     requestPath := req.URL.Path
+
+    //log the request
+    if len(req.URL.RawQuery) == 0 {
+        log.Stdout(requestPath)
+    } else {
+        log.Stdout(requestPath + "?" + req.URL.RawQuery)
+    }
 
     //parse the form data (if it exists)
     perr := req.ParseForm()

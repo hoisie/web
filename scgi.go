@@ -31,7 +31,7 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
     var buf bytes.Buffer
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
-        
+
         for k, v := range conn.headers {
             buf.WriteString(k + ": " + v + "\r\n")
         }
@@ -117,7 +117,7 @@ func handleScgiRequest(fd net.Conn) {
     }
 
     req := readScgiRequest(&buf)
-    
+
     sc := scgiConn{&fd, make(map[string]string), false}
     routeHandler(&req, &sc)
     fd.Close()
@@ -126,14 +126,14 @@ func handleScgiRequest(fd net.Conn) {
 func listenAndServeScgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Stderrf(err.String())
+        log.Stderrf("SCGI listen error", err.String())
         return
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
-            log.Stderrf(err.String())
+            log.Stderrf("SCGI accept error", err.String())
             break
         }
         go handleScgiRequest(fd)

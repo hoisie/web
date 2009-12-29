@@ -223,8 +223,11 @@ func handleFcgiRequest(fd net.Conn) {
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
+        if err == os.EOF {
+            break
+        }
         if err != nil {
-            log.Stderrf(err.String())
+            log.Stderrf("FCGI Error", err.String())
             break
         }
         content := make([]byte, h.ContentLength)
@@ -262,14 +265,14 @@ func handleFcgiRequest(fd net.Conn) {
 func listenAndServeFcgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Stderrf(err.String())
+        log.Stderrf("FCGI listen error", err.String())
         return
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
-            log.Stderrf(err.String())
+            log.Stderrf("FCGI accept error", err.String())
             break
         }
         go handleFcgiRequest(fd)

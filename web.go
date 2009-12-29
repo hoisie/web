@@ -99,7 +99,6 @@ func (c *httpConn) Close() {
 
 func httpHandler(c *http.Conn, req *http.Request) {
     conn := httpConn{c}
-    req.ParseForm()
     routeHandler((*Request)(req), &conn)
 }
 
@@ -112,6 +111,12 @@ func routeHandler(req *Request, conn Conn) {
     log.Stdout(req.RawURL)
     requestPath := req.URL.Path
 
+    //parse the form data (if it exists)
+    perr := req.ParseForm()
+    if perr != nil {
+        log.Stderrf("Failed to parse form data %q", req.Body)
+    }
+
     ctx := Context{req, conn}
 
     //try to serve a static file
@@ -120,6 +125,9 @@ func routeHandler(req *Request, conn Conn) {
         serveFile(&ctx, staticFile)
         return
     }
+
+    //set default encoding
+    conn.SetHeader("Content-Type", "text/html; charset=utf-8")
 
     for cr, route := range routes {
         if !cr.MatchString(requestPath) {
@@ -162,7 +170,6 @@ func routeHandler(req *Request, conn Conn) {
                 args[ai] = reflect.NewValue(arg)
             }
             ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
-
             conn.StartResponse(200)
             conn.WriteString(ret)
             return

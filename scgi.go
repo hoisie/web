@@ -28,16 +28,16 @@ func (conn *scgiConn) SetHeader(hdr string, val string) {
 }
 
 func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
+    var buf bytes.Buffer
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
-        var buf bytes.Buffer
+        
         for k, v := range conn.headers {
             buf.WriteString(k + ": " + v + "\r\n")
         }
         buf.WriteString("\r\n")
         conn.fd.Write(buf.Bytes())
     }
-
     return conn.fd.Write(data)
 }
 
@@ -117,11 +117,7 @@ func handleScgiRequest(fd net.Conn) {
     }
 
     req := readScgiRequest(&buf)
-    perr := req.ParseForm()
-    if perr != nil {
-        log.Stderrf("Failed to parse form data %q", req.Body)
-    }
-
+    
     sc := scgiConn{&fd, make(map[string]string), false}
     routeHandler(&req, &sc)
     fd.Close()

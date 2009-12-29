@@ -6,6 +6,7 @@ import (
     "encoding/binary"
     "fmt"
     "http"
+    "io"
     "log"
     "net"
     "os"
@@ -54,6 +55,27 @@ func (h fcgiHeader) bytes() []byte {
     return buf
 }
 
+func newFcgiRecord(typ int, requestId int, data []byte) []byte {
+    var record bytes.Buffer
+    l := len(data)
+    // round to the nearest 8
+    padding := make([]byte, uint8(-l&7))
+    hdr := fcgiHeader{
+        Version: 1,
+        Type: uint8(typ),
+        RequestId: uint16(requestId),
+        ContentLength: uint16(l),
+        PaddingLength: uint8(len(padding)),
+    }
+
+    //write the header
+    record.Write(hdr.bytes())
+    record.Write(data)
+    record.Write(padding)
+
+    return record.Bytes()
+}
+
 type fcgiEndRequest struct {
     appStatus      uint32
     protocolStatus uint8
@@ -69,7 +91,7 @@ func (er fcgiEndRequest) bytes() []byte {
 
 type fcgiConn struct {
     requestId    uint16
-    fd           net.Conn
+    fd           io.ReadWriteCloser
     headers      map[string]string
     wroteHeaders bool
 }
@@ -215,7 +237,7 @@ func buildRequest(headers map[string]string) *Request {
     return &req
 }
 
-func handleFcgiRequest(fd net.Conn) {
+func handleFcgiConnection(fd io.ReadWriteCloser) {
 
     br := bufio.NewReader(fd)
     var req *Request
@@ -275,7 +297,7 @@ func listenAndServeFcgi(addr string) {
             log.Stderrf("FCGI accept error", err.String())
             break
         }
-        go handleFcgiRequest(fd)
+        go handleFcgiConnection(fd)
 
     }
 }

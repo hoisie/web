@@ -4,6 +4,7 @@ import (
     "bytes"
     "fmt"
     "http"
+    "io"
     "log"
     "net"
     "os"
@@ -11,7 +12,7 @@ import (
 )
 
 type scgiConn struct {
-    fd           *net.Conn
+    fd           io.ReadWriteCloser
     headers      map[string]string
     wroteHeaders bool
 }
@@ -93,7 +94,7 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     return req
 }
 
-func handleScgiRequest(fd net.Conn) {
+func handleScgiRequest(fd io.ReadWriteCloser) {
     var buf bytes.Buffer
     var tmp [1024]byte
     n, err := fd.Read(&tmp)
@@ -118,7 +119,7 @@ func handleScgiRequest(fd net.Conn) {
 
     req := readScgiRequest(&buf)
 
-    sc := scgiConn{&fd, make(map[string]string), false}
+    sc := scgiConn{fd, make(map[string]string), false}
     routeHandler(&req, &sc)
     fd.Close()
 }

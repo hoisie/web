@@ -225,23 +225,34 @@ func buildRequest(headers map[string]string) *Request {
     url, _ := http.ParseURL(rawurl)
     useragent, _ := headers["USER_AGENT"]
 
+    httpheader := map[string]string{}
+    if method == "POST" {
+        if ctype, ok := headers["CONTENT_TYPE"]; ok {
+            httpheader["Content-Type"] = ctype
+        }
+
+        if clength, ok := headers["CONTENT_LENGTH"]; ok {
+            httpheader["Content-Length"] = clength
+        }
+    }
+
     req := Request{Method: method,
         RawURL: rawurl,
         URL: url,
         Proto: proto,
         Host: host,
         UserAgent: useragent,
-        Header: make(map[string]string),
+        Header: httpheader,
     }
 
     return &req
 }
 
 func handleFcgiConnection(fd io.ReadWriteCloser) {
-
     br := bufio.NewReader(fd)
     var req *Request
     var fc *fcgiConn
+    var body bytes.Buffer
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
@@ -271,14 +282,16 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
             }
         case FcgiStdin:
             if h.ContentLength > 0 {
-                var buf bytes.Buffer
-                buf.Write(content)
-                req.Body = &buf
+                body.Write(content)
             } else if h.ContentLength == 0 {
+                req.Body = &body
                 routeHandler(req, fc)
                 fc.complete()
             }
         case FcgiData:
+            if h.ContentLength > 0 {
+                body.Write(content)
+            }
         case FcgiAbortRequest:
         }
     }
@@ -298,6 +311,5 @@ func listenAndServeFcgi(addr string) {
             break
         }
         go handleFcgiConnection(fd)
-
     }
 }

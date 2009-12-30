@@ -68,8 +68,6 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     var httpheader = make(map[string]string)
 
     method, _ := headers["REQUEST_METHOD"]
-    ctype, _ := headers["CONTENT_TYPE"]
-    clength, _ := headers["CONTENT_LENGTH"]
     host, _ := headers["HTTP_HOST"]
     path, _ := headers["REQUEST_URI"]
     port, _ := headers["SERVER_PORT"]
@@ -78,8 +76,15 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     url, _ := http.ParseURL(rawurl)
     useragent, _ := headers["USER_AGENT"]
 
-    httpheader["Content-Length"] = clength
-    httpheader["Content-Type"] = ctype
+    if method == "POST" {
+        if ctype, ok := headers["CONTENT_TYPE"]; ok {
+            httpheader["Content-Type"] = ctype
+        }
+
+        if clength, ok := headers["CONTENT_LENGTH"]; ok {
+            httpheader["Content-Length"] = clength
+        }
+    }
 
     req := Request{Method: method,
         RawURL: rawurl,

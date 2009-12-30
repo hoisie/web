@@ -102,7 +102,7 @@ func httpHandler(c *http.Conn, req *http.Request) {
 }
 
 func error(conn Conn, code int, body string) {
-    conn.StartResponse(200)
+    conn.StartResponse(code)
     conn.WriteString(body)
 }
 
@@ -119,7 +119,7 @@ func routeHandler(req *Request, conn Conn) {
     //parse the form data (if it exists)
     perr := req.ParseForm()
     if perr != nil {
-        log.Stderrf("Failed to parse form data %q", req.Body)
+        log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
     ctx := Context{req, conn}

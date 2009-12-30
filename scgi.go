@@ -2,12 +2,53 @@ package web
 
 import (
     "bytes"
+    "fmt"
     "http"
-    "io/ioutil"
+    "io"
     "log"
     "net"
+    "os"
     "strconv"
 )
+
+type scgiConn struct {
+    fd           io.ReadWriteCloser
+    headers      map[string]string
+    wroteHeaders bool
+}
+
+func (conn *scgiConn) StartResponse(status int) {
+    var buf bytes.Buffer
+    text := statusText[status]
+    fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
+    conn.fd.Write(buf.Bytes())
+}
+
+func (conn *scgiConn) SetHeader(hdr string, val string) {
+    conn.headers[hdr] = val
+}
+
+func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
+    var buf bytes.Buffer
+    if !conn.wroteHeaders {
+        conn.wroteHeaders = true
+
+        for k, v := range conn.headers {
+            buf.WriteString(k + ": " + v + "\r\n")
+        }
+        buf.WriteString("\r\n")
+        conn.fd.Write(buf.Bytes())
+    }
+    return conn.fd.Write(data)
+}
+
+func (conn *scgiConn) WriteString(data string) {
+    var buf bytes.Buffer
+    buf.WriteString(data)
+    conn.Write(buf.Bytes())
+}
+
+func (conn *scgiConn) Close() { conn.fd.Close() }
 
 func readScgiRequest(buf *bytes.Buffer) Request {
     headers := make(map[string]string)
@@ -27,8 +68,6 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     var httpheader = make(map[string]string)
 
     method, _ := headers["REQUEST_METHOD"]
-    ctype, _ := headers["CONTENT_TYPE"]
-    clength, _ := headers["CONTENT_LENGTH"]
     host, _ := headers["HTTP_HOST"]
     path, _ := headers["REQUEST_URI"]
     port, _ := headers["SERVER_PORT"]
@@ -37,8 +76,15 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     url, _ := http.ParseURL(rawurl)
     useragent, _ := headers["USER_AGENT"]
 
-    httpheader["Content-Length"] = clength
-    httpheader["Content-Type"] = ctype
+    if method == "POST" {
+        if ctype, ok := headers["CONTENT_TYPE"]; ok {
+            httpheader["Content-Type"] = ctype
+        }
+
+        if clength, ok := headers["CONTENT_LENGTH"]; ok {
+            httpheader["Content-Length"] = clength
+        }
+    }
 
     req := Request{Method: method,
         RawURL: rawurl,
@@ -53,7 +99,7 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     return req
 }
 
-func handleScgiRequest(fd net.Conn) {
+func handleScgiRequest(fd io.ReadWriteCloser) {
     var buf bytes.Buffer
     var tmp [1024]byte
     n, err := fd.Read(&tmp)
@@ -77,34 +123,23 @@ func handleScgiRequest(fd net.Conn) {
     }
 
     req := readScgiRequest(&buf)
-    perr := req.ParseForm()
-    if perr != nil {
-        log.Stderrf("Failed to parse form data %q", req.Body)
-    }
-    resp := routeHandler(&req)
 
-    var scgiResp bytes.Buffer
-    scgiResp.WriteString("Status: " + resp.Status + "\r\n")
-    scgiResp.WriteString("Content-Type: text/html\r\n\r\n")
-    fd.Write(scgiResp.Bytes())
-    if resp.Body != nil {
-        body, _ := ioutil.ReadAll(resp.Body)
-        fd.Write(body)
-    }
+    sc := scgiConn{fd, make(map[string]string), false}
+    routeHandler(&req, &sc)
     fd.Close()
 }
 
 func listenAndServeScgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Stderrf(err.String())
+        log.Stderrf("SCGI listen error", err.String())
         return
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
-            log.Stderrf(err.String())
+            log.Stderrf("SCGI accept error", err.String())
             break
         }
         go handleScgiRequest(fd)

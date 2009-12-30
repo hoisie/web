@@ -3,7 +3,6 @@ package web
 import (
     "bytes"
     "http"
-    "io"
     "io/ioutil"
     "log"
     "os"
@@ -21,42 +20,26 @@ func (r *Request) ParseForm() (err os.Error) {
     return req.ParseForm()
 }
 
-type Response struct {
-    Status     string
-    StatusCode int
-    Header     map[string]string
-    Body       io.Reader
-}
-
-func newResponse(statusCode int, body string) *Response {
-    text := statusText[statusCode]
-    resp := Response{StatusCode: statusCode,
-        Status: text,
-        Header: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
-    }
-    if len(body) == 0 {
-        resp.Body = bytes.NewBufferString(text)
-    } else {
-        resp.Body = bytes.NewBufferString(body)
-    }
-    return &resp
+type Conn interface {
+    StartResponse(status int)
+    SetHeader(hdr string, val string)
+    Write(data []byte) (n int, err os.Error)
+    WriteString(content string)
+    Close()
 }
 
 type Context struct {
     *Request
-    *Response
+    Conn
 }
 
-func (ctx *Context) Abort(code int, message string) {
-    ctx.Response = newResponse(code, message)
+func (ctx *Context) Error(status int, body string) {
+    //send an error
 }
 
 var contextType reflect.Type
 var templateDir string
 var staticDir string
-
-//hashset for static files
-var staticFiles = map[string]int{}
 
 func init() {
     contextType = reflect.Typeof(Context{})
@@ -83,30 +66,73 @@ func addRoute(r string, method string, handler interface{}) {
     routes[cr] = route{r, cr, method, fv}
 }
 
-func httpHandler(c *http.Conn, req *http.Request) {
-    requestPath := req.URL.Path
+type httpConn struct {
+    conn *http.Conn
+}
 
-    //try to serve a static file
-    staticFile := path.Join(staticDir, requestPath)
-    if _, static := staticFiles[staticFile]; static {
-        http.ServeFile(c, req, staticFile)
-        return
+func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
+
+func (c *httpConn) SetHeader(hdr string, val string) {
+    c.conn.SetHeader(hdr, val)
+}
+
+func (c *httpConn) WriteString(content string) {
+    buf := bytes.NewBufferString(content)
+    c.conn.Write(buf.Bytes())
+}
+
+func (c *httpConn) Write(content []byte) (n int, err os.Error) {
+    return c.conn.Write(content)
+}
+
+func (c *httpConn) Close() {
+    rwc, buf, _ := c.conn.Hijack()
+    if buf != nil {
+        buf.Flush()
     }
 
-    req.ParseForm()
-    resp := routeHandler((*Request)(req))
-    c.WriteHeader(resp.StatusCode)
-    if resp.Body != nil {
-        body, _ := ioutil.ReadAll(resp.Body)
-        c.Write(body)
+    if rwc != nil {
+        rwc.Close()
     }
 }
 
-func routeHandler(req *Request) *Response {
-    log.Stdout(req.RawURL)
+func httpHandler(c *http.Conn, req *http.Request) {
+    conn := httpConn{c}
+    routeHandler((*Request)(req), &conn)
+}
+
+func error(conn Conn, code int, body string) {
+    conn.StartResponse(code)
+    conn.WriteString(body)
+}
+
+func routeHandler(req *Request, conn Conn) {
     requestPath := req.URL.Path
 
-    ctx := Context{req, newResponse(200, "")}
+    //log the request
+    if len(req.URL.RawQuery) == 0 {
+        log.Stdout(requestPath)
+    } else {
+        log.Stdout(requestPath + "?" + req.URL.RawQuery)
+    }
+
+    //parse the form data (if it exists)
+    perr := req.ParseForm()
+    if perr != nil {
+        log.Stderrf("Failed to parse form data %q", perr.String())
+    }
+
+    ctx := Context{req, conn}
+
+    //try to serve a static file
+    staticFile := path.Join(staticDir, requestPath)
+    if fileExists(staticFile) {
+        serveFile(&ctx, staticFile)
+        return
+    }
+
+    //set default encoding
+    conn.SetHeader("Content-Type", "text/html; charset=utf-8")
 
     for cr, route := range routes {
         if !cr.MatchString(requestPath) {
@@ -141,22 +167,21 @@ func routeHandler(req *Request) *Response {
             actualIn := len(match) - 1
             if expectedIn != actualIn {
                 log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
-                return newResponse(500, "")
+                error(conn, 500, "Server Error")
+                return
             }
 
             for _, arg := range match[1:] {
                 args[ai] = reflect.NewValue(arg)
             }
             ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
-            var buf bytes.Buffer
-            buf.WriteString(ret)
-            resp := ctx.Response
-            resp.Body = &buf
-            return resp
+            conn.StartResponse(200)
+            conn.WriteString(ret)
+            return
         }
     }
 
-    return newResponse(404, "")
+    error(conn, 404, "Page not found")
 }
 
 func render(tmplString string, context interface{}) (string, os.Error) {
@@ -209,6 +234,11 @@ func RunScgi(addr string) {
     listenAndServeScgi(addr)
 }
 
+func RunFcgi(addr string) {
+    log.Stdoutf("web.go serving fcgi %s", addr)
+    listenAndServeFcgi(addr)
+}
+
 func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }
 
 func Post(route string, handler interface{}) { addRoute(route, "POST", handler) }
@@ -233,31 +263,32 @@ func dirExists(dir string) bool {
     return true
 }
 
-func getCwd() string { return os.Getenv("PWD") }
+func fileExists(dir string) bool {
+    d, e := os.Stat(dir)
+    switch {
+    case e != nil:
+        return false
+    case !d.IsRegular():
+        return false
+    }
+
+    return true
+}
 
 type dirError string
 
 func (path dirError) String() string { return "Failed to set directory " + string(path) }
 
-type staticVisitor struct{}
-
-func (v staticVisitor) VisitDir(path string, d *os.Dir) bool {
-    return true
-}
-
-func (v staticVisitor) VisitFile(path string, d *os.Dir) {
-    staticFiles[path] = 1
-}
+func getCwd() string { return os.Getenv("PWD") }
 
 func SetStaticDir(dir string) os.Error {
     cwd := getCwd()
     sd := path.Join(cwd, dir)
     if !dirExists(sd) {
         return dirError(sd)
+
     }
     staticDir = sd
-    staticFiles = map[string]int{}
-    path.Walk(sd, staticVisitor{}, nil)
 
     return nil
 }

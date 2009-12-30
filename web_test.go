@@ -204,7 +204,7 @@ func buildFcgiKeyValue(key string, val string) []byte {
     return buf.Bytes()
 }
 
-func buildTestFcgiRequest(method string, path string, body string, headers map[string]string) *bytes.Buffer {
+func buildTestFcgiRequest(method string, path string, bodychunks []string, headers map[string]string) *bytes.Buffer {
 
     var req bytes.Buffer
     fcgiHeaders := make(map[string]string)
@@ -216,8 +216,13 @@ func buildTestFcgiRequest(method string, path string, body string, headers map[s
     fcgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     fcgiHeaders["USER_AGENT"] = "web.go test framework"
 
+    bodylength := 0
+    for _, s := range (bodychunks) {
+        bodylength += len(s)
+    }
+
     if method == "POST" {
-        fcgiHeaders["Content-Length"] = fmt.Sprintf("%d", len(body))
+        fcgiHeaders["Content-Length"] = fmt.Sprintf("%d", bodylength)
         fcgiHeaders["Content-Type"] = "text/plain"
     }
 
@@ -230,15 +235,20 @@ func buildTestFcgiRequest(method string, path string, body string, headers map[s
         buf.Write(kv)
     }
 
-    //add the params request
+    //add the params record
     req.Write(newFcgiRecord(FcgiParams, 0, buf.Bytes()))
 
+    //add the end-of-params record
+    req.Write(newFcgiRecord(FcgiParams, 0, []byte{}))
+
     //send the body
-    if len(body) > 0 {
-        req.Write(newFcgiRecord(FcgiStdin, 0, strings.Bytes(body)))
+    for _, s := range (bodychunks) {
+        if len(s) > 0 {
+            req.Write(newFcgiRecord(FcgiStdin, 0, strings.Bytes(s)))
+        }
     }
 
-    //add the stdin request
+    //add the end-of-stdin record
     req.Write(newFcgiRecord(FcgiStdin, 0, []byte{}))
 
     return &req
@@ -272,7 +282,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
 
 func TestFcgi(t *testing.T) {
     for _, test := range (tests) {
-        req := buildTestFcgiRequest(test.method, test.path, test.body, make(map[string]string))
+        req := buildTestFcgiRequest(test.method, test.path, []string{test.body}, make(map[string]string))
         var output bytes.Buffer
         nb := tcpProxy{input: req, output: &output}
         handleFcgiConnection(&nb)
@@ -282,5 +292,22 @@ func TestFcgi(t *testing.T) {
         if body != test.expected {
             t.Fatalf("Fcgi exected %q got %q", test.expected, body)
         }
+    }
+}
+
+
+func TestFcgiChucks(t *testing.T) {
+    //split up an fcgi request
+    bodychunks := []string{`a=12&b=`, strings.Repeat("1234567890", 200)}
+
+    req := buildTestFcgiRequest("POST", "/post/echoparam/b", bodychunks, make(map[string]string))
+    var output bytes.Buffer
+    nb := tcpProxy{input: req, output: &output}
+    handleFcgiConnection(&nb)
+    contents := getFcgiOutput(&output).String()
+    body := contents[strings.Index(contents, "\r\n\r\n")+4:]
+
+    if body != strings.Repeat("1234567890", 200) {
+        t.Fatalf("Fcgi chunks test failed")
     }
 }

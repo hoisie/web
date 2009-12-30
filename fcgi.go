@@ -203,9 +203,8 @@ func readFcgiParamSize(data []byte, index int) (int, int) {
 
 }
 
-func readFcgiParams(data []byte) map[string]string {
-    var params = make(map[string]string)
-
+//read the fcgi parameters contained in data, and store them in storage
+func readFcgiParams(data []byte, storage map[string]string) {
     for idx := 0; len(data) > idx; {
         keySize, shift := readFcgiParamSize(data, idx)
         idx += shift
@@ -215,10 +214,8 @@ func readFcgiParams(data []byte) map[string]string {
         idx += keySize
         val := data[idx : idx+valSize]
         idx += valSize
-        params[string(key)] = string(val)
+        storage[string(key)] = string(val)
     }
-
-    return params
 }
 
 func buildRequest(headers map[string]string) *Request {
@@ -260,6 +257,7 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
     var req *Request
     var fc *fcgiConn
     var body bytes.Buffer
+    headers := map[string]string{}
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
@@ -282,15 +280,21 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
         switch h.Type {
         case FcgiBeginRequest:
             fc = &fcgiConn{h.RequestId, fd, make(map[string]string), false}
+
         case FcgiParams:
             if h.ContentLength > 0 {
-                params := readFcgiParams(content)
-                req = buildRequest(params)
+                readFcgiParams(content, headers)
+            } else if h.ContentLength == 0 {
+                req = buildRequest(headers)
             }
         case FcgiStdin:
             if h.ContentLength > 0 {
                 body.Write(content)
             } else if h.ContentLength == 0 {
+                if req == nil {
+                    log.Stderrf("Invalid fcgi request params\n")
+                    return
+                }
                 req.Body = &body
                 routeHandler(req, fc)
                 fc.complete()

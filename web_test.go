@@ -62,11 +62,14 @@ var tests = []Test{
     Test{"GET", "/echo/hello", "", "hello"},
     Test{"POST", "/post/echo/hello", "", "hello"},
     Test{"POST", "/post/echoparam/a", "a=hello", "hello"},
+    //long url
+    Test{"GET", "/echo/" + strings.Repeat("0123456789", 100), "", strings.Repeat("0123456789", 100)},
 }
 
 //initialize the routes
 func init() {
     Get("/", func() string { return "index" })
+    Get("/echo/(.*)", func(s string) string { return s })
     Get("/echo/(.*)", func(s string) string { return s })
     Post("/post/echo/(.*)", func(s string) string { return s })
     Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Form[name][0] })
@@ -187,8 +190,14 @@ func buildFcgiKeyValue(key string, val string) []byte {
             B   uint8
         }{uint8(len(key)), uint8(len(val))}
         binary.Write(&buf, binary.BigEndian, data)
-    }
+    } else if len(key) <= 127 && len(val) > 127 {
+        data := struct {
+            A   uint8
+            B   uint32
+        }{uint8(len(key)), uint32(len(val)) | 1<<31}
 
+        binary.Write(&buf, binary.BigEndian, data)
+    }
     buf.Write(strings.Bytes(key))
     buf.Write(strings.Bytes(val))
 

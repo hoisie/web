@@ -184,26 +184,33 @@ func (conn *fcgiConn) complete() {
 
 func (conn *fcgiConn) Close() {}
 
+func readFcgiParamSize(data []byte, index int) (int, int) {
+
+    var size int
+    var shift = 0
+
+    if data[index]>>7 == 0 {
+        size = int(data[index])
+        shift = 1
+    } else {
+        var s uint32
+        binary.Read(bytes.NewBuffer(data[index:index+4]), binary.BigEndian, &s)
+        s ^= 1 << 31
+        size = int(s)
+        shift = 4
+    }
+    return size, shift
+
+}
+
 func readFcgiParams(data []byte) map[string]string {
     var params = make(map[string]string)
 
     for idx := 0; len(data) > idx; {
-        var keySize int = int(data[idx])
-        if keySize>>7 == 0 {
-            idx += 1
-        } else {
-            binary.Read(bytes.NewBuffer(data[idx:idx+4]), binary.BigEndian, &keySize)
-            idx += 4
-        }
-
-        var valSize int = int(data[idx])
-        if valSize>>7 == 0 {
-            idx += 1
-        } else {
-            binary.Read(bytes.NewBuffer(data[idx:idx+4]), binary.BigEndian, &valSize)
-            idx += 4
-        }
-
+        keySize, shift := readFcgiParamSize(data, idx)
+        idx += shift
+        valSize, shift := readFcgiParamSize(data, idx)
+        idx += shift
         key := data[idx : idx+keySize]
         idx += keySize
         val := data[idx : idx+valSize]

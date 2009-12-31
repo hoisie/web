@@ -1,0 +1,3 @@
+[submodule "gostache"]
+	path = gostache
+	url = git://github.com/hoisie/gostache.git

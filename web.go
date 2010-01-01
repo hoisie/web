@@ -30,17 +30,15 @@ type Context struct {
     Conn
 }
 
-func (ctx *Context) Error(status int, body string) {
+func (ctx *Context) Abort(status int, body string) {
     //send an error
 }
 
 var contextType reflect.Type
-var templateDir string
 var staticDir string
 
 func init() {
     contextType = reflect.Typeof(Context{})
-    SetTemplateDir("templates")
     SetStaticDir("static")
 }
 
@@ -181,6 +179,7 @@ func routeHandler(req *Request, conn Conn) {
     error(conn, 404, "Page not found")
 }
 
+//runs the web application and serves http requests
 func Run(addr string) {
     http.Handle("/", http.HandlerFunc(httpHandler))
 
@@ -191,24 +190,28 @@ func Run(addr string) {
     }
 }
 
+//runs the web application and serves scgi requests
 func RunScgi(addr string) {
     log.Stdoutf("web.go serving scgi %s", addr)
     listenAndServeScgi(addr)
 }
 
+//runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
     log.Stdoutf("web.go serving fcgi %s", addr)
     listenAndServeFcgi(addr)
 }
 
+//Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }
 
+//Adds a handler for the 'POST' http method.
 func Post(route string, handler interface{}) { addRoute(route, "POST", handler) }
 
-func Head(route string, handler interface{}) { addRoute(route, "HEAD", handler) }
-
+//Adds a handler for the 'PUT' http method.
 func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
 
+//Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
 }
@@ -243,6 +246,8 @@ func (path dirError) String() string { return "Failed to set directory " + strin
 
 func getCwd() string { return os.Getenv("PWD") }
 
+//changes the location of the static directory. by default, it's under the 'static' folder
+//of the directory containing the web application
 func SetStaticDir(dir string) os.Error {
     cwd := getCwd()
     sd := path.Join(cwd, dir)
@@ -252,16 +257,6 @@ func SetStaticDir(dir string) os.Error {
     }
     staticDir = sd
 
-    return nil
-}
-
-func SetTemplateDir(dir string) os.Error {
-    cwd := getCwd()
-    td := path.Join(cwd, dir)
-    if !dirExists(td) {
-        return dirError(td)
-    }
-    templateDir = td
     return nil
 }
 

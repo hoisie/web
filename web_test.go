@@ -227,7 +227,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     }
 
     // add the begin request
-    req.Write(newFcgiRecord(FcgiBeginRequest, 0, make([]byte, 8)))
+    req.Write(newFcgiRecord(fcgiBeginRequest, 0, make([]byte, 8)))
 
     var buf bytes.Buffer
     for k, v := range (fcgiHeaders) {
@@ -236,20 +236,20 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     }
 
     //add the params record
-    req.Write(newFcgiRecord(FcgiParams, 0, buf.Bytes()))
+    req.Write(newFcgiRecord(fcgiParams, 0, buf.Bytes()))
 
     //add the end-of-params record
-    req.Write(newFcgiRecord(FcgiParams, 0, []byte{}))
+    req.Write(newFcgiRecord(fcgiParams, 0, []byte{}))
 
     //send the body
     for _, s := range (bodychunks) {
         if len(s) > 0 {
-            req.Write(newFcgiRecord(FcgiStdin, 0, strings.Bytes(s)))
+            req.Write(newFcgiRecord(fcgiStdin, 0, strings.Bytes(s)))
         }
     }
 
     //add the end-of-stdin record
-    req.Write(newFcgiRecord(FcgiStdin, 0, []byte{}))
+    req.Write(newFcgiRecord(fcgiStdin, 0, []byte{}))
 
     return &req
 }
@@ -272,7 +272,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
             br.Read(padding)
         }
 
-        if h.Type == FcgiStdout {
+        if h.Type == fcgiStdout {
             output.Write(content)
         }
     }

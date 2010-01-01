@@ -45,7 +45,7 @@ func serveFile(ctx *Context, name string) {
     f, err := os.Open(name, os.O_RDONLY, 0)
 
     if err != nil {
-        ctx.Error(404, "Invalid file")
+        ctx.Abort(404, "Invalid file")
         return
     }
 

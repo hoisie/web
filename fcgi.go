@@ -13,25 +13,25 @@ import (
 )
 
 const (
-    FcgiBeginRequest = iota + 1
-    FcgiAbortRequest
-    FcgiEndRequest
-    FcgiParams
-    FcgiStdin
-    FcgiStdout
-    FcgiStderr
-    FcgiData
-    FcgiGetValues
-    FcgiGetValuesResult
-    FcgiUnknownType
-    FcgiMaxType = FcgiUnknownType
+    fcgiBeginRequest = iota + 1
+    fcgiAbortRequest
+    fcgiEndRequest
+    fcgiParams
+    fcgiStdin
+    fcgiStdout
+    fcgiStderr
+    fcgiData
+    fcgiGetValues
+    fcgiGetValuesResult
+    fcgiUnknownType
+    fcgiMaxType = fcgiUnknownType
 )
 
 const (
-    FcgiRequestComplete = iota
-    FcgiCantMpxConn
-    FcgiOverloaded
-    FcgiUnknownRole
+    fcgiRequestComplete = iota
+    fcgiCantMpxConn
+    fcgiOverloaded
+    fcgiUnknownRole
 )
 
 type fcgiHeader struct {
@@ -76,13 +76,13 @@ func newFcgiRecord(typ int, requestId int, data []byte) []byte {
     return record.Bytes()
 }
 
-type fcgiEndRequest struct {
+type fcgiEndReq struct {
     appStatus      uint32
     protocolStatus uint8
     reserved       [3]uint8
 }
 
-func (er fcgiEndRequest) bytes() []byte {
+func (er fcgiEndReq) bytes() []byte {
     buf := make([]byte, 8)
     binary.BigEndian.PutUint32(buf, er.appStatus)
     buf[4] = er.protocolStatus
@@ -102,7 +102,7 @@ func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
     padding := make([]byte, uint8(-l&7))
     hdr := fcgiHeader{
         Version: 1,
-        Type: FcgiStdout,
+        Type: fcgiStdout,
         RequestId: conn.requestId,
         ContentLength: uint16(l),
         PaddingLength: uint8(len(padding)),
@@ -167,12 +167,12 @@ func (conn *fcgiConn) SetHeader(hdr string, val string) {
 }
 
 func (conn *fcgiConn) complete() {
-    content := fcgiEndRequest{appStatus: 200, protocolStatus: FcgiRequestComplete}.bytes()
+    content := fcgiEndReq{appStatus: 200, protocolStatus: fcgiRequestComplete}.bytes()
     l := len(content)
 
     hdr := fcgiHeader{
         Version: 1,
-        Type: FcgiEndRequest,
+        Type: fcgiEndRequest,
         RequestId: uint16(conn.requestId),
         ContentLength: uint16(l),
         PaddingLength: 0,
@@ -278,16 +278,16 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
         }
 
         switch h.Type {
-        case FcgiBeginRequest:
+        case fcgiBeginRequest:
             fc = &fcgiConn{h.RequestId, fd, make(map[string]string), false}
 
-        case FcgiParams:
+        case fcgiParams:
             if h.ContentLength > 0 {
                 readFcgiParams(content, headers)
             } else if h.ContentLength == 0 {
                 req = buildRequest(headers)
             }
-        case FcgiStdin:
+        case fcgiStdin:
             if h.ContentLength > 0 {
                 body.Write(content)
             } else if h.ContentLength == 0 {
@@ -299,11 +299,11 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
                 routeHandler(req, fc)
                 fc.complete()
             }
-        case FcgiData:
+        case fcgiData:
             if h.ContentLength > 0 {
                 body.Write(content)
             }
-        case FcgiAbortRequest:
+        case fcgiAbortRequest:
         }
     }
 }

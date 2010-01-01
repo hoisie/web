@@ -3,14 +3,11 @@ package web
 import (
     "bytes"
     "http"
-    "io/ioutil"
     "log"
     "os"
     "path"
     "reflect"
     "regexp"
-    "strings"
-    "template"
 )
 
 type Request http.Request
@@ -182,41 +179,6 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     error(conn, 404, "Page not found")
-}
-
-func render(tmplString string, context interface{}) (string, os.Error) {
-
-    var tmpl *template.Template
-    var err os.Error
-
-    if tmpl, err = template.Parse(tmplString, nil); err != nil {
-        return "", err
-    }
-
-    var buf bytes.Buffer
-
-    tmpl.Execute(context, &buf)
-    return buf.String(), nil
-}
-
-
-func Render(filename string, context interface{}) (string, os.Error) {
-    var templateBytes []uint8
-    var err os.Error
-
-    if !strings.HasPrefix(filename, "/") {
-        filename = path.Join(templateDir, filename)
-    }
-
-    if templateBytes, err = ioutil.ReadFile(filename); err != nil {
-        return "", err
-    }
-
-    return render(string(templateBytes), context)
-}
-
-func RenderString(tmplString string, context interface{}) (string, os.Error) {
-    return render(tmplString, context)
 }
 
 func Run(addr string) {

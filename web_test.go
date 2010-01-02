@@ -19,7 +19,7 @@ type connProxy struct {
 
 func (c *connProxy) StartResponse(status int) { c.status = status }
 
-func (c *connProxy) SetHeader(hdr string, val string) {
+func (c *connProxy) SetHeader(hdr string, val string, unique bool) {
     c.headers[hdr] = val
 }
 
@@ -72,7 +72,7 @@ func init() {
     Get("/echo/(.*)", func(s string) string { return s })
     Get("/echo/(.*)", func(s string) string { return s })
     Post("/post/echo/(.*)", func(s string) string { return s })
-    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Form[name][0] })
+    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name][0] })
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {
@@ -95,7 +95,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
         Proto: proto,
         Host: host,
         UserAgent: useragent,
-        Header: headers,
+        Headers: headers,
         Body: bytes.NewBufferString(body),
     }
 

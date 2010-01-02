@@ -2,24 +2,19 @@ package web
 
 import (
     "bytes"
+    "fmt"
     "http"
     "log"
     "os"
     "path"
     "reflect"
     "regexp"
+    "time"
 )
-
-type Request http.Request
-
-func (r *Request) ParseForm() (err os.Error) {
-    req := (*http.Request)(r)
-    return req.ParseForm()
-}
 
 type Conn interface {
     StartResponse(status int)
-    SetHeader(hdr string, val string)
+    SetHeader(hdr string, val string, unique bool)
     Write(data []byte) (n int, err os.Error)
     WriteString(content string)
     Close()
@@ -32,6 +27,20 @@ type Context struct {
 
 func (ctx *Context) Abort(status int, body string) {
     //send an error
+}
+
+//Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+func (ctx *Context) SetCookie(name string, value string, duration int64) {
+	if duration == 0 {
+		//do some really long time
+	}
+	
+  	utctime := time.UTC();
+ 	utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
+  	expires := utc1.RFC1123()
+  	expires = expires[0:len(expires) - 3]+"GMT"
+  	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires);
+  	ctx.Conn.SetHeader("Set-Cookie", cookie, false)
 }
 
 var contextType reflect.Type
@@ -67,7 +76,9 @@ type httpConn struct {
 
 func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 
-func (c *httpConn) SetHeader(hdr string, val string) {
+func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
+	//right now unique can't be implemented through the http package.
+	//see issue 488
     c.conn.SetHeader(hdr, val)
 }
 
@@ -93,7 +104,10 @@ func (c *httpConn) Close() {
 
 func httpHandler(c *http.Conn, req *http.Request) {
     conn := httpConn{c}
-    routeHandler((*Request)(req), &conn)
+    
+    wreq := newRequest( req );
+    
+    routeHandler(wreq, &conn)
 }
 
 func error(conn Conn, code int, body string) {
@@ -112,12 +126,17 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     //parse the form data (if it exists)
-    perr := req.ParseForm()
+    perr := req.ParseParams()
     if perr != nil {
         log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
-    ctx := Context{req, conn}
+    perr = req.ParseCookies()
+    if perr != nil {
+        log.Stderrf("Failed to parse cookies %q", perr.String())
+    }
+	
+    ctx := Context{ req, conn }
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -127,7 +146,8 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     //set default encoding
-    conn.SetHeader("Content-Type", "text/html; charset=utf-8")
+    conn.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    conn.SetHeader("Server", "web.go", true)
 
     for cr, route := range routes {
         if !cr.MatchString(requestPath) {

@@ -3,7 +3,6 @@ package web
 import (
     "bytes"
     "fmt"
-    "http"
     "io"
     "log"
     "net"
@@ -13,7 +12,7 @@ import (
 
 type scgiConn struct {
     fd           io.ReadWriteCloser
-    headers      map[string]string
+    headers      map[string][]string
     wroteHeaders bool
 }
 
@@ -24,8 +23,21 @@ func (conn *scgiConn) StartResponse(status int) {
     conn.fd.Write(buf.Bytes())
 }
 
-func (conn *scgiConn) SetHeader(hdr string, val string) {
-    conn.headers[hdr] = val
+func (conn *scgiConn) SetHeader(hdr string, val string, unique bool) {
+	if _,contains := conn.headers[hdr]; ! contains {
+		conn.headers[hdr] = []string{val}
+		return
+	}
+	
+	if unique {
+		//just overwrite the first value
+		conn.headers[hdr][0] = val;
+	} else {
+		newHeaders := make ([]string, len(conn.headers) + 1)
+		copy (newHeaders, conn.headers[hdr])
+		newHeaders[len(newHeaders)-1] = val;
+		conn.headers[hdr] = newHeaders
+	}
 }
 
 func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
@@ -34,8 +46,11 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
         conn.wroteHeaders = true
 
         for k, v := range conn.headers {
-            buf.WriteString(k + ": " + v + "\r\n")
+        	for _,i := range v {
+            	buf.WriteString(k + ": " + i + "\r\n")
+            }
         }
+        
         buf.WriteString("\r\n")
         conn.fd.Write(buf.Bytes())
     }
@@ -50,7 +65,7 @@ func (conn *scgiConn) WriteString(data string) {
 
 func (conn *scgiConn) Close() { conn.fd.Close() }
 
-func readScgiRequest(buf *bytes.Buffer) Request {
+func readScgiRequest(buf *bytes.Buffer) *Request {
     headers := make(map[string]string)
 
     content := buf.Bytes()
@@ -65,36 +80,7 @@ func readScgiRequest(buf *bytes.Buffer) Request {
     var body bytes.Buffer
     body.Write(fields[len(fields)-1][1:])
 
-    var httpheader = make(map[string]string)
-
-    method, _ := headers["REQUEST_METHOD"]
-    host, _ := headers["HTTP_HOST"]
-    path, _ := headers["REQUEST_URI"]
-    port, _ := headers["SERVER_PORT"]
-    proto, _ := headers["SERVER_PROTOCOL"]
-    rawurl := "http://" + host + ":" + port + path
-    url, _ := http.ParseURL(rawurl)
-    useragent, _ := headers["USER_AGENT"]
-
-    if method == "POST" {
-        if ctype, ok := headers["CONTENT_TYPE"]; ok {
-            httpheader["Content-Type"] = ctype
-        }
-
-        if clength, ok := headers["CONTENT_LENGTH"]; ok {
-            httpheader["Content-Length"] = clength
-        }
-    }
-
-    req := Request{Method: method,
-        RawURL: rawurl,
-        URL: url,
-        Proto: proto,
-        Host: host,
-        UserAgent: useragent,
-        Body: &body,
-        Header: httpheader,
-    }
+	req := newRequestCgi( headers, &body )
 
     return req
 }
@@ -124,8 +110,8 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
 
     req := readScgiRequest(&buf)
 
-    sc := scgiConn{fd, make(map[string]string), false}
-    routeHandler(&req, &sc)
+    sc := scgiConn{fd, make(map[string][]string), false}
+    routeHandler(req, &sc)
     fd.Close()
 }
 

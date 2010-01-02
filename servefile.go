@@ -53,16 +53,16 @@ func serveFile(ctx *Context, name string) {
     ext := path.Ext(name)
 
     if ctype, ok := contentByExt[ext]; ok {
-        ctx.Conn.SetHeader("Content-Type", ctype)
+        ctx.Conn.SetHeader("Content-Type", ctype, true)
     } else {
         // read first chunk to decide between utf-8 text and binary
         var buf [1024]byte
         n, _ := io.ReadFull(f, &buf)
         b := buf[0:n]
         if isText(b) {
-            ctx.Conn.SetHeader("Content-Type", "text-plain; charset=utf-8")
+            ctx.Conn.SetHeader("Content-Type", "text-plain; charset=utf-8", true)
         } else {
-            ctx.Conn.SetHeader("Content-Type", "application/octet-stream") // generic binary
+            ctx.Conn.SetHeader("Content-Type", "application/octet-stream", true) // generic binary
         }
         ctx.Conn.Write(b)
     }

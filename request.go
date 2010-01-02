@@ -1,30 +1,30 @@
 package web
 
 import (
-	"container/vector"
-	"fmt"
-	"http"
-	"io"
-	"io/ioutil"
-	"os"
-	"strings"
+    "container/vector"
+    "fmt"
+    "http"
+    "io"
+    "io/ioutil"
+    "os"
+    "strings"
 )
 
 type Request struct {
-    Method     string // GET, POST, PUT, etc.
-    RawURL     string // The raw URL given in the request.
-    URL        *http.URL   // Parsed URL.
-    Proto      string // "HTTP/1.0"
-    ProtoMajor int    // 1
-    ProtoMinor int    // 0
-    Headers map[string]string
-    Body io.Reader
-    Close bool
-    Host string
-    Referer string
-    UserAgent string
-    Params map[string][]string
-    Cookies map[string]string
+    Method     string    // GET, POST, PUT, etc.
+    RawURL     string    // The raw URL given in the request.
+    URL        *http.URL // Parsed URL.
+    Proto      string    // "HTTP/1.0"
+    ProtoMajor int       // 1
+    ProtoMinor int       // 0
+    Headers    map[string]string
+    Body       io.Reader
+    Close      bool
+    Host       string
+    Referer    string
+    UserAgent  string
+    Params     map[string][]string
+    Cookies    map[string]string
 }
 
 type badStringError struct {
@@ -34,29 +34,29 @@ type badStringError struct {
 
 func (e *badStringError) String() string { return fmt.Sprintf("%s %q", e.what, e.str) }
 
-func newRequest( hr *http.Request ) *Request {
-	req := Request {
-		Method: hr.Method,
-		RawURL: hr.RawURL, 
-		URL: 	hr.URL, 
-		Proto: 	hr.Proto, 
-		ProtoMajor: hr.ProtoMajor, 
-		ProtoMinor: hr.ProtoMinor,
-		Headers:	hr.Header,
-		Body:		hr.Body,
-		Close:		hr.Close,
-		Host:		hr.Host,
-		Referer:	hr.Referer,
-		UserAgent:	hr.UserAgent,
-		Params:		hr.Form,
-		}
-	return &req;
+func newRequest(hr *http.Request) *Request {
+    req := Request{
+        Method: hr.Method,
+        RawURL: hr.RawURL,
+        URL: hr.URL,
+        Proto: hr.Proto,
+        ProtoMajor: hr.ProtoMajor,
+        ProtoMinor: hr.ProtoMinor,
+        Headers: hr.Header,
+        Body: hr.Body,
+        Close: hr.Close,
+        Host: hr.Host,
+        Referer: hr.Referer,
+        UserAgent: hr.UserAgent,
+        Params: hr.Form,
+    }
+    return &req
 }
 
-func newRequestCgi( headers map[string]string, body io.Reader ) *Request {
+func newRequestCgi(headers map[string]string, body io.Reader) *Request {
 
-	var httpheader = make(map[string]string)
-	
+    var httpheader = make(map[string]string)
+
     method, _ := headers["REQUEST_METHOD"]
     host, _ := headers["HTTP_HOST"]
     path, _ := headers["REQUEST_URI"]
@@ -64,8 +64,8 @@ func newRequestCgi( headers map[string]string, body io.Reader ) *Request {
     proto, _ := headers["SERVER_PROTOCOL"]
     rawurl := "http://" + host + ":" + port + path
     url, _ := http.ParseURL(rawurl)
-    useragent, _ := headers["USER_AGENT"]	
-    
+    useragent, _ := headers["USER_AGENT"]
+
     if method == "POST" {
         if ctype, ok := headers["CONTENT_TYPE"]; ok {
             httpheader["Content-Type"] = ctype
@@ -75,10 +75,9 @@ func newRequestCgi( headers map[string]string, body io.Reader ) *Request {
             httpheader["Content-Length"] = clength
         }
     }
-    
 
     req := Request{
-    	Method: method,
+        Method: method,
         RawURL: rawurl,
         URL: url,
         Proto: proto,
@@ -96,7 +95,7 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
     for _, kv := range strings.Split(query, "&", 0) {
         kvPair := strings.Split(kv, "=", 2)
 
-		var key, value string
+        var key, value string
         var e os.Error
         key, e = http.URLUnescape(kvPair[0])
         if e == nil && len(kvPair) > 1 {
@@ -106,7 +105,7 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
             err = e
         }
 
-		vec, ok := data[key]
+        vec, ok := data[key]
         if !ok {
             vec = new(vector.StringVector)
             data[key] = vec
@@ -114,11 +113,11 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
         vec.Push(value)
     }
 
-	for k, vec := range data {
+    for k, vec := range data {
         m[k] = vec.Data()
     }
 
-	return
+    return
 }
 
 // ParseForm parses the request body as a form for POST requests, or the raw query for GET requests.
@@ -129,7 +128,7 @@ func (r *Request) ParseParams() (err os.Error) {
     }
     r.Params = make(map[string][]string)
 
-	var query string
+    var query string
     switch r.Method {
     case "GET":
         query = r.URL.RawQuery
@@ -154,23 +153,23 @@ func (r *Request) ParseParams() (err os.Error) {
 }
 
 func (r *Request) ParseCookies() (err os.Error) {
-	if r.Cookies != nil {
-		return;
-	}
-	
-	r.Cookies = make(map[string]string)
-	
-	for k,v := range( r.Headers ) {
-		if k == "Cookie" {
-			cookies := strings.Split(v, ";",0);
-			for _,cookie := range(cookies) {
-				cookie = strings.TrimSpace(cookie);
-				parts := strings.Split(cookie,"=",0);
-				println("has a cookie", parts[0], parts[1]);
-				r.Cookies[parts[0]] = parts[1]
-			}
-		}
-	}
-	
-	return nil
+    if r.Cookies != nil {
+        return
+    }
+
+    r.Cookies = make(map[string]string)
+
+    for k, v := range (r.Headers) {
+        if k == "Cookie" {
+            cookies := strings.Split(v, ";", 0)
+            for _, cookie := range (cookies) {
+                cookie = strings.TrimSpace(cookie)
+                parts := strings.Split(cookie, "=", 0)
+                println("has a cookie", parts[0], parts[1])
+                r.Cookies[parts[0]] = parts[1]
+            }
+        }
+    }
+
+    return nil
 }

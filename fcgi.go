@@ -133,8 +133,8 @@ func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
         for k, v := range conn.headers {
-        	for _,i := range v {
-            	buf.WriteString(k + ": " + i + "\r\n")
+            for _, i := range v {
+                buf.WriteString(k + ": " + i + "\r\n")
             }
         }
         buf.WriteString("\r\n")
@@ -164,20 +164,20 @@ func (conn *fcgiConn) StartResponse(status int) {
 }
 
 func (conn *fcgiConn) SetHeader(hdr string, val string, unique bool) {
-	if _,contains := conn.headers[hdr]; ! contains {
-		conn.headers[hdr] = []string{val}
-		return
-	}
-	
-	if unique {
-		//just overwrite the first value
-		conn.headers[hdr][0] = val;
-	} else {
-		newHeaders := make ([]string, len(conn.headers) + 1)
-		copy (newHeaders, conn.headers[hdr])
-		newHeaders[len(newHeaders)-1] = val;
-		conn.headers[hdr] = newHeaders
-	}
+    if _, contains := conn.headers[hdr]; !contains {
+        conn.headers[hdr] = []string{val}
+        return
+    }
+
+    if unique {
+        //just overwrite the first value
+        conn.headers[hdr][0] = val
+    } else {
+        newHeaders := make([]string, len(conn.headers)+1)
+        copy(newHeaders, conn.headers[hdr])
+        newHeaders[len(newHeaders)-1] = val
+        conn.headers[hdr] = newHeaders
+    }
 }
 
 func (conn *fcgiConn) complete() {
@@ -238,7 +238,7 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
     var fc *fcgiConn
     var body bytes.Buffer
     headers := map[string]string{}
-    
+
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
@@ -270,7 +270,7 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
             if h.ContentLength > 0 {
                 body.Write(content)
             } else if h.ContentLength == 0 {
-                req = newRequestCgi( headers, &body )
+                req = newRequestCgi(headers, &body)
                 routeHandler(req, fc)
                 fc.complete()
             }

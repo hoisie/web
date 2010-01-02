@@ -24,20 +24,20 @@ func (conn *scgiConn) StartResponse(status int) {
 }
 
 func (conn *scgiConn) SetHeader(hdr string, val string, unique bool) {
-	if _,contains := conn.headers[hdr]; ! contains {
-		conn.headers[hdr] = []string{val}
-		return
-	}
-	
-	if unique {
-		//just overwrite the first value
-		conn.headers[hdr][0] = val;
-	} else {
-		newHeaders := make ([]string, len(conn.headers) + 1)
-		copy (newHeaders, conn.headers[hdr])
-		newHeaders[len(newHeaders)-1] = val;
-		conn.headers[hdr] = newHeaders
-	}
+    if _, contains := conn.headers[hdr]; !contains {
+        conn.headers[hdr] = []string{val}
+        return
+    }
+
+    if unique {
+        //just overwrite the first value
+        conn.headers[hdr][0] = val
+    } else {
+        newHeaders := make([]string, len(conn.headers)+1)
+        copy(newHeaders, conn.headers[hdr])
+        newHeaders[len(newHeaders)-1] = val
+        conn.headers[hdr] = newHeaders
+    }
 }
 
 func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
@@ -46,11 +46,11 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
         conn.wroteHeaders = true
 
         for k, v := range conn.headers {
-        	for _,i := range v {
-            	buf.WriteString(k + ": " + i + "\r\n")
+            for _, i := range v {
+                buf.WriteString(k + ": " + i + "\r\n")
             }
         }
-        
+
         buf.WriteString("\r\n")
         conn.fd.Write(buf.Bytes())
     }
@@ -80,7 +80,7 @@ func readScgiRequest(buf *bytes.Buffer) *Request {
     var body bytes.Buffer
     body.Write(fields[len(fields)-1][1:])
 
-	req := newRequestCgi( headers, &body )
+    req := newRequestCgi(headers, &body)
 
     return req
 }

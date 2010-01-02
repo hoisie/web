@@ -31,16 +31,16 @@ func (ctx *Context) Abort(status int, body string) {
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, duration int64) {
-	if duration == 0 {
-		//do some really long time
-	}
-	
-  	utctime := time.UTC();
- 	utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
-  	expires := utc1.RFC1123()
-  	expires = expires[0:len(expires) - 3]+"GMT"
-  	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires);
-  	ctx.Conn.SetHeader("Set-Cookie", cookie, false)
+    if duration == 0 {
+        //do some really long time
+    }
+
+    utctime := time.UTC()
+    utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
+    expires := utc1.RFC1123()
+    expires = expires[0:len(expires)-3] + "GMT"
+    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires)
+    ctx.Conn.SetHeader("Set-Cookie", cookie, false)
 }
 
 var contextType reflect.Type
@@ -77,8 +77,8 @@ type httpConn struct {
 func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
-	//right now unique can't be implemented through the http package.
-	//see issue 488
+    //right now unique can't be implemented through the http package.
+    //see issue 488
     c.conn.SetHeader(hdr, val)
 }
 
@@ -104,9 +104,9 @@ func (c *httpConn) Close() {
 
 func httpHandler(c *http.Conn, req *http.Request) {
     conn := httpConn{c}
-    
-    wreq := newRequest( req );
-    
+
+    wreq := newRequest(req)
+
     routeHandler(wreq, &conn)
 }
 
@@ -135,8 +135,8 @@ func routeHandler(req *Request, conn Conn) {
     if perr != nil {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
-	
-    ctx := Context{ req, conn }
+
+    ctx := Context{req, conn}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -188,6 +188,7 @@ func routeHandler(req *Request, conn Conn) {
 
             for _, arg := range match[1:] {
                 args[ai] = reflect.NewValue(arg)
+                ai += 1
             }
             ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
             conn.StartResponse(200)

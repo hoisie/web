@@ -60,6 +60,7 @@ type Test struct {
 var tests = []Test{
     Test{"GET", "/", "", "index"},
     Test{"GET", "/echo/hello", "", "hello"},
+    Test{"GET", "/multiecho/a/b/c/d", "", "abcd"},
     Test{"POST", "/post/echo/hello", "", "hello"},
     Test{"POST", "/post/echoparam/a", "a=hello", "hello"},
     //long url
@@ -70,7 +71,7 @@ var tests = []Test{
 func init() {
     Get("/", func() string { return "index" })
     Get("/echo/(.*)", func(s string) string { return s })
-    Get("/echo/(.*)", func(s string) string { return s })
+    Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
     Post("/post/echo/(.*)", func(s string) string { return s })
     Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name][0] })
 }

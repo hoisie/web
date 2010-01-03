@@ -203,56 +203,54 @@ func routeHandler(req *Request, conn Conn) {
         }
         match := cr.MatchStrings(requestPath)
 
-        if len(match) > 0 {
-            if len(match[0]) != len(requestPath) {
-                continue
-            }
+        if len(match[0]) != len(requestPath) {
+            continue
+        }
 
-            var args vector.Vector
+        var args vector.Vector
 
-            handlerType := route.handler.Type().(*reflect.FuncType)
+        handlerType := route.handler.Type().(*reflect.FuncType)
 
-            //check if the first arg in the handler is a context type
-            if handlerType.NumIn() > 0 {
-                if a0, ok := handlerType.In(0).(*reflect.PtrType); ok {
-                    typ := a0.Elem()
-                    if typ == contextType {
-                        args.Push(reflect.NewValue(&ctx))
-                    }
+        //check if the first arg in the handler is a context type
+        if handlerType.NumIn() > 0 {
+            if a0, ok := handlerType.In(0).(*reflect.PtrType); ok {
+                typ := a0.Elem()
+                if typ == contextType {
+                    args.Push(reflect.NewValue(&ctx))
                 }
             }
+        }
 
-            for _, arg := range match[1:] {
-                args.Push(reflect.NewValue(arg))
-            }
+        for _, arg := range match[1:] {
+            args.Push(reflect.NewValue(arg))
+        }
 
-            if len(args) != handlerType.NumIn() {
-                log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
-                ctx.Abort(500, "Server Error")
-                return
-            }
-
-            valArgs := make([]reflect.Value, len(args))
-            for i, j := range (args) {
-                valArgs[i] = j.(reflect.Value)
-            }
-            ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
-
-            if !ctx.responseStarted {
-                //check if session data is stored
-                if len(s.Data) > 0 {
-                    s.save()
-                    //set the session for half an hour
-                    ctx.SetCookie(sessionKey, s.Id, 1800)
-                }
-
-                conn.StartResponse(200)
-                ctx.responseStarted = true
-                conn.WriteString(ret)
-            }
-
+        if len(args) != handlerType.NumIn() {
+            log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
+            ctx.Abort(500, "Server Error")
             return
         }
+
+        valArgs := make([]reflect.Value, len(args))
+        for i, j := range (args) {
+            valArgs[i] = j.(reflect.Value)
+        }
+        ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
+
+        if !ctx.responseStarted {
+            //check if session data is stored
+            if len(s.Data) > 0 {
+                s.save()
+                //set the session for half an hour
+                ctx.SetCookie(sessionKey, s.Id, 1800)
+            }
+
+            conn.StartResponse(200)
+            ctx.responseStarted = true
+            conn.WriteString(ret)
+        }
+
+        return
     }
 
     ctx.Abort(404, "Page not found")

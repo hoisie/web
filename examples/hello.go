@@ -4,7 +4,7 @@ import (
     "web"
 )
 
-func hello(val string) string { return "hello " + val } 
+func hello(val string) string { return "hello " + val }
 
 func main() {
     web.Get("/(.*)", hello)

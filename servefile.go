@@ -11,6 +11,7 @@ var contentByExt = map[string]string{
     ".css": "text/css",
     ".gif": "image/gif",
     ".html": "text/html; charset=utf-8",
+    ".htm": "text/html; charset=utf-8",
     ".jpg": "image/jpeg",
     ".js": "application/x-javascript",
     ".pdf": "application/pdf",

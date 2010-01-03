@@ -2,8 +2,6 @@
 
 web.go is the simplest way to write web applications in the Go programming language. 
 
-See [www.getwebgo.com](http://www.getwebgo.com) for complete documentation. 
-
 ## Overview
 
 web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra, pylons, or web.py. It is designed to be a lightweight web framework that doesn't impose any scaffolding on the user. Some features include:
@@ -11,8 +9,6 @@ web.go should be familiar to people who've developed websites with higher-level 
 * Routing to url handlers based on regular expressions
 * Support for user sessions
 * Web applications are compiled to native code. This means very fast execution and page render speed ( benchmarks coming soon :)
-
-To use web.go, simply install it and import the "web" package. You then need to map url routes to function handlers using web.Get, web.Post, etc.. Finally, you need to call web.Run with the address of the host. (see the example below)
 
 ## Installation
 

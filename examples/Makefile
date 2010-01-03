@@ -5,7 +5,7 @@ ALL=hello arcchallenge
 all: $(ALL)
 
 clean:
-	rm -rf *.6 $(ALL)
+	rm -rf *.[68] $(ALL)
 
 %: %.go
 	$(GC) $*.go

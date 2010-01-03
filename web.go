@@ -2,11 +2,13 @@ package web
 
 import (
     "bytes"
+    "container/vector"
     "fmt"
     "http"
     "log"
     "os"
     "path"
+    "rand"
     "reflect"
     "regexp"
     "time"
@@ -22,6 +24,7 @@ type Conn interface {
 
 type Context struct {
     *Request
+    Session *session
     Conn
 }
 
@@ -43,8 +46,42 @@ func (ctx *Context) SetCookie(name string, value string, duration int64) {
     ctx.Conn.SetHeader("Set-Cookie", cookie, false)
 }
 
+var sessionMap = make(map[string]*session)
+
+func randomString(length int) string {
+    pop := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw"
+    var res bytes.Buffer
+
+    for i := 0; i < length; i++ {
+        rnd := rand.Intn(len(pop))
+        res.WriteByte(pop[rnd])
+    }
+
+    return res.String()
+}
+
+type session struct {
+    Data map[string]interface{}
+    Id   string
+}
+
+func newSession () *session {
+	s := session {
+		Data : make(map[string]interface{}),
+		Id:	randomString(10),
+	}
+	
+	return &s
+}
+
+func (s *session) save() {
+	sessionMap[s.Id] = s;
+}
+
 var contextType reflect.Type
 var staticDir string
+
+const sessionKey = "wgosession"
 
 func init() {
     contextType = reflect.Typeof(Context{})
@@ -131,12 +168,23 @@ func routeHandler(req *Request, conn Conn) {
         log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
+	//check the cookies for a session id
     perr = req.ParseCookies()
     if perr != nil {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
 
-    ctx := Context{req, conn}
+	s := newSession()
+	
+	for k,v := range( req.Cookies ) {
+		if k == sessionKey {
+			if sess,ok := sessionMap[ v ]; ok {
+				s = sess
+			}
+		}
+	}
+	
+    ctx := Context{req, s, conn}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -150,48 +198,57 @@ func routeHandler(req *Request, conn Conn) {
     conn.SetHeader("Server", "web.go", true)
 
     for cr, route := range routes {
+        if req.Method != route.method {
+            continue
+        }
+
         if !cr.MatchString(requestPath) {
             continue
         }
         match := cr.MatchStrings(requestPath)
+
         if len(match) > 0 {
             if len(match[0]) != len(requestPath) {
                 continue
             }
-            if req.Method != route.method {
-                continue
-            }
-            ai := 0
-            handlerType := route.handler.Type().(*reflect.FuncType)
-            expectedIn := handlerType.NumIn()
-            args := make([]reflect.Value, expectedIn)
 
-            if expectedIn > 0 {
-                a0 := handlerType.In(0)
-                ptyp, ok := a0.(*reflect.PtrType)
-                if ok {
-                    typ := ptyp.Elem()
+			var args vector.Vector;
+
+            handlerType := route.handler.Type().(*reflect.FuncType)
+            
+			//check if the first arg in the handler is a context type
+            if handlerType.NumIn() > 0 {
+                if a0,ok := handlerType.In(0).(*reflect.PtrType); ok {
+                    typ := a0.Elem()
                     if typ == contextType {
-                        args[ai] = reflect.NewValue(&ctx)
-                        ai += 1
-                        expectedIn -= 1
+                        args.Push( reflect.NewValue(&ctx) )
                     }
                 }
             }
 
-            actualIn := len(match) - 1
-            if expectedIn != actualIn {
+            for _, arg := range match[1:] {
+                args.Push( reflect.NewValue(arg) )
+            }
+
+            if len(args) != handlerType.NumIn() {
                 log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
                 error(conn, 500, "Server Error")
                 return
             }
 
-            for _, arg := range match[1:] {
-                args[ai] = reflect.NewValue(arg)
-                ai += 1
-            }
-            ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
+			valArgs := make( []reflect.Value, len(args) );
+			for i,j := range(args) { valArgs[i] = j.(reflect.Value) };
+            ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
+            
+        	//check if session data is stored
+			if len(s.Data) > 0 {
+				s.save()
+				//set the session for half an hour
+				ctx.SetCookie(sessionKey, s.Id, 1800);
+			}
+			
             conn.StartResponse(200)
+            
             conn.WriteString(ret)
             return
         }

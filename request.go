@@ -165,7 +165,6 @@ func (r *Request) ParseCookies() (err os.Error) {
             for _, cookie := range (cookies) {
                 cookie = strings.TrimSpace(cookie)
                 parts := strings.Split(cookie, "=", 0)
-                println("has a cookie", parts[0], parts[1])
                 r.Cookies[parts[0]] = parts[1]
             }
         }

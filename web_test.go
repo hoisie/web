@@ -11,28 +11,43 @@ import (
 )
 
 // this implements the web.Connection interface. It's useful to test routing handlers
-type connProxy struct {
+type bufferedConn struct {
     status  int
-    headers map[string]string
+    headers map[string][]string
     buf     *bytes.Buffer
 }
 
-func (c *connProxy) StartResponse(status int) { c.status = status }
-
-func (c *connProxy) SetHeader(hdr string, val string, unique bool) {
-    c.headers[hdr] = val
+func (c *bufferedConn) StartResponse(status int) {
+    c.status = status
 }
 
-func (c *connProxy) WriteString(content string) {
+func (conn *bufferedConn) SetHeader(hdr string, val string, unique bool) {
+    if _, contains := conn.headers[hdr]; !contains {
+        conn.headers[hdr] = []string{val}
+        return
+    }
+
+    if unique {
+        //just overwrite the first value
+        conn.headers[hdr][0] = val
+    } else {
+        newHeaders := make([]string, len(conn.headers)+1)
+        copy(newHeaders, conn.headers[hdr])
+        newHeaders[len(newHeaders)-1] = val
+        conn.headers[hdr] = newHeaders
+    }
+}
+
+func (c *bufferedConn) WriteString(content string) {
     c.buf.WriteString(content)
 }
 
-func (c *connProxy) Write(content []byte) (n int, err os.Error) {
+func (c *bufferedConn) Write(content []byte) (n int, err os.Error) {
     c.buf.Write(content)
     return n, nil
 }
 
-func (c *connProxy) Close() {}
+func (c *bufferedConn) Close() {}
 
 //this implements io.ReadWriteCloser, which means it can be passed around as a tcp connection
 type tcpProxy struct {
@@ -74,6 +89,14 @@ func init() {
     Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
     Post("/post/echo/(.*)", func(s string) string { return s })
     Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name][0] })
+
+    Post("/session/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
+        ctx.Session.Data[name] = val
+        return ""
+    })
+
+    Get("/session/get/(.*)", func(ctx *Context, name string) string { return ctx.Session.Data[name].(string) })
+
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {
@@ -84,6 +107,10 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
     proto := "HTTP/1.1"
     useragent := "web.go test framework"
+
+    if headers == nil {
+        headers = map[string]string{}
+    }
 
     if method == "POST" {
         headers["Content-Length"] = fmt.Sprintf("%d", len(body))
@@ -107,7 +134,7 @@ func TestRouting(t *testing.T) {
     for _, test := range (tests) {
         req := buildTestRequest(test.method, test.path, test.body, make(map[string]string))
         var buf bytes.Buffer
-        c := connProxy{status: 0, headers: make(map[string]string), buf: &buf}
+        c := bufferedConn{status: 0, headers: make(map[string][]string), buf: &buf}
         routeHandler(req, &c)
         body := buf.String()
 
@@ -310,5 +337,31 @@ func TestFcgiChucks(t *testing.T) {
 
     if body != strings.Repeat("1234567890", 200) {
         t.Fatalf("Fcgi chunks test failed")
+    }
+}
+
+func TestSession(t *testing.T) {
+
+	//set a=1 i the session
+    setreq := buildTestRequest("POST", "/session/set/a/1", "", nil)
+    
+	var b1 bytes.Buffer;
+    c1 := bufferedConn{headers: make(map[string][]string), buf: &b1}
+    routeHandler(setreq, &c1)
+    
+    cookie := c1.headers["Set-Cookie"][0]
+    if strings.HasPrefix(cookie, "wgosession=") {
+    	i := strings.Index(cookie, ";");
+    	cookie = cookie[0:i]
+    }
+    
+    //pass the session cookie
+    getreq := buildTestRequest("GET", "/session/get/a", "", map[string]string { "Cookie": cookie} )
+    var b2 bytes.Buffer
+    c2 := bufferedConn{headers: make(map[string][]string), buf: &b2}
+    routeHandler(getreq, &c2)
+    body := b2.String()
+   	if body != "1" {
+        t.Fatalf("Session test failed")
     }
 }

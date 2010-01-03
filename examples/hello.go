@@ -1,11 +1,10 @@
 package main
 
 import (
-    "fmt"
     "web"
 )
 
-func hello(val string) string { return fmt.Sprintf("hello %s", val) }
+func hello(val string) string { return "hello " + val } 
 
 func main() {
     web.Get("/(.*)", hello)

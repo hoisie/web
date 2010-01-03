@@ -5,7 +5,6 @@ import (
     "bufio"
     "encoding/binary"
     "fmt"
-    "http"
     "io"
     "log"
     "net"
@@ -13,25 +12,25 @@ import (
 )
 
 const (
-    FcgiBeginRequest = iota + 1
-    FcgiAbortRequest
-    FcgiEndRequest
-    FcgiParams
-    FcgiStdin
-    FcgiStdout
-    FcgiStderr
-    FcgiData
-    FcgiGetValues
-    FcgiGetValuesResult
-    FcgiUnknownType
-    FcgiMaxType = FcgiUnknownType
+    fcgiBeginRequest = iota + 1
+    fcgiAbortRequest
+    fcgiEndRequest
+    fcgiParams
+    fcgiStdin
+    fcgiStdout
+    fcgiStderr
+    fcgiData
+    fcgiGetValues
+    fcgiGetValuesResult
+    fcgiUnknownType
+    fcgiMaxType = fcgiUnknownType
 )
 
 const (
-    FcgiRequestComplete = iota
-    FcgiCantMpxConn
-    FcgiOverloaded
-    FcgiUnknownRole
+    fcgiRequestComplete = iota
+    fcgiCantMpxConn
+    fcgiOverloaded
+    fcgiUnknownRole
 )
 
 type fcgiHeader struct {
@@ -76,13 +75,13 @@ func newFcgiRecord(typ int, requestId int, data []byte) []byte {
     return record.Bytes()
 }
 
-type fcgiEndRequest struct {
+type fcgiEndReq struct {
     appStatus      uint32
     protocolStatus uint8
     reserved       [3]uint8
 }
 
-func (er fcgiEndRequest) bytes() []byte {
+func (er fcgiEndReq) bytes() []byte {
     buf := make([]byte, 8)
     binary.BigEndian.PutUint32(buf, er.appStatus)
     buf[4] = er.protocolStatus
@@ -92,7 +91,7 @@ func (er fcgiEndRequest) bytes() []byte {
 type fcgiConn struct {
     requestId    uint16
     fd           io.ReadWriteCloser
-    headers      map[string]string
+    headers      map[string][]string
     wroteHeaders bool
 }
 
@@ -102,7 +101,7 @@ func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
     padding := make([]byte, uint8(-l&7))
     hdr := fcgiHeader{
         Version: 1,
-        Type: FcgiStdout,
+        Type: fcgiStdout,
         RequestId: conn.requestId,
         ContentLength: uint16(l),
         PaddingLength: uint8(len(padding)),
@@ -134,7 +133,9 @@ func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
         for k, v := range conn.headers {
-            buf.WriteString(k + ": " + v + "\r\n")
+            for _, i := range v {
+                buf.WriteString(k + ": " + i + "\r\n")
+            }
         }
         buf.WriteString("\r\n")
         conn.fcgiWrite(buf.Bytes())
@@ -162,17 +163,30 @@ func (conn *fcgiConn) StartResponse(status int) {
     conn.fcgiWrite(buf.Bytes())
 }
 
-func (conn *fcgiConn) SetHeader(hdr string, val string) {
-    conn.headers[hdr] = val
+func (conn *fcgiConn) SetHeader(hdr string, val string, unique bool) {
+    if _, contains := conn.headers[hdr]; !contains {
+        conn.headers[hdr] = []string{val}
+        return
+    }
+
+    if unique {
+        //just overwrite the first value
+        conn.headers[hdr][0] = val
+    } else {
+        newHeaders := make([]string, len(conn.headers)+1)
+        copy(newHeaders, conn.headers[hdr])
+        newHeaders[len(newHeaders)-1] = val
+        conn.headers[hdr] = newHeaders
+    }
 }
 
 func (conn *fcgiConn) complete() {
-    content := fcgiEndRequest{appStatus: 200, protocolStatus: FcgiRequestComplete}.bytes()
+    content := fcgiEndReq{appStatus: 200, protocolStatus: fcgiRequestComplete}.bytes()
     l := len(content)
 
     hdr := fcgiHeader{
         Version: 1,
-        Type: FcgiEndRequest,
+        Type: fcgiEndRequest,
         RequestId: uint16(conn.requestId),
         ContentLength: uint16(l),
         PaddingLength: 0,
@@ -218,46 +232,13 @@ func readFcgiParams(data []byte, storage map[string]string) {
     }
 }
 
-func buildRequest(headers map[string]string) *Request {
-    method, _ := headers["REQUEST_METHOD"]
-    host, _ := headers["HTTP_HOST"]
-    path, _ := headers["REQUEST_URI"]
-    port, _ := headers["SERVER_PORT"]
-    proto, _ := headers["SERVER_PROTOCOL"]
-    rawurl := "http://" + host + ":" + port + path
-
-    url, _ := http.ParseURL(rawurl)
-    useragent, _ := headers["USER_AGENT"]
-
-    httpheader := map[string]string{}
-    if method == "POST" {
-        if ctype, ok := headers["CONTENT_TYPE"]; ok {
-            httpheader["Content-Type"] = ctype
-        }
-
-        if clength, ok := headers["CONTENT_LENGTH"]; ok {
-            httpheader["Content-Length"] = clength
-        }
-    }
-
-    req := Request{Method: method,
-        RawURL: rawurl,
-        URL: url,
-        Proto: proto,
-        Host: host,
-        UserAgent: useragent,
-        Header: httpheader,
-    }
-
-    return &req
-}
-
 func handleFcgiConnection(fd io.ReadWriteCloser) {
     br := bufio.NewReader(fd)
     var req *Request
     var fc *fcgiConn
     var body bytes.Buffer
     headers := map[string]string{}
+
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
@@ -278,32 +259,26 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
         }
 
         switch h.Type {
-        case FcgiBeginRequest:
-            fc = &fcgiConn{h.RequestId, fd, make(map[string]string), false}
+        case fcgiBeginRequest:
+            fc = &fcgiConn{h.RequestId, fd, make(map[string][]string), false}
 
-        case FcgiParams:
+        case fcgiParams:
             if h.ContentLength > 0 {
                 readFcgiParams(content, headers)
-            } else if h.ContentLength == 0 {
-                req = buildRequest(headers)
             }
-        case FcgiStdin:
+        case fcgiStdin:
             if h.ContentLength > 0 {
                 body.Write(content)
             } else if h.ContentLength == 0 {
-                if req == nil {
-                    log.Stderrf("Invalid fcgi request params\n")
-                    return
-                }
-                req.Body = &body
+                req = newRequestCgi(headers, &body)
                 routeHandler(req, fc)
                 fc.complete()
             }
-        case FcgiData:
+        case fcgiData:
             if h.ContentLength > 0 {
                 body.Write(content)
             }
-        case FcgiAbortRequest:
+        case fcgiAbortRequest:
         }
     }
 }

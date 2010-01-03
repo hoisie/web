@@ -2,27 +2,21 @@ package web
 
 import (
     "bytes"
+    "container/vector"
+    "fmt"
     "http"
-    "io/ioutil"
     "log"
     "os"
     "path"
+    "rand"
     "reflect"
     "regexp"
-    "strings"
-    "template"
+    "time"
 )
-
-type Request http.Request
-
-func (r *Request) ParseForm() (err os.Error) {
-    req := (*http.Request)(r)
-    return req.ParseForm()
-}
 
 type Conn interface {
     StartResponse(status int)
-    SetHeader(hdr string, val string)
+    SetHeader(hdr string, val string, unique bool)
     Write(data []byte) (n int, err os.Error)
     WriteString(content string)
     Close()
@@ -30,20 +24,68 @@ type Conn interface {
 
 type Context struct {
     *Request
+    Session *session
     Conn
+    responseStarted bool
 }
 
-func (ctx *Context) Error(status int, body string) {
-    //send an error
+func (ctx *Context) Abort(status int, body string) {
+    ctx.Conn.StartResponse(status)
+    ctx.Conn.WriteString(body)
+    ctx.responseStarted = true
 }
+
+//Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+func (ctx *Context) SetCookie(name string, value string, duration int64) {
+    if duration == 0 {
+        //do some really long time
+    }
+
+    utctime := time.UTC()
+    utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
+    expires := utc1.RFC1123()
+    expires = expires[0:len(expires)-3] + "GMT"
+    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires)
+    ctx.Conn.SetHeader("Set-Cookie", cookie, false)
+}
+
+var sessionMap = make(map[string]*session)
+
+func randomString(length int) string {
+    pop := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    var res bytes.Buffer
+
+    for i := 0; i < length; i++ {
+        rnd := rand.Intn(len(pop))
+        res.WriteByte(pop[rnd])
+    }
+
+    return res.String()
+}
+
+type session struct {
+    Data map[string]interface{}
+    Id   string
+}
+
+func newSession() *session {
+    s := session{
+        Data: make(map[string]interface{}),
+        Id: randomString(10),
+    }
+
+    return &s
+}
+
+func (s *session) save() { sessionMap[s.Id] = s }
 
 var contextType reflect.Type
-var templateDir string
 var staticDir string
+
+const sessionKey = "wgosession"
 
 func init() {
     contextType = reflect.Typeof(Context{})
-    SetTemplateDir("templates")
     SetStaticDir("static")
 }
 
@@ -72,7 +114,9 @@ type httpConn struct {
 
 func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 
-func (c *httpConn) SetHeader(hdr string, val string) {
+func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
+    //right now unique can't be implemented through the http package.
+    //see issue 488
     c.conn.SetHeader(hdr, val)
 }
 
@@ -98,12 +142,10 @@ func (c *httpConn) Close() {
 
 func httpHandler(c *http.Conn, req *http.Request) {
     conn := httpConn{c}
-    routeHandler((*Request)(req), &conn)
-}
 
-func error(conn Conn, code int, body string) {
-    conn.StartResponse(code)
-    conn.WriteString(body)
+    wreq := newRequest(req)
+
+    routeHandler(wreq, &conn)
 }
 
 func routeHandler(req *Request, conn Conn) {
@@ -117,12 +159,28 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     //parse the form data (if it exists)
-    perr := req.ParseForm()
+    perr := req.ParseParams()
     if perr != nil {
         log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
-    ctx := Context{req, conn}
+    //check the cookies for a session id
+    perr = req.ParseCookies()
+    if perr != nil {
+        log.Stderrf("Failed to parse cookies %q", perr.String())
+    }
+
+    s := newSession()
+
+    for k, v := range (req.Cookies) {
+        if k == sessionKey {
+            if sess, ok := sessionMap[v]; ok {
+                s = sess
+            }
+        }
+    }
+
+    ctx := Context{req, s, conn, false}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -132,93 +190,73 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     //set default encoding
-    conn.SetHeader("Content-Type", "text/html; charset=utf-8")
+    conn.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    conn.SetHeader("Server", "web.go", true)
 
     for cr, route := range routes {
+        if req.Method != route.method {
+            continue
+        }
+
         if !cr.MatchString(requestPath) {
             continue
         }
         match := cr.MatchStrings(requestPath)
-        if len(match) > 0 {
-            if len(match[0]) != len(requestPath) {
-                continue
-            }
-            if req.Method != route.method {
-                continue
-            }
-            ai := 0
-            handlerType := route.handler.Type().(*reflect.FuncType)
-            expectedIn := handlerType.NumIn()
-            args := make([]reflect.Value, expectedIn)
 
-            if expectedIn > 0 {
-                a0 := handlerType.In(0)
-                ptyp, ok := a0.(*reflect.PtrType)
-                if ok {
-                    typ := ptyp.Elem()
-                    if typ == contextType {
-                        args[ai] = reflect.NewValue(&ctx)
-                        ai += 1
-                        expectedIn -= 1
-                    }
+        if len(match[0]) != len(requestPath) {
+            continue
+        }
+
+        var args vector.Vector
+
+        handlerType := route.handler.Type().(*reflect.FuncType)
+
+        //check if the first arg in the handler is a context type
+        if handlerType.NumIn() > 0 {
+            if a0, ok := handlerType.In(0).(*reflect.PtrType); ok {
+                typ := a0.Elem()
+                if typ == contextType {
+                    args.Push(reflect.NewValue(&ctx))
                 }
             }
+        }
 
-            actualIn := len(match) - 1
-            if expectedIn != actualIn {
-                log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
-                error(conn, 500, "Server Error")
-                return
-            }
+        for _, arg := range match[1:] {
+            args.Push(reflect.NewValue(arg))
+        }
 
-            for _, arg := range match[1:] {
-                args[ai] = reflect.NewValue(arg)
-            }
-            ret := route.handler.Call(args)[0].(*reflect.StringValue).Get()
-            conn.StartResponse(200)
-            conn.WriteString(ret)
+        if len(args) != handlerType.NumIn() {
+            log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
+            ctx.Abort(500, "Server Error")
             return
         }
+
+        valArgs := make([]reflect.Value, len(args))
+        for i, j := range (args) {
+            valArgs[i] = j.(reflect.Value)
+        }
+        ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
+
+        if !ctx.responseStarted {
+            //check if session data is stored
+            if len(s.Data) > 0 {
+                s.save()
+                //set the session for half an hour
+                ctx.SetCookie(sessionKey, s.Id, 1800)
+            }
+
+            conn.StartResponse(200)
+            ctx.responseStarted = true
+            conn.WriteString(ret)
+        }
+
+        return
     }
 
-    error(conn, 404, "Page not found")
+    ctx.Abort(404, "Page not found")
 }
 
-func render(tmplString string, context interface{}) (string, os.Error) {
-
-    tmpl := template.New(nil)
-    tmpl.SetDelims("{{","}}")
-
-    if err := tmpl.Parse(tmplString); err != nil {
-        return "", err
-    }
-
-    var buf bytes.Buffer
-
-    tmpl.Execute(context, &buf)
-    return buf.String(), nil
-}
-
-
-func Render(filename string, context interface{}) (string, os.Error) {
-    var templateBytes []uint8
-    var err os.Error
-
-    if !strings.HasPrefix(filename, "/") {
-        filename = path.Join(templateDir, filename)
-    }
-
-    if templateBytes, err = ioutil.ReadFile(filename); err != nil {
-        return "", err
-    }
-
-    return render(string(templateBytes), context)
-}
-
-func RenderString(tmplString string, context interface{}) (string, os.Error) {
-    return render(tmplString, context)
-}
-
+//runs the web application and serves http requests
 func Run(addr string) {
     http.Handle("/", http.HandlerFunc(httpHandler))
 
@@ -229,24 +267,28 @@ func Run(addr string) {
     }
 }
 
+//runs the web application and serves scgi requests
 func RunScgi(addr string) {
     log.Stdoutf("web.go serving scgi %s", addr)
     listenAndServeScgi(addr)
 }
 
+//runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
     log.Stdoutf("web.go serving fcgi %s", addr)
     listenAndServeFcgi(addr)
 }
 
+//Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }
 
+//Adds a handler for the 'POST' http method.
 func Post(route string, handler interface{}) { addRoute(route, "POST", handler) }
 
-func Head(route string, handler interface{}) { addRoute(route, "HEAD", handler) }
-
+//Adds a handler for the 'PUT' http method.
 func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
 
+//Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
 }
@@ -281,6 +323,8 @@ func (path dirError) String() string { return "Failed to set directory " + strin
 
 func getCwd() string { return os.Getenv("PWD") }
 
+//changes the location of the static directory. by default, it's under the 'static' folder
+//of the directory containing the web application
 func SetStaticDir(dir string) os.Error {
     cwd := getCwd()
     sd := path.Join(cwd, dir)
@@ -290,16 +334,6 @@ func SetStaticDir(dir string) os.Error {
     }
     staticDir = sd
 
-    return nil
-}
-
-func SetTemplateDir(dir string) os.Error {
-    cwd := getCwd()
-    td := path.Join(cwd, dir)
-    if !dirExists(td) {
-        return dirError(td)
-    }
-    templateDir = td
     return nil
 }
 

@@ -5,8 +5,11 @@
 include $(GOROOT)/src/Make.$(GOARCH)
 
 TARG=web
+GOFMT=gofmt -spaces=true -tabindent=false -tabwidth=4
+
 GOFILES=\
 	fcgi.go\
+	request.go\
 	scgi.go\
 	servefile.go\
 	web.go\
@@ -14,8 +17,11 @@ GOFILES=\
 include $(GOROOT)/src/Make.pkg
 
 format:
-	gofmt -spaces=true -tabindent=false -tabwidth=4 -w fcgi.go
-	gofmt -spaces=true -tabindent=false -tabwidth=4 -w scgi.go
-	gofmt -spaces=true -tabindent=false -tabwidth=4 -w servefile.go
-	gofmt -spaces=true -tabindent=false -tabwidth=4 -w web.go
-	gofmt -spaces=true -tabindent=false -tabwidth=4 -w web_test.go
+	${GOFMT} -w fcgi.go
+	${GOFMT} -w request.go
+	${GOFMT} -w scgi.go
+	${GOFMT} -w servefile.go
+	${GOFMT} -w web.go
+	${GOFMT} -w web_test.go
+	${GOFMT} -w examples/hello.go
+	${GOFMT} -w examples/arcchallenge.go

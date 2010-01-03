@@ -26,10 +26,13 @@ type Context struct {
     *Request
     Session *session
     Conn
+    responseStarted bool
 }
 
 func (ctx *Context) Abort(status int, body string) {
-    //send an error
+    ctx.Conn.StartResponse(status)
+    ctx.Conn.WriteString(body)
+    ctx.responseStarted = true
 }
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
@@ -49,7 +52,7 @@ func (ctx *Context) SetCookie(name string, value string, duration int64) {
 var sessionMap = make(map[string]*session)
 
 func randomString(length int) string {
-    pop := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw"
+    pop := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     var res bytes.Buffer
 
     for i := 0; i < length; i++ {
@@ -65,18 +68,16 @@ type session struct {
     Id   string
 }
 
-func newSession () *session {
-	s := session {
-		Data : make(map[string]interface{}),
-		Id:	randomString(10),
-	}
-	
-	return &s
+func newSession() *session {
+    s := session{
+        Data: make(map[string]interface{}),
+        Id: randomString(10),
+    }
+
+    return &s
 }
 
-func (s *session) save() {
-	sessionMap[s.Id] = s;
-}
+func (s *session) save() { sessionMap[s.Id] = s }
 
 var contextType reflect.Type
 var staticDir string
@@ -147,11 +148,6 @@ func httpHandler(c *http.Conn, req *http.Request) {
     routeHandler(wreq, &conn)
 }
 
-func error(conn Conn, code int, body string) {
-    conn.StartResponse(code)
-    conn.WriteString(body)
-}
-
 func routeHandler(req *Request, conn Conn) {
     requestPath := req.URL.Path
 
@@ -168,23 +164,23 @@ func routeHandler(req *Request, conn Conn) {
         log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
-	//check the cookies for a session id
+    //check the cookies for a session id
     perr = req.ParseCookies()
     if perr != nil {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
 
-	s := newSession()
-	
-	for k,v := range( req.Cookies ) {
-		if k == sessionKey {
-			if sess,ok := sessionMap[ v ]; ok {
-				s = sess
-			}
-		}
-	}
-	
-    ctx := Context{req, s, conn}
+    s := newSession()
+
+    for k, v := range (req.Cookies) {
+        if k == sessionKey {
+            if sess, ok := sessionMap[v]; ok {
+                s = sess
+            }
+        }
+    }
+
+    ctx := Context{req, s, conn, false}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -212,49 +208,54 @@ func routeHandler(req *Request, conn Conn) {
                 continue
             }
 
-			var args vector.Vector;
+            var args vector.Vector
 
             handlerType := route.handler.Type().(*reflect.FuncType)
-            
-			//check if the first arg in the handler is a context type
+
+            //check if the first arg in the handler is a context type
             if handlerType.NumIn() > 0 {
-                if a0,ok := handlerType.In(0).(*reflect.PtrType); ok {
+                if a0, ok := handlerType.In(0).(*reflect.PtrType); ok {
                     typ := a0.Elem()
                     if typ == contextType {
-                        args.Push( reflect.NewValue(&ctx) )
+                        args.Push(reflect.NewValue(&ctx))
                     }
                 }
             }
 
             for _, arg := range match[1:] {
-                args.Push( reflect.NewValue(arg) )
+                args.Push(reflect.NewValue(arg))
             }
 
             if len(args) != handlerType.NumIn() {
                 log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
-                error(conn, 500, "Server Error")
+                ctx.Abort(500, "Server Error")
                 return
             }
 
-			valArgs := make( []reflect.Value, len(args) );
-			for i,j := range(args) { valArgs[i] = j.(reflect.Value) };
+            valArgs := make([]reflect.Value, len(args))
+            for i, j := range (args) {
+                valArgs[i] = j.(reflect.Value)
+            }
             ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
-            
-        	//check if session data is stored
-			if len(s.Data) > 0 {
-				s.save()
-				//set the session for half an hour
-				ctx.SetCookie(sessionKey, s.Id, 1800);
-			}
-			
-            conn.StartResponse(200)
-            
-            conn.WriteString(ret)
+
+            if !ctx.responseStarted {
+                //check if session data is stored
+                if len(s.Data) > 0 {
+                    s.save()
+                    //set the session for half an hour
+                    ctx.SetCookie(sessionKey, s.Id, 1800)
+                }
+
+                conn.StartResponse(200)
+                ctx.responseStarted = true
+                conn.WriteString(ret)
+            }
+
             return
         }
     }
 
-    error(conn, 404, "Page not found")
+    ctx.Abort(404, "Page not found")
 }
 
 //runs the web application and serves http requests

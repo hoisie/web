@@ -35,6 +35,14 @@ func (ctx *Context) Abort(status int, body string) {
     ctx.responseStarted = true
 }
 
+func (ctx *Context) Redirect(status int, url string) {
+    //note := "<a href=\"%v\">" + statusText[code] + "</a>.\n"
+
+    ctx.Conn.SetHeader("Location", url, true)
+    ctx.Conn.StartResponse(status)
+    ctx.Conn.WriteString("")
+    ctx.responseStarted = true
+}
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, duration int64) {
     if duration == 0 {

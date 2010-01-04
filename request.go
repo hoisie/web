@@ -172,3 +172,8 @@ func (r *Request) ParseCookies() (err os.Error) {
 
     return nil
 }
+
+func (r *Request) HasParam(name string) bool {
+    _, ok := r.Params[name]
+    return ok
+}

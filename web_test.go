@@ -123,6 +123,8 @@ func init() {
         ctx.Abort(n, message)
         return ""
     })
+
+    Get("/writetest", func(ctx *Context) { ctx.WriteString("hello") })
 }
 
 var tests = []Test{
@@ -134,7 +136,7 @@ var tests = []Test{
     //long url
     Test{"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
 
-    Test{"GET", "/", "", 200, "index"},
+    Test{"GET", "/writetest", "", 200, "hello"},
     Test{"GET", "/doesnotexist", "", 404, "Page not found"},
     Test{"POST", "/doesnotexist", "", 404, "Page not found"},
     Test{"GET", "/error/code/500", "", 500, statusText[500]},

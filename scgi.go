@@ -57,12 +57,6 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
     return conn.fd.Write(data)
 }
 
-func (conn *scgiConn) WriteString(data string) {
-    var buf bytes.Buffer
-    buf.WriteString(data)
-    conn.Write(buf.Bytes())
-}
-
 func (conn *scgiConn) Close() { conn.fd.Close() }
 
 func readScgiRequest(buf *bytes.Buffer) *Request {

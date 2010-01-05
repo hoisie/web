@@ -11,39 +11,52 @@ import (
     "rand"
     "reflect"
     "regexp"
+    "strings"
     "time"
 )
 
-var rgen = rand.New( rand.NewSource( time.Nanoseconds() ) )
+var rgen = rand.New(rand.NewSource(time.Nanoseconds()))
 
-type Conn interface {
+type conn interface {
     StartResponse(status int)
     SetHeader(hdr string, val string, unique bool)
     Write(data []byte) (n int, err os.Error)
-    WriteString(content string)
     Close()
 }
 
 type Context struct {
     *Request
-    Session *session
-    Conn
+    *conn
+    Session         *session
     responseStarted bool
 }
 
-func (ctx *Context) Abort(status int, body string) {
-    ctx.Conn.StartResponse(status)
-    ctx.Conn.WriteString(body)
+func (ctx *Context) StartResponse(status int) {
+    ctx.conn.StartResponse(status)
     ctx.responseStarted = true
+}
+
+func (ctx *Context) Write(data []byte) (n int, err os.Error) {
+    if !ctx.responseStarted {
+        ctx.StartResponse(200)
+    }
+    return ctx.conn.Write(data)
+}
+func (ctx *Context) WriteString(content string) {
+    ctx.Write(strings.Bytes(content))
+}
+
+func (ctx *Context) Abort(status int, body string) {
+    ctx.StartResponse(status)
+    ctx.WriteString(body)
 }
 
 func (ctx *Context) Redirect(status int, url string) {
     //note := "<a href=\"%v\">" + statusText[code] + "</a>.\n"
 
-    ctx.Conn.SetHeader("Location", url, true)
-    ctx.Conn.StartResponse(status)
-    ctx.Conn.WriteString("")
-    ctx.responseStarted = true
+    ctx.SetHeader("Location", url, true)
+    ctx.StartResponse(status)
+    ctx.WriteString("")
 }
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, duration int64) {
@@ -56,7 +69,7 @@ func (ctx *Context) SetCookie(name string, value string, duration int64) {
     expires := utc1.RFC1123()
     expires = expires[0:len(expires)-3] + "GMT"
     cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires)
-    ctx.Conn.SetHeader("Set-Cookie", cookie, false)
+    ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
 var sessionMap = make(map[string]*session)
@@ -158,7 +171,7 @@ func httpHandler(c *http.Conn, req *http.Request) {
     routeHandler(wreq, &conn)
 }
 
-func routeHandler(req *Request, conn Conn) {
+func routeHandler(req *Request, c conn) {
     requestPath := req.URL.Path
 
     //log the request
@@ -190,7 +203,7 @@ func routeHandler(req *Request, conn Conn) {
         }
     }
 
-    ctx := Context{req, s, conn, false}
+    ctx := Context{req, &c, s, false}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -200,8 +213,8 @@ func routeHandler(req *Request, conn Conn) {
     }
 
     //set default encoding
-    conn.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-    conn.SetHeader("Server", "web.go", true)
+    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    ctx.SetHeader("Server", "web.go", true)
 
     for cr, route := range routes {
         if req.Method != route.method {
@@ -245,9 +258,16 @@ func routeHandler(req *Request, conn Conn) {
         for i, j := range (args) {
             valArgs[i] = j.(reflect.Value)
         }
-        ret := route.handler.Call(valArgs)[0].(*reflect.StringValue).Get()
 
-        if !ctx.responseStarted {
+        ret := route.handler.Call(valArgs)
+
+        if len(ret) == 0 {
+            return
+        }
+
+        sval, ok := ret[0].(*reflect.StringValue)
+
+        if ok && !ctx.responseStarted {
             //check if session data is stored
             if len(s.Data) > 0 {
                 s.save()
@@ -255,9 +275,8 @@ func routeHandler(req *Request, conn Conn) {
                 ctx.SetCookie(sessionKey, s.Id, 1800)
             }
 
-            conn.StartResponse(200)
-            ctx.responseStarted = true
-            conn.WriteString(ret)
+            ctx.StartResponse(200)
+            ctx.WriteString(sval.Get())
         }
 
         return

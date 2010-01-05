@@ -150,12 +150,6 @@ func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
     return len(data), nil
 }
 
-func (conn *fcgiConn) WriteString(data string) {
-    var buf bytes.Buffer
-    buf.WriteString(data)
-    conn.Write(buf.Bytes())
-}
-
 func (conn *fcgiConn) StartResponse(status int) {
     var buf bytes.Buffer
     text := statusText[status]

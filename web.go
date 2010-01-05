@@ -248,15 +248,15 @@ func routeHandler(req *Request, c conn) {
             args.Push(reflect.NewValue(arg))
         }
 
-        if len(args) != handlerType.NumIn() {
+        if args.Len() != handlerType.NumIn() {
             log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
             ctx.Abort(500, "Server Error")
             return
         }
 
-        valArgs := make([]reflect.Value, len(args))
-        for i, j := range (args) {
-            valArgs[i] = j.(reflect.Value)
+        valArgs := make([]reflect.Value, args.Len())
+        for i := 0; i < args.Len(); i++ {
+            valArgs[i] = args.At(i).(reflect.Value)
         }
 
         ret := route.handler.Call(valArgs)

@@ -14,6 +14,8 @@ import (
     "time"
 )
 
+var rgen = rand.New( rand.NewSource( time.Nanoseconds() ) )
+
 type Conn interface {
     StartResponse(status int)
     SetHeader(hdr string, val string, unique bool)
@@ -64,7 +66,7 @@ func randomString(length int) string {
     var res bytes.Buffer
 
     for i := 0; i < length; i++ {
-        rnd := rand.Intn(len(pop))
+        rnd := rgen.Intn(len(pop))
         res.WriteByte(pop[rnd])
     }
 

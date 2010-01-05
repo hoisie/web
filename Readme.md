@@ -41,7 +41,9 @@ You can point your browser to http://localhost:9999/world .
 
 ## Documentation
 
-More documentation, including a tutorial and API docs, is available on [web.go's home page](http://www.getwebgo.com)
+For a quickstart guide, check out [web.go's home page](http://www.getwebgo.com)
+
+There is also a [tutorial](http://www.getwebgo.com/tutorial)
 
 If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development effors on features that people will actually use. 
 

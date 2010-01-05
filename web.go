@@ -345,6 +345,18 @@ func SetStaticDir(dir string) os.Error {
     return nil
 }
 
+func Urlencode ( data map[string]string ) string {
+        var buf bytes.Buffer;
+        for k,v := range ( data ) {
+                buf.WriteString ( http.URLEscape(k) )
+                buf.WriteByte('=' )
+                buf.WriteString ( http.URLEscape(v) )
+                buf.WriteByte('&' )
+        }
+        s := buf.String()
+        return s[0:len(s) - 1]
+}
+
 //copied from go's http package, because it's not public
 var statusText = map[int]string{
     http.StatusContinue: "Continue",

@@ -11,6 +11,11 @@ import (
     "strings"
 )
 
+type filedata struct {
+    Filename string
+    Data     []byte
+}
+
 type Request struct {
     Method     string    // GET, POST, PUT, etc.
     RawURL     string    // The raw URL given in the request.
@@ -26,8 +31,9 @@ type Request struct {
     UserAgent  string
     Params     map[string][]string
     Cookies    map[string]string
-    Files      map[string][]byte
+    Files      map[string]filedata
 }
+
 
 type badStringError struct {
     what string
@@ -147,22 +153,23 @@ func (r *Request) ParseParams() (err os.Error) {
             }
             query = string(b)
         case "multipart/form-data":
-            r.Files = make(map[string][]byte)
+            r.Files = make(map[string]filedata)
             boundary := strings.Split(ct, "boundary=", 2)[1]
             var b []byte
             if b, err = ioutil.ReadAll(r.Body); err != nil {
                 return err
             }
-            parts := bytes.Split(b, strings.Bytes("--"+boundary+"\r\n"), 0)
+            parts := bytes.Split(b, strings.Bytes("--"+boundary+"--\r\n"), 0)
+            parts = bytes.Split(parts[0], strings.Bytes("--"+boundary+"\r\n"), 0)
             for _, data := range (parts) {
-                if len(data) == 0 {
+                if len(data) < 2 {
                     continue
                 }
+                data = data[0 : len(data)-2] // remove the \r\n
                 var line []byte
                 var rest = data
-                headers := map[string]string{}
-                isfile := false
-                var name string
+                //content-disposition params
+                cdparams := map[string]string{}
                 for {
                     res := bytes.Split(rest, []byte{'\r', '\n'}, 2)
                     if len(res) != 2 {
@@ -178,24 +185,31 @@ func (r *Request) ParseParams() (err os.Error) {
                     n := strings.TrimSpace(header[0])
                     v := strings.TrimSpace(header[1])
                     if n == "Content-Disposition" {
-                        parts := strings.Split(v, ";", 0)
-                        for _, parm := range (parts[1:]) {
-                            pp := strings.Split(parm, "=", 2)
-                            pn := strings.TrimSpace(pp[0])
-                            pv := strings.TrimSpace(pp[1])
-                            if pn == "name" {
-                                name = pv[1 : len(pv)-1]
-                            } else if pn == "filename" {
-                                isfile = true
-                            }
+                        cdparts := strings.Split(v, ";", 0)
+                        for _, cdparam := range (cdparts[1:]) {
+                            split := strings.Split(cdparam, "=", 2)
+                            pname := strings.TrimSpace(split[0])
+                            pval := strings.TrimSpace(split[1])
+                            cdparams[pname] = pval
                         }
                     }
-
-                    headers[n] = v
                 }
-                if isfile {
-                    parts = bytes.Split(rest, strings.Bytes("\r\n--"+boundary+"--\r\n"), 0)
-                    r.Files[name] = parts[0]
+                //if the param doesn't have a name, ignore it
+                if _, ok := cdparams["name"]; !ok {
+                    continue
+                }
+                name := cdparams["name"]
+                //check if name is quoted
+                if strings.HasPrefix(name, `"`) {
+                    name = name[1 : len(name)-1]
+                }
+
+                //if it's a file, store it in the Files member
+                if filename, ok := cdparams["filename"]; ok {
+                    if strings.HasPrefix(filename, `"`) {
+                        filename = filename[1 : len(filename)-1]
+                    }
+                    r.Files[name] = filedata{filename, rest}
                 } else {
                     _, ok := r.Params[name]
                     if !ok {

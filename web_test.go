@@ -104,13 +104,6 @@ func init() {
     Post("/post/echo/(.*)", func(s string) string { return s })
     Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name][0] })
 
-    Post("/session/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
-        ctx.Session.Data[name] = val
-        return ""
-    })
-
-    Get("/session/get/(.*)", func(ctx *Context, name string) string { return ctx.Session.Data[name].(string) })
-
     Get("/error/code/(.*)", func(ctx *Context, code string) string {
         n, _ := strconv.Atoi(code)
         message := statusText[n]
@@ -125,6 +118,19 @@ func init() {
     })
 
     Get("/writetest", func(ctx *Context) { ctx.WriteString("hello") })
+
+    Post("/securecookie/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
+        ctx.SetSecureCookie(name, val, 60)
+        return ""
+    })
+
+    Get("/securecookie/get/(.+)", func(ctx *Context, name string) string {
+        val, ok := ctx.GetSecureCookie(name)
+        if !ok {
+            return ""
+        }
+        return val
+    })
 }
 
 var tests = []Test{
@@ -387,19 +393,17 @@ func TestFcgiChucks(t *testing.T) {
     }
 }
 
-func TestSession(t *testing.T) {
-
-    resp1 := getTestResponse("POST", "/session/set/a/1", "", nil)
-
-    sid, ok := resp1.cookies[sessionKey]
+func TestSecureCookie(t *testing.T) {
+    SetCookieSecret("7C19QRmwf3mHZ9CPAaPQ0hsWeufKd")
+    resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil)
+    sval, ok := resp1.cookies["a"]
     if !ok {
-        t.Fatalf("Failed to get session cookie")
+        t.Fatalf("Failed to get cookie ")
     }
-
-    cookie := fmt.Sprintf("%s=%s", sessionKey, sid)
-    resp2 := getTestResponse("GET", "/session/get/a", "", map[string]string{"Cookie": cookie})
+    cookie := fmt.Sprintf("%s=%s", "a", sval)
+    resp2 := getTestResponse("GET", "/securecookie/get/a", "", map[string]string{"Cookie": cookie})
 
     if resp2.body != "1" {
-        t.Fatalf("Session test failed")
+        t.Fatalf("SecureCookie test failed")
     }
 }

@@ -130,7 +130,7 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
 
 // ParseForm parses the request body as a form for POST requests, or the raw query for GET requests.
 // It is idempotent.
-func (r *Request) ParseParams() (err os.Error) {
+func (r *Request) parseParams() (err os.Error) {
     if r.Params != nil {
         return
     }
@@ -229,7 +229,7 @@ func (r *Request) ParseParams() (err os.Error) {
     return parseForm(r.Params, query)
 }
 
-func (r *Request) ParseCookies() (err os.Error) {
+func (r *Request) parseCookies() (err os.Error) {
     if r.Cookies != nil {
         return
     }
@@ -241,7 +241,7 @@ func (r *Request) ParseCookies() (err os.Error) {
             cookies := strings.Split(v, ";", 0)
             for _, cookie := range (cookies) {
                 cookie = strings.TrimSpace(cookie)
-                parts := strings.Split(cookie, "=", 0)
+                parts := strings.Split(cookie, "=", 2)
                 r.Cookies[parts[0]] = parts[1]
             }
         }

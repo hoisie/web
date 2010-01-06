@@ -3,19 +3,23 @@ package web
 import (
     "bytes"
     "container/vector"
+    "crypto/hmac"
+    "encoding/base64"
     "fmt"
     "http"
+    "io/ioutil"
     "log"
     "os"
     "path"
-    "rand"
     "reflect"
     "regexp"
+    "strconv"
     "strings"
     "time"
 )
 
-var rgen = rand.New(rand.NewSource(time.Nanoseconds()))
+//secret key used to store cookies
+var secret = ""
 
 type conn interface {
     StartResponse(status int)
@@ -27,7 +31,6 @@ type conn interface {
 type Context struct {
     *Request
     *conn
-    Session         *session
     responseStarted bool
 }
 
@@ -59,8 +62,8 @@ func (ctx *Context) Redirect(status int, url string) {
     ctx.WriteString("")
 }
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, duration int64) {
-    if duration == 0 {
+func (ctx *Context) SetCookie(name string, value string, age int64) {
+    if age == 0 {
         //do some really long time
     }
 
@@ -72,40 +75,73 @@ func (ctx *Context) SetCookie(name string, value string, duration int64) {
     ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
-var sessionMap = make(map[string]*session)
+func SetCookieSecret(key string) { secret = key }
 
-func randomString(length int) string {
-    pop := "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    var res bytes.Buffer
+func getCookieSig(val []byte, timestamp string) string {
+    hm := hmac.NewSHA1(strings.Bytes(secret))
 
-    for i := 0; i < length; i++ {
-        rnd := rgen.Intn(len(pop))
-        res.WriteByte(pop[rnd])
+    hm.Write(val)
+    hm.Write(strings.Bytes(timestamp))
+
+    hex := fmt.Sprintf("%02x", hm.Sum())
+    return hex
+}
+
+func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+    //base64 encode the val
+    if len(secret) == 0 {
+        log.Stderrf("Secret Key for secure cookies has not been set. Please call web.SetCookieSecret\n")
+        return
+    }
+    var buf bytes.Buffer
+    encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+    encoder.Write(strings.Bytes(val))
+    encoder.Close()
+    vs := buf.String()
+    vb := buf.Bytes()
+
+    timestamp := strconv.Itoa64(time.Seconds())
+
+    sig := getCookieSig(vb, timestamp)
+
+    cookie := strings.Join([]string{vs, timestamp, sig}, "|")
+
+    ctx.SetCookie(name, cookie, age)
+}
+
+func (ctx *Context) GetSecureCookie(name string) (string, bool) {
+
+    cookie, ok := ctx.Request.Cookies[name]
+
+    if !ok {
+        return "", false
     }
 
-    return res.String()
-}
+    parts := strings.Split(cookie, "|", 3)
 
-type session struct {
-    Data map[string]interface{}
-    Id   string
-}
+    val := parts[0]
+    timestamp := parts[1]
+    sig := parts[2]
 
-func newSession() *session {
-    s := session{
-        Data: make(map[string]interface{}),
-        Id: randomString(10),
+    if getCookieSig(strings.Bytes(val), timestamp) != sig {
+        return "", false
     }
 
-    return &s
-}
+    ts, _ := strconv.Atoi64(timestamp)
 
-func (s *session) save() { sessionMap[s.Id] = s }
+    if time.Seconds()-31*86400 > ts {
+        return "", false
+    }
+
+    buf := bytes.NewBufferString(val)
+    encoder := base64.NewDecoder(base64.StdEncoding, buf)
+
+    res, _ := ioutil.ReadAll(encoder)
+    return string(res), true
+}
 
 var contextType reflect.Type
 var staticDir string
-
-const sessionKey = "wgosession"
 
 func init() {
     contextType = reflect.Typeof(Context{})
@@ -182,28 +218,18 @@ func routeHandler(req *Request, c conn) {
     }
 
     //parse the form data (if it exists)
-    perr := req.ParseParams()
+    perr := req.parseParams()
     if perr != nil {
         log.Stderrf("Failed to parse form data %q", perr.String())
     }
 
-    //check the cookies for a session id
-    perr = req.ParseCookies()
+    //parse the cookies
+    perr = req.parseCookies()
     if perr != nil {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
 
-    s := newSession()
-
-    for k, v := range (req.Cookies) {
-        if k == sessionKey {
-            if sess, ok := sessionMap[v]; ok {
-                s = sess
-            }
-        }
-    }
-
-    ctx := Context{req, &c, s, false}
+    ctx := Context{req, &c, false}
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
@@ -268,13 +294,6 @@ func routeHandler(req *Request, c conn) {
         sval, ok := ret[0].(*reflect.StringValue)
 
         if ok && !ctx.responseStarted {
-            //check if session data is stored
-            if len(s.Data) > 0 {
-                s.save()
-                //set the session for half an hour
-                ctx.SetCookie(sessionKey, s.Id, 1800)
-            }
-
             ctx.StartResponse(200)
             ctx.WriteString(sval.Get())
         }

@@ -111,6 +111,8 @@ func init() {
         return ""
     })
 
+    Get("/error/notfound/(.*)", func(ctx *Context, message string) { ctx.NotFound(message) })
+
     Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
         n, _ := strconv.Atoi(code)
         ctx.Abort(n, message)
@@ -143,6 +145,7 @@ var tests = []Test{
     Test{"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
 
     Test{"GET", "/writetest", "", 200, "hello"},
+    Test{"GET", "/error/notfound/notfound", "", 404, "notfound"},
     Test{"GET", "/doesnotexist", "", 404, "Page not found"},
     Test{"POST", "/doesnotexist", "", 404, "Page not found"},
     Test{"GET", "/error/code/500", "", 500, statusText[500]},

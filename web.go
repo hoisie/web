@@ -55,12 +55,16 @@ func (ctx *Context) Abort(status int, body string) {
 }
 
 func (ctx *Context) Redirect(status int, url string) {
-    //note := "<a href=\"%v\">" + statusText[code] + "</a>.\n"
-
     ctx.SetHeader("Location", url, true)
     ctx.StartResponse(status)
-    ctx.WriteString("")
+    ctx.WriteString("Redirecting to: " + url)
 }
+
+func (ctx *Context) NotFound(message string) {
+    ctx.StartResponse(404)
+    ctx.WriteString(message)
+}
+
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
     if age == 0 {

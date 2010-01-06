@@ -196,6 +196,16 @@ func (r *Request) ParseParams() (err os.Error) {
                 if isfile {
                     parts = bytes.Split(rest, strings.Bytes("\r\n--"+boundary+"--\r\n"), 0)
                     r.Files[name] = parts[0]
+                } else {
+                    _, ok := r.Params[name]
+                    if !ok {
+                        r.Params[name] = []string{}
+                    }
+                    curlen := len(r.Params[name])
+                    newlst := make([]string, curlen+1)
+                    copy(newlst, r.Params[name])
+                    newlst[curlen] = string(rest)
+                    r.Params[name] = newlst
                 }
             }
         default:

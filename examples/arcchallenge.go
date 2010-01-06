@@ -17,7 +17,6 @@ func main() {
     web.Get("/said", func() string { return form })
     web.Post("/say", func(ctx *web.Context) string {
         uid := strconv.Itoa64(rand.Int63())
-        println(uid)
         ctx.SetSecureCookie("user", uid, 3600)
         users[uid] = ctx.Request.Params["said"][0]
         return `<a href="/final">Click Here</a>`

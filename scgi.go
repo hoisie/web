@@ -86,8 +86,6 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
     content := data[len(data)-clen:]
 
-    println("clen", clen, len(content))
-
     fields := bytes.Split(data[0:len(data)-clen], []byte{0}, 0)
 
     for i := 0; i < len(fields)-1; i += 2 {
@@ -97,9 +95,6 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     }
 
     body := bytes.NewBuffer(content)
-    //var body bytes.Buffer
-    //body.Write(content)
-
     req := newRequestCgi(headers, body)
 
     return req, nil
@@ -118,7 +113,7 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
     read := n
     length, _ := strconv.Atoi(string(tmp[0:colonPos]))
     buf.Write(tmp[0:n])
-    println("read", n)
+
     for read < length {
         n, err := fd.Read(&tmp)
         if err != nil || n == 0 {

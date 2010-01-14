@@ -59,24 +59,51 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
 
 func (conn *scgiConn) Close() { conn.fd.Close() }
 
-func readScgiRequest(buf *bytes.Buffer) *Request {
+func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     headers := make(map[string]string)
 
-    content := buf.Bytes()
-    colon := bytes.IndexByte(content, ':')
-    content = content[colon+1:]
-    fields := bytes.Split(content, []byte{0}, 0)
+    data := buf.Bytes()
+    var clen int
+
+    colon := bytes.IndexByte(data, ':')
+    data = data[colon+1:]
+    var err os.Error
+    //find the CONTENT_LENGTH
+
+    clfields := bytes.Split(data, []byte{0}, 3)
+    if len(clfields) != 3 {
+        return nil,os.NewError ("Invalid SCGI Request -- no fields")
+    }
+
+    clfields = clfields[0:2]
+    if string(clfields[0]) != "CONTENT_LENGTH"{
+        return nil,os.NewError ("Invalid SCGI Request -- expecing CONTENT_LENGTH")
+    }
+
+    if clen,err = strconv.Atoi ( string(clfields[1]) ); err != nil {
+        return nil,os.NewError ("Invalid SCGI Request -- invalid CONTENT_LENGTH field")
+    }
+    
+
+    content := data[ len(data) - clen : ]
+
+    println("clen", clen, len(content))
+    
+    fields := bytes.Split ( data [ 0: len(data) - clen], []byte{0}, 0 )
+
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])
         value := string(fields[i+1])
         headers[key] = value
     }
-    var body bytes.Buffer
-    body.Write(fields[len(fields)-1][1:])
 
-    req := newRequestCgi(headers, &body)
+    body := bytes.NewBuffer(content)
+    //var body bytes.Buffer
+    //body.Write(content)
 
-    return req
+    req := newRequestCgi(headers, body)
+
+    return req, nil
 }
 
 func handleScgiRequest(fd io.ReadWriteCloser) {
@@ -92,17 +119,23 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
     read := n
     length, _ := strconv.Atoi(string(tmp[0:colonPos]))
     buf.Write(tmp[0:n])
-
+    println("read", n)
     for read < length {
         n, err := fd.Read(&tmp)
         if err != nil || n == 0 {
             break
         }
+	
         buf.Write(tmp[0:n])
         read += n
     }
 
-    req := readScgiRequest(&buf)
+    req,err := readScgiRequest(&buf)
+    
+    if err != nil {
+        log.Stderrf("SCGI read error", err.String())
+	return;
+    }
 
     sc := scgiConn{fd, make(map[string][]string), false}
     routeHandler(req, &sc)

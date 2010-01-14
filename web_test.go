@@ -138,9 +138,12 @@ func init() {
 var tests = []Test{
     Test{"GET", "/", "", 200, "index"},
     Test{"GET", "/echo/hello", "", 200, "hello"},
+    Test{"GET", "/echo/hello", "", 200, "hello"},
     Test{"GET", "/multiecho/a/b/c/d", "", 200, "abcd"},
     Test{"POST", "/post/echo/hello", "", 200, "hello"},
+    Test{"POST", "/post/echo/hello", "", 200, "hello"},
     Test{"POST", "/post/echoparam/a", "a=hello", 200, "hello"},
+    Test{"POST", "/post/echoparam/a", "a=hello\x00", 200, "hello\x00"},
     //long url
     Test{"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
 
@@ -195,8 +198,8 @@ func TestRouting(t *testing.T) {
     }
 }
 
-func buildScgiFields(fields map[string]string) []byte {
-    var buf bytes.Buffer
+func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
+    
     for k, v := range (fields) {
         buf.WriteString(k)
         buf.Write([]byte{0})
@@ -208,7 +211,14 @@ func buildScgiFields(fields map[string]string) []byte {
 }
 
 func buildTestScgiRequest(method string, path string, body string, headers map[string]string) *bytes.Buffer {
+
+    var hbuf bytes.Buffer
     scgiHeaders := make(map[string]string)
+
+    hbuf.WriteString("CONTENT_LENGTH")
+    hbuf.Write([]byte{0})
+    hbuf.WriteString(fmt.Sprintf("%d", len(body)))
+    hbuf.Write([]byte{0})
 
     scgiHeaders["REQUEST_METHOD"] = method
     scgiHeaders["HTTP_HOST"] = "127.0.0.1"
@@ -217,25 +227,24 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
     scgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     scgiHeaders["USER_AGENT"] = "web.go test framework"
 
+    buildScgiFields(scgiHeaders, &hbuf)
+
     if method == "POST" {
         headers["Content-Length"] = fmt.Sprintf("%d", len(body))
         headers["Content-Type"] = "text/plain"
     }
 
-    f1 := buildScgiFields(scgiHeaders)
-    fields := f1
-
     if len(headers) > 0 {
-        f2 := buildScgiFields(headers)
-        fields = bytes.Join([][]byte{f1, f2}, []byte{})
+        buildScgiFields(headers, &hbuf)
     }
+    
+    fielddata := hbuf.Bytes()
+    var buf bytes.Buffer;
 
-    var buf bytes.Buffer
-
-    //comma at the end
-    clen := len(fields) + len(body) + 1
-    fmt.Fprintf(&buf, "%d:", clen)
-    buf.Write(fields)
+    //extra 1 is for the comma at the end
+    dlen := len(fielddata) + len(body) + 1
+    fmt.Fprintf(&buf, "%d:", dlen)
+    buf.Write(fielddata)
     buf.WriteString(",")
     buf.WriteString(body)
 
@@ -289,6 +298,12 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     var req bytes.Buffer
     fcgiHeaders := make(map[string]string)
 
+    bodylength := 0
+    for _, s := range (bodychunks) {
+        bodylength += len(s)
+    }
+
+    fcgiHeaders["CONTENT_LENGTH"] = fmt.Sprintf("%d", bodylength)
     fcgiHeaders["REQUEST_METHOD"] = method
     fcgiHeaders["HTTP_HOST"] = "127.0.0.1"
     fcgiHeaders["REQUEST_URI"] = path
@@ -296,10 +311,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     fcgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     fcgiHeaders["USER_AGENT"] = "web.go test framework"
 
-    bodylength := 0
-    for _, s := range (bodychunks) {
-        bodylength += len(s)
-    }
+
 
     if method == "POST" {
         fcgiHeaders["Content-Length"] = fmt.Sprintf("%d", bodylength)

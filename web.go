@@ -73,7 +73,7 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 
     utctime := time.UTC()
     utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
-    expires := utc1.RFC1123()
+    expires := utc1.Format(time.RFC1123)
     expires = expires[0:len(expires)-3] + "GMT"
     cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires)
     ctx.SetHeader("Set-Cookie", cookie, false)

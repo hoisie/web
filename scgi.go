@@ -72,24 +72,23 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
     clfields := bytes.Split(data, []byte{0}, 3)
     if len(clfields) != 3 {
-        return nil,os.NewError ("Invalid SCGI Request -- no fields")
+        return nil, os.NewError("Invalid SCGI Request -- no fields")
     }
 
     clfields = clfields[0:2]
-    if string(clfields[0]) != "CONTENT_LENGTH"{
-        return nil,os.NewError ("Invalid SCGI Request -- expecing CONTENT_LENGTH")
+    if string(clfields[0]) != "CONTENT_LENGTH" {
+        return nil, os.NewError("Invalid SCGI Request -- expecing CONTENT_LENGTH")
     }
 
-    if clen,err = strconv.Atoi ( string(clfields[1]) ); err != nil {
-        return nil,os.NewError ("Invalid SCGI Request -- invalid CONTENT_LENGTH field")
+    if clen, err = strconv.Atoi(string(clfields[1])); err != nil {
+        return nil, os.NewError("Invalid SCGI Request -- invalid CONTENT_LENGTH field")
     }
-    
 
-    content := data[ len(data) - clen : ]
+    content := data[len(data)-clen:]
 
     println("clen", clen, len(content))
-    
-    fields := bytes.Split ( data [ 0: len(data) - clen], []byte{0}, 0 )
+
+    fields := bytes.Split(data[0:len(data)-clen], []byte{0}, 0)
 
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])
@@ -125,16 +124,16 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
         if err != nil || n == 0 {
             break
         }
-	
+
         buf.Write(tmp[0:n])
         read += n
     }
 
-    req,err := readScgiRequest(&buf)
-    
+    req, err := readScgiRequest(&buf)
+
     if err != nil {
         log.Stderrf("SCGI read error", err.String())
-	return;
+        return
     }
 
     sc := scgiConn{fd, make(map[string][]string), false}

@@ -199,7 +199,7 @@ func TestRouting(t *testing.T) {
 }
 
 func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
-    
+
     for k, v := range (fields) {
         buf.WriteString(k)
         buf.Write([]byte{0})
@@ -237,9 +237,9 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
     if len(headers) > 0 {
         buildScgiFields(headers, &hbuf)
     }
-    
+
     fielddata := hbuf.Bytes()
-    var buf bytes.Buffer;
+    var buf bytes.Buffer
 
     //extra 1 is for the comma at the end
     dlen := len(fielddata) + len(body) + 1
@@ -310,8 +310,6 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     fcgiHeaders["SERVER_PORT"] = "80"
     fcgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     fcgiHeaders["USER_AGENT"] = "web.go test framework"
-
-
 
     if method == "POST" {
         fcgiHeaders["Content-Length"] = fmt.Sprintf("%d", bodylength)

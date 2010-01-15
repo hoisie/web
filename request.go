@@ -242,6 +242,9 @@ func (r *Request) parseCookies() (err os.Error) {
             for _, cookie := range (cookies) {
                 cookie = strings.TrimSpace(cookie)
                 parts := strings.Split(cookie, "=", 2)
+                if len(parts) != 2 {
+                    continue
+                }
                 r.Cookies[parts[0]] = parts[1]
             }
         }

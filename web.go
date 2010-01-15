@@ -216,7 +216,7 @@ func routeHandler(req *Request, c conn) {
 
     //log the request
     if len(req.URL.RawQuery) == 0 {
-        log.Stdout(requestPath)
+        log.Stdout(req.Method + " " + requestPath)
     } else {
         log.Stdout(requestPath + "?" + req.URL.RawQuery)
     }

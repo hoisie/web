@@ -43,6 +43,12 @@ func (ctx *Context) Write(data []byte) (n int, err os.Error) {
     if !ctx.responseStarted {
         ctx.StartResponse(200)
     }
+
+    //if it's a HEAD request, we just write blank data
+    if ctx.Request.Method == "HEAD" {
+        data = []byte{}
+    }
+
     return ctx.conn.Write(data)
 }
 func (ctx *Context) WriteString(content string) {
@@ -247,7 +253,8 @@ func routeHandler(req *Request, c conn) {
     ctx.SetHeader("Server", "web.go", true)
 
     for cr, route := range routes {
-        if req.Method != route.method {
+        //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
+        if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
             continue
         }
 
@@ -298,8 +305,10 @@ func routeHandler(req *Request, c conn) {
         sval, ok := ret[0].(*reflect.StringValue)
 
         if ok && !ctx.responseStarted {
+            outbytes := strings.Bytes(sval.Get())
+            ctx.SetHeader("Content-Length", strconv.Itoa(len(outbytes)), true)
             ctx.StartResponse(200)
-            ctx.WriteString(sval.Get())
+            ctx.Write(outbytes)
         }
 
         return

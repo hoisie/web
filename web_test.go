@@ -39,10 +39,14 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
 
     response := testResponse{headers: make(map[string][]string), cookies: make(map[string]string)}
     s := buf.String()
+
     contents := strings.Split(s, "\r\n\r\n", 2)
 
     header := contents[0]
-    response.body = contents[1]
+
+    if len(contents) > 1 {
+        response.body = contents[1]
+    }
 
     headers := strings.Split(header, "\r\n", 0)
 
@@ -189,11 +193,57 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 func TestRouting(t *testing.T) {
     for _, test := range (tests) {
         resp := getTestResponse(test.method, test.path, test.body, make(map[string]string))
+
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
         }
         if resp.body != test.expectedBody {
             t.Fatalf("expected %q got %q", test.expectedBody, resp.body)
+        }
+        if cl, ok := resp.headers["Content-Length"]; ok {
+            clExp, _ := strconv.Atoi(cl[0])
+            clAct := len(strings.Bytes(resp.body))
+            if clExp != clAct {
+                t.Fatalf("Content-length doesn't match. expected %d got %d", clExp, clAct)
+            }
+        }
+    }
+}
+
+func TestHead(t *testing.T) {
+    for _, test := range (tests) {
+
+        if test.method != "GET" {
+            continue
+        }
+        getresp := getTestResponse("GET", test.path, test.body, make(map[string]string))
+        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string]string))
+
+        if getresp.statusCode != headresp.statusCode {
+            t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
+        }
+        if len(strings.Bytes(headresp.body)) != 0 {
+            t.Fatalf("head request arrived with a body")
+        }
+
+        var cl []string
+        var getcl, headcl int
+        var hascl1, hascl2 bool
+
+        if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
+            getcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
+            headcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if hascl1 != hascl2 {
+            t.Fatalf("head and get: one has content-length, one doesn't")
+        }
+
+        if hascl1 == true && getcl != headcl {
+            t.Fatalf("head and get content-length differ")
         }
     }
 }
@@ -268,6 +318,55 @@ func TestScgi(t *testing.T) {
         }
     }
 }
+
+func TestScgiHead(t *testing.T) {
+    for _, test := range (tests) {
+
+        if test.method != "GET" {
+            continue
+        }
+
+        req := buildTestScgiRequest("GET", test.path, test.body, make(map[string]string))
+        var output bytes.Buffer
+        nb := tcpBuffer{input: req, output: &output}
+        handleScgiRequest(&nb)
+        getresp := buildTestResponse(&output)
+
+        req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string]string))
+        var output2 bytes.Buffer
+        nb = tcpBuffer{input: req, output: &output2}
+        handleScgiRequest(&nb)
+        headresp := buildTestResponse(&output2)
+
+        if getresp.statusCode != headresp.statusCode {
+            t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
+        }
+        if len(strings.Bytes(headresp.body)) != 0 {
+            t.Fatalf("head request arrived with a body")
+        }
+
+        var cl []string
+        var getcl, headcl int
+        var hascl1, hascl2 bool
+
+        if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
+            getcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
+            headcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if hascl1 != hascl2 {
+            t.Fatalf("head and get: one has content-length, one doesn't")
+        }
+
+        if hascl1 == true && getcl != headcl {
+            t.Fatalf("head and get content-length differ")
+        }
+    }
+}
+
 
 func buildFcgiKeyValue(key string, val string) []byte {
 
@@ -389,8 +488,56 @@ func TestFcgi(t *testing.T) {
     }
 }
 
+func TestFcgiHead(t *testing.T) {
+    for _, test := range (tests) {
 
-func TestFcgiChucks(t *testing.T) {
+        if test.method != "GET" {
+            continue
+        }
+        req := buildTestFcgiRequest("GET", test.path, []string{test.body}, make(map[string]string))
+        var output bytes.Buffer
+        nb := tcpBuffer{input: req, output: &output}
+        handleFcgiConnection(&nb)
+        contents := getFcgiOutput(&output)
+        getresp := buildTestResponse(contents)
+
+        req = buildTestFcgiRequest("HEAD", test.path, []string{test.body}, make(map[string]string))
+        var output2 bytes.Buffer
+        nb = tcpBuffer{input: req, output: &output2}
+        handleFcgiConnection(&nb)
+        contents = getFcgiOutput(&output2)
+        headresp := buildTestResponse(contents)
+
+        if getresp.statusCode != headresp.statusCode {
+            t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
+        }
+        if len(strings.Bytes(headresp.body)) != 0 {
+            t.Fatalf("head request arrived with a body")
+        }
+
+        var cl []string
+        var getcl, headcl int
+        var hascl1, hascl2 bool
+
+        if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
+            getcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
+            headcl, _ = strconv.Atoi(cl[0])
+        }
+
+        if hascl1 != hascl2 {
+            t.Fatalf("head and get: one has content-length, one doesn't")
+        }
+
+        if hascl1 == true && getcl != headcl {
+            t.Fatalf("head and get content-length differ")
+        }
+    }
+}
+
+func TestFcgiChunks(t *testing.T) {
     //split up an fcgi request
     bodychunks := []string{`a=12&b=`, strings.Repeat("1234567890", 200)}
 

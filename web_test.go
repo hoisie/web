@@ -80,7 +80,6 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
 }
 
 func getTestResponse(method string, path string, body string, headers map[string]string) *testResponse {
-
     req := buildTestRequest(method, path, body, headers)
     var buf bytes.Buffer
 
@@ -137,6 +136,7 @@ func init() {
         }
         return val
     })
+    Get("/getparam", func(ctx *Context) string { return ctx.GetParam("a") })
 }
 
 var tests = []Test{
@@ -157,6 +157,8 @@ var tests = []Test{
     Test{"POST", "/doesnotexist", "", 404, "Page not found"},
     Test{"GET", "/error/code/500", "", 500, statusText[500]},
     Test{"POST", "/posterror/code/410/failedrequest", "", 410, "failedrequest"},
+    Test{"GET", "/getparam?a=abcd", "", 200, "abcd"},
+    Test{"GET", "/getparam?b=abcd", "", 200, ""},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

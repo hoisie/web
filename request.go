@@ -138,7 +138,7 @@ func (r *Request) parseParams() (err os.Error) {
 
     var query string
     switch r.Method {
-    case "GET":
+    case "GET", "HEAD":
         query = r.URL.RawQuery
     case "POST":
         if r.Body == nil {
@@ -253,13 +253,18 @@ func (r *Request) parseCookies() (err os.Error) {
     return nil
 }
 
-func (r *Request) HasParam(name string) bool {
+//Returns the first parameter given a name, or an empty string
+func (r *Request) GetParam(name string) string {
     if r.Params == nil || len(r.Params) == 0 {
-        return false
+        return ""
     }
-    _, ok := r.Params[name]
-    return ok
+    params, ok := r.Params[name]
+    if !ok  || len(params) == 0 {
+	return ""
+    }
+    return params[0]
 }
+
 func (r *Request) HasFile(name string) bool {
     if r.Files == nil || len(r.Files) == 0 {
         return false

@@ -161,7 +161,7 @@ func (r *Request) parseParams() (err os.Error) {
             }
             parts := bytes.Split(b, strings.Bytes("--"+boundary+"--\r\n"), 0)
             parts = bytes.Split(parts[0], strings.Bytes("--"+boundary+"\r\n"), 0)
-            for _, data := range (parts) {
+            for _, data := range parts {
                 if len(data) < 2 {
                     continue
                 }
@@ -186,7 +186,7 @@ func (r *Request) parseParams() (err os.Error) {
                     v := strings.TrimSpace(header[1])
                     if n == "Content-Disposition" {
                         cdparts := strings.Split(v, ";", 0)
-                        for _, cdparam := range (cdparts[1:]) {
+                        for _, cdparam := range cdparts[1:] {
                             split := strings.Split(cdparam, "=", 2)
                             pname := strings.TrimSpace(split[0])
                             pval := strings.TrimSpace(split[1])
@@ -236,10 +236,10 @@ func (r *Request) parseCookies() (err os.Error) {
 
     r.Cookies = make(map[string]string)
 
-    for k, v := range (r.Headers) {
+    for k, v := range r.Headers {
         if k == "Cookie" {
             cookies := strings.Split(v, ";", 0)
-            for _, cookie := range (cookies) {
+            for _, cookie := range cookies {
                 cookie = strings.TrimSpace(cookie)
                 parts := strings.Split(cookie, "=", 2)
                 if len(parts) != 2 {
@@ -259,8 +259,8 @@ func (r *Request) GetParam(name string) string {
         return ""
     }
     params, ok := r.Params[name]
-    if !ok  || len(params) == 0 {
-	return ""
+    if !ok || len(params) == 0 {
+        return ""
     }
     return params[0]
 }

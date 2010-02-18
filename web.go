@@ -400,7 +400,7 @@ func SetStaticDir(dir string) os.Error {
 
 func Urlencode(data map[string]string) string {
     var buf bytes.Buffer
-    for k, v := range (data) {
+    for k, v := range data {
         buf.WriteString(http.URLEscape(k))
         buf.WriteByte('=')
         buf.WriteString(http.URLEscape(v))

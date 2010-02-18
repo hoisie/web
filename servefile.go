@@ -2,21 +2,11 @@ package web
 
 import (
     "io"
+    "mime"
     "os"
     "path"
     "utf8"
 )
-
-var contentByExt = map[string]string{
-    ".css": "text/css",
-    ".gif": "image/gif",
-    ".html": "text/html; charset=utf-8",
-    ".htm": "text/html; charset=utf-8",
-    ".jpg": "image/jpeg",
-    ".js": "application/x-javascript",
-    ".pdf": "application/pdf",
-    ".png": "image/png",
-}
 
 func isText(b []byte) bool {
     for len(b) > 0 && utf8.FullRune(b) {
@@ -53,7 +43,7 @@ func serveFile(ctx *Context, name string) {
     defer f.Close()
     ext := path.Ext(name)
 
-    if ctype, ok := contentByExt[ext]; ok {
+    if ctype := mime.TypeByExtension(ext); ctype != "" {
         ctx.SetHeader("Content-Type", ctype, true)
     } else {
         // read first chunk to decide between utf-8 text and binary

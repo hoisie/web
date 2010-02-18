@@ -53,7 +53,7 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
     statusParts := strings.Split(headers[0], " ", 3)
     response.statusCode, _ = strconv.Atoi(statusParts[1])
 
-    for _, h := range (headers[1:]) {
+    for _, h := range headers[1:] {
         split := strings.Split(h, ":", 2)
         name := strings.TrimSpace(split[0])
         value := strings.TrimSpace(split[1])
@@ -193,7 +193,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 }
 
 func TestRouting(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
         resp := getTestResponse(test.method, test.path, test.body, make(map[string]string))
 
         if resp.statusCode != test.expectedStatus {
@@ -213,7 +213,7 @@ func TestRouting(t *testing.T) {
 }
 
 func TestHead(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
 
         if test.method != "GET" {
             continue
@@ -252,7 +252,7 @@ func TestHead(t *testing.T) {
 
 func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
 
-    for k, v := range (fields) {
+    for k, v := range fields {
         buf.WriteString(k)
         buf.Write([]byte{0})
         buf.WriteString(v)
@@ -304,7 +304,7 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
 }
 
 func TestScgi(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
         req := buildTestScgiRequest(test.method, test.path, test.body, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
@@ -322,7 +322,7 @@ func TestScgi(t *testing.T) {
 }
 
 func TestScgiHead(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
 
         if test.method != "GET" {
             continue
@@ -400,7 +400,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     fcgiHeaders := make(map[string]string)
 
     bodylength := 0
-    for _, s := range (bodychunks) {
+    for _, s := range bodychunks {
         bodylength += len(s)
     }
 
@@ -421,7 +421,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     req.Write(newFcgiRecord(fcgiBeginRequest, 0, make([]byte, 8)))
 
     var buf bytes.Buffer
-    for k, v := range (fcgiHeaders) {
+    for k, v := range fcgiHeaders {
         kv := buildFcgiKeyValue(k, v)
         buf.Write(kv)
     }
@@ -433,7 +433,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     req.Write(newFcgiRecord(fcgiParams, 0, []byte{}))
 
     //send the body
-    for _, s := range (bodychunks) {
+    for _, s := range bodychunks {
         if len(s) > 0 {
             req.Write(newFcgiRecord(fcgiStdin, 0, strings.Bytes(s)))
         }
@@ -472,7 +472,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
 }
 
 func TestFcgi(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
         req := buildTestFcgiRequest(test.method, test.path, []string{test.body}, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
@@ -491,7 +491,7 @@ func TestFcgi(t *testing.T) {
 }
 
 func TestFcgiHead(t *testing.T) {
-    for _, test := range (tests) {
+    for _, test := range tests {
 
         if test.method != "GET" {
             continue

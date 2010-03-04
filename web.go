@@ -52,7 +52,7 @@ func (ctx *Context) Write(data []byte) (n int, err os.Error) {
     return ctx.conn.Write(data)
 }
 func (ctx *Context) WriteString(content string) {
-    ctx.Write(strings.Bytes(content))
+    ctx.Write([]byte(content))
 }
 
 func (ctx *Context) Abort(status int, body string) {
@@ -88,10 +88,10 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 func SetCookieSecret(key string) { secret = key }
 
 func getCookieSig(val []byte, timestamp string) string {
-    hm := hmac.NewSHA1(strings.Bytes(secret))
+    hm := hmac.NewSHA1([]byte(secret))
 
     hm.Write(val)
-    hm.Write(strings.Bytes(timestamp))
+    hm.Write([]byte(timestamp))
 
     hex := fmt.Sprintf("%02x", hm.Sum())
     return hex
@@ -105,7 +105,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     }
     var buf bytes.Buffer
     encoder := base64.NewEncoder(base64.StdEncoding, &buf)
-    encoder.Write(strings.Bytes(val))
+    encoder.Write([]byte(val))
     encoder.Close()
     vs := buf.String()
     vb := buf.Bytes()
@@ -133,7 +133,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
     timestamp := parts[1]
     sig := parts[2]
 
-    if getCookieSig(strings.Bytes(val), timestamp) != sig {
+    if getCookieSig([]byte(val), timestamp) != sig {
         return "", false
     }
 
@@ -303,10 +303,10 @@ func routeHandler(req *Request, c conn) {
         sval, ok := ret[0].(*reflect.StringValue)
 
         if ok && !ctx.responseStarted {
-            outbytes := strings.Bytes(sval.Get())
-            ctx.SetHeader("Content-Length", strconv.Itoa(len(outbytes)), true)
+            content := []byte(sval.Get())
+            ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
             ctx.StartResponse(200)
-            ctx.Write(outbytes)
+            ctx.Write(content)
         }
 
         return
@@ -406,52 +406,4 @@ func Urlencode(data map[string]string) string {
     }
     s := buf.String()
     return s[0 : len(s)-1]
-}
-
-//copied from go's http package, because it's not public
-var statusText = map[int]string{
-    http.StatusContinue: "Continue",
-    http.StatusSwitchingProtocols: "Switching Protocols",
-
-    http.StatusOK: "OK",
-    http.StatusCreated: "Created",
-    http.StatusAccepted: "Accepted",
-    http.StatusNonAuthoritativeInfo: "Non-Authoritative Information",
-    http.StatusNoContent: "No Content",
-    http.StatusResetContent: "Reset Content",
-    http.StatusPartialContent: "Partial Content",
-
-    http.StatusMultipleChoices: "Multiple Choices",
-    http.StatusMovedPermanently: "Moved Permanently",
-    http.StatusFound: "Found",
-    http.StatusSeeOther: "See Other",
-    http.StatusNotModified: "Not Modified",
-    http.StatusUseProxy: "Use Proxy",
-    http.StatusTemporaryRedirect: "Temporary Redirect",
-
-    http.StatusBadRequest: "Bad Request",
-    http.StatusUnauthorized: "Unauthorized",
-    http.StatusPaymentRequired: "Payment Required",
-    http.StatusForbidden: "Forbidden",
-    http.StatusNotFound: "Not Found",
-    http.StatusMethodNotAllowed: "Method Not Allowed",
-    http.StatusNotAcceptable: "Not Acceptable",
-    http.StatusProxyAuthRequired: "Proxy Authentication Required",
-    http.StatusRequestTimeout: "Request Timeout",
-    http.StatusConflict: "Conflict",
-    http.StatusGone: "Gone",
-    http.StatusLengthRequired: "Length Required",
-    http.StatusPreconditionFailed: "Precondition Failed",
-    http.StatusRequestEntityTooLarge: "Request Entity Too Large",
-    http.StatusRequestURITooLong: "Request URI Too Long",
-    http.StatusUnsupportedMediaType: "Unsupported Media Type",
-    http.StatusRequestedRangeNotSatisfiable: "Requested Range Not Satisfiable",
-    http.StatusExpectationFailed: "Expectation Failed",
-
-    http.StatusInternalServerError: "Internal Server Error",
-    http.StatusNotImplemented: "Not Implemented",
-    http.StatusBadGateway: "Bad Gateway",
-    http.StatusServiceUnavailable: "Service Unavailable",
-    http.StatusGatewayTimeout: "Gateway Timeout",
-    http.StatusHTTPVersionNotSupported: "HTTP Version Not Supported",
 }

@@ -60,9 +60,9 @@ func newFcgiRecord(typ int, requestId int, data []byte) []byte {
     // round to the nearest 8
     padding := make([]byte, uint8(-l&7))
     hdr := fcgiHeader{
-        Version: 1,
-        Type: uint8(typ),
-        RequestId: uint16(requestId),
+        Version:       1,
+        Type:          uint8(typ),
+        RequestId:     uint16(requestId),
         ContentLength: uint16(l),
         PaddingLength: uint8(len(padding)),
     }
@@ -100,9 +100,9 @@ func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
     // round to the nearest 8
     padding := make([]byte, uint8(-l&7))
     hdr := fcgiHeader{
-        Version: 1,
-        Type: fcgiStdout,
-        RequestId: conn.requestId,
+        Version:       1,
+        Type:          fcgiStdout,
+        RequestId:     conn.requestId,
         ContentLength: uint16(l),
         PaddingLength: uint8(len(padding)),
     }
@@ -179,9 +179,9 @@ func (conn *fcgiConn) complete() {
     l := len(content)
 
     hdr := fcgiHeader{
-        Version: 1,
-        Type: fcgiEndRequest,
-        RequestId: uint16(conn.requestId),
+        Version:       1,
+        Type:          fcgiEndRequest,
+        RequestId:     uint16(conn.requestId),
         ContentLength: uint16(l),
         PaddingLength: 0,
     }

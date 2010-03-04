@@ -12,6 +12,7 @@ GOFILES=\
 	request.go\
 	scgi.go\
 	servefile.go\
+	status.go\
 	web.go\
 
 include $(GOROOT)/src/Make.pkg
@@ -21,6 +22,7 @@ format:
 	${GOFMT} -w request.go
 	${GOFMT} -w scgi.go
 	${GOFMT} -w servefile.go
+	${GOFMT} -w status.go
 	${GOFMT} -w web.go
 	${GOFMT} -w web_test.go
 	${GOFMT} -w examples/hello.go

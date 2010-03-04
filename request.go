@@ -44,19 +44,19 @@ func (e *badStringError) String() string { return fmt.Sprintf("%s %q", e.what, e
 
 func newRequest(hr *http.Request) *Request {
     req := Request{
-        Method: hr.Method,
-        RawURL: hr.RawURL,
-        URL: hr.URL,
-        Proto: hr.Proto,
+        Method:     hr.Method,
+        RawURL:     hr.RawURL,
+        URL:        hr.URL,
+        Proto:      hr.Proto,
         ProtoMajor: hr.ProtoMajor,
         ProtoMinor: hr.ProtoMinor,
-        Headers: hr.Header,
-        Body: hr.Body,
-        Close: hr.Close,
-        Host: hr.Host,
-        Referer: hr.Referer,
-        UserAgent: hr.UserAgent,
-        Params: hr.Form,
+        Headers:    hr.Header,
+        Body:       hr.Body,
+        Close:      hr.Close,
+        Host:       hr.Host,
+        Referer:    hr.Referer,
+        UserAgent:  hr.UserAgent,
+        Params:     hr.Form,
     }
     return &req
 }
@@ -89,14 +89,14 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
     }
 
     req := Request{
-        Method: method,
-        RawURL: rawurl,
-        URL: url,
-        Proto: proto,
-        Host: host,
+        Method:    method,
+        RawURL:    rawurl,
+        URL:       url,
+        Proto:     proto,
+        Host:      host,
         UserAgent: useragent,
-        Body: body,
-        Headers: httpheader,
+        Body:      body,
+        Headers:   httpheader,
     }
 
     return &req
@@ -163,8 +163,8 @@ func (r *Request) parseParams() (err os.Error) {
             if b, err = ioutil.ReadAll(r.Body); err != nil {
                 return err
             }
-            parts := bytes.Split(b, strings.Bytes("--"+boundary+"--\r\n"), 0)
-            parts = bytes.Split(parts[0], strings.Bytes("--"+boundary+"\r\n"), 0)
+            parts := bytes.Split(b, []byte("--"+boundary+"--\r\n"), 0)
+            parts = bytes.Split(parts[0], []byte("--"+boundary+"\r\n"), 0)
             for _, data := range parts {
                 if len(data) < 2 {
                     continue

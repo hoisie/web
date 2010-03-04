@@ -180,13 +180,13 @@ func buildTestRequest(method string, path string, body string, headers map[strin
     }
 
     req := Request{Method: method,
-        RawURL: rawurl,
-        URL: url,
-        Proto: proto,
-        Host: host,
+        RawURL:    rawurl,
+        URL:       url,
+        Proto:     proto,
+        Host:      host,
         UserAgent: useragent,
-        Headers: headers,
-        Body: bytes.NewBufferString(body),
+        Headers:   headers,
+        Body:      bytes.NewBufferString(body),
     }
 
     return &req
@@ -204,7 +204,7 @@ func TestRouting(t *testing.T) {
         }
         if cl, ok := resp.headers["Content-Length"]; ok {
             clExp, _ := strconv.Atoi(cl[0])
-            clAct := len(strings.Bytes(resp.body))
+            clAct := len(resp.body)
             if clExp != clAct {
                 t.Fatalf("Content-length doesn't match. expected %d got %d", clExp, clAct)
             }
@@ -224,7 +224,7 @@ func TestHead(t *testing.T) {
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
         }
-        if len(strings.Bytes(headresp.body)) != 0 {
+        if len(headresp.body) != 0 {
             t.Fatalf("head request arrived with a body")
         }
 
@@ -254,9 +254,9 @@ func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
 
     for k, v := range fields {
         buf.WriteString(k)
-        buf.Write([]byte{0})
+        buf.WriteByte(0)
         buf.WriteString(v)
-        buf.Write([]byte{0})
+        buf.WriteByte(0)
     }
 
     return buf.Bytes()
@@ -268,9 +268,9 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
     scgiHeaders := make(map[string]string)
 
     hbuf.WriteString("CONTENT_LENGTH")
-    hbuf.Write([]byte{0})
+    hbuf.WriteByte(0)
     hbuf.WriteString(fmt.Sprintf("%d", len(body)))
-    hbuf.Write([]byte{0})
+    hbuf.WriteByte(0)
 
     scgiHeaders["REQUEST_METHOD"] = method
     scgiHeaders["HTTP_HOST"] = "127.0.0.1"
@@ -297,7 +297,7 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
     dlen := len(fielddata) + len(body) + 1
     fmt.Fprintf(&buf, "%d:", dlen)
     buf.Write(fielddata)
-    buf.WriteString(",")
+    buf.WriteByte(',')
     buf.WriteString(body)
 
     return &buf
@@ -343,7 +343,7 @@ func TestScgiHead(t *testing.T) {
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
         }
-        if len(strings.Bytes(headresp.body)) != 0 {
+        if len(headresp.body) != 0 {
             t.Fatalf("head request arrived with a body")
         }
 
@@ -388,8 +388,8 @@ func buildFcgiKeyValue(key string, val string) []byte {
 
         binary.Write(&buf, binary.BigEndian, data)
     }
-    buf.Write(strings.Bytes(key))
-    buf.Write(strings.Bytes(val))
+    buf.WriteString(key)
+    buf.WriteString(val)
 
     return buf.Bytes()
 }
@@ -417,6 +417,10 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
         fcgiHeaders["Content-Type"] = "text/plain"
     }
 
+    for k, v := range headers {
+        fcgiHeaders[k] = v
+    }
+
     // add the begin request
     req.Write(newFcgiRecord(fcgiBeginRequest, 0, make([]byte, 8)))
 
@@ -435,7 +439,7 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     //send the body
     for _, s := range bodychunks {
         if len(s) > 0 {
-            req.Write(newFcgiRecord(fcgiStdin, 0, strings.Bytes(s)))
+            req.Write(newFcgiRecord(fcgiStdin, 0, []byte(s)))
         }
     }
 
@@ -513,7 +517,7 @@ func TestFcgiHead(t *testing.T) {
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
         }
-        if len(strings.Bytes(headresp.body)) != 0 {
+        if len(headresp.body) != 0 {
             t.Fatalf("head request arrived with a body")
         }
 
@@ -562,10 +566,40 @@ func TestSecureCookie(t *testing.T) {
     if !ok {
         t.Fatalf("Failed to get cookie ")
     }
-    cookie := fmt.Sprintf("%s=%s", "a", sval)
+    cookie := fmt.Sprintf("a=%s", sval)
     resp2 := getTestResponse("GET", "/securecookie/get/a", "", map[string]string{"Cookie": cookie})
 
     if resp2.body != "1" {
+        t.Fatalf("SecureCookie test failed")
+    }
+}
+
+
+func TestSecureCookieFcgi(t *testing.T) {
+    SetCookieSecret("7C19QRmwf3mHZ9CPAaPQ0hsWeufKd")
+
+    //set the cookie
+    req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string]string))
+    var output bytes.Buffer
+    nb := tcpBuffer{input: req, output: &output}
+    handleFcgiConnection(&nb)
+    contents := getFcgiOutput(&output)
+    resp := buildTestResponse(contents)
+    sval, ok := resp.cookies["a"]
+    if !ok {
+        t.Fatalf("SecureCookieFcgi test failed")
+    }
+
+    //send the cookie
+    cookie := fmt.Sprintf("a=%s", sval)
+    req = buildTestFcgiRequest("GET", "/securecookie/get/a", []string{}, map[string]string{"HTTP_COOKIE": cookie})
+    var output2 bytes.Buffer
+    nb = tcpBuffer{input: req, output: &output2}
+    handleFcgiConnection(&nb)
+    contents = getFcgiOutput(&output2)
+    resp = buildTestResponse(contents)
+
+    if resp.body != "1" {
         t.Fatalf("SecureCookie test failed")
     }
 }

@@ -240,17 +240,15 @@ func (r *Request) parseCookies() (err os.Error) {
 
     r.Cookies = make(map[string]string)
 
-    for k, v := range r.Headers {
-        if k == "Cookie" {
-            cookies := strings.Split(v, ";", 0)
-            for _, cookie := range cookies {
-                cookie = strings.TrimSpace(cookie)
-                parts := strings.Split(cookie, "=", 2)
-                if len(parts) != 2 {
-                    continue
-                }
-                r.Cookies[parts[0]] = parts[1]
+    if v, ok := r.Headers["Cookie"]; ok {
+        cookies := strings.Split(v, ";", 0)
+        for _, cookie := range cookies {
+            cookie = strings.TrimSpace(cookie)
+            parts := strings.Split(cookie, "=", 2)
+            if len(parts) != 2 {
+                continue
             }
+            r.Cookies[parts[0]] = parts[1]
         }
     }
 

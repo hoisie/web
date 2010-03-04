@@ -74,6 +74,10 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
     url, _ := http.ParseURL(rawurl)
     useragent, _ := headers["USER_AGENT"]
 
+    if cookie, ok := headers["HTTP_COOKIE"]; ok {
+        httpheader["Cookie"] = cookie
+    }
+
     if method == "POST" {
         if ctype, ok := headers["CONTENT_TYPE"]; ok {
             httpheader["Content-Type"] = ctype

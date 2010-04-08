@@ -311,7 +311,13 @@ func routeHandler(req *Request, c conn) {
 
         return
     }
-
+    
+    //try to serve index.html
+    if indexPath := path.Join(staticDir, "index.html"); requestPath == "/" && fileExists(indexPath) {
+      serveFile(&ctx, indexPath)
+      return
+    }
+    
     ctx.Abort(404, "Page not found")
 }
 

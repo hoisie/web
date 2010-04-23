@@ -165,7 +165,7 @@ type route struct {
     handler *reflect.FuncValue
 }
 
-var routes = make(map[*regexp.Regexp]route)
+var routes vector.Vector
 
 func addRoute(r string, method string, handler interface{}) {
     cr, err := regexp.Compile(r)
@@ -174,7 +174,7 @@ func addRoute(r string, method string, handler interface{}) {
         return
     }
     fv := reflect.NewValue(handler).(*reflect.FuncValue)
-    routes[cr] = route{r, cr, method, fv}
+    routes.Push(route{r, cr, method, fv})
 }
 
 type httpConn struct {
@@ -250,7 +250,9 @@ func routeHandler(req *Request, c conn) {
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
     ctx.SetHeader("Server", "web.go", true)
 
-    for cr, route := range routes {
+    for i := 0; i < routes.Len(); i++ {
+        route := routes.At(i).(route)
+        cr := route.cr
         //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
         if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
             continue
@@ -311,13 +313,13 @@ func routeHandler(req *Request, c conn) {
 
         return
     }
-    
+
     //try to serve index.html
     if indexPath := path.Join(staticDir, "index.html"); requestPath == "/" && fileExists(indexPath) {
-      serveFile(&ctx, indexPath)
-      return
+        serveFile(&ctx, indexPath)
+        return
     }
-    
+
     ctx.Abort(404, "Page not found")
 }
 

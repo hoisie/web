@@ -155,7 +155,18 @@ var staticDir string
 
 func init() {
     contextType = reflect.Typeof(Context{})
-    SetStaticDir("static")
+    //find the location of the exe file
+    arg0 := path.Clean(os.Args[0])
+    wd, _ := os.Getwd()
+    var exeFile string
+    if strings.HasPrefix(arg0, "/") {
+        exeFile = arg0
+    } else {
+        //TODO for robustness, search each directory in $PATH
+        exeFile = path.Join(wd, arg0)
+    }
+    root, _ := path.Split(exeFile)
+    staticDir = path.Join(root, "static")
 }
 
 type route struct {
@@ -384,22 +395,14 @@ func fileExists(dir string) bool {
     return true
 }
 
-type dirError string
-
-func (path dirError) String() string { return "Failed to set directory " + string(path) }
-
-func getCwd() string { return os.Getenv("PWD") }
-
 //changes the location of the static directory. by default, it's under the 'static' folder
 //of the directory containing the web application
 func SetStaticDir(dir string) os.Error {
-    cwd := getCwd()
-    sd := path.Join(cwd, dir)
-    if !dirExists(sd) {
-        return dirError(sd)
-
+    if !dirExists(dir) {
+        msg := fmt.Sprintf("Failed to set static directory %q - does not exist", dir)
+        return os.NewError(msg)
     }
-    staticDir = sd
+    staticDir = dir
 
     return nil
 }

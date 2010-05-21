@@ -59,9 +59,7 @@ func serveFile(ctx *Context, name string) {
 
     //set the last-modified header
     lm := time.SecondsToLocalTime(info.Mtime_ns / 1e9)
-    ftime := lm.Format(time.RFC1123)
-    ftime = ftime[0:len(ftime)-3] + "GMT"
-    ctx.SetHeader("Last-Modified", ftime, true)
+    ctx.SetHeader("Last-Modified", webTime(lm), true)
 
     //generate a simple etag with heuristic MD5(filename, size, lastmod)
     etagparts := []string{name, strconv.Itoa64(info.Size), strconv.Itoa64(info.Mtime_ns)}

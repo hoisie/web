@@ -79,9 +79,7 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 
     utctime := time.UTC()
     utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
-    expires := utc1.Format(time.RFC1123)
-    expires = expires[0:len(expires)-3] + "GMT"
-    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, expires)
+    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utc1))
     ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
@@ -250,16 +248,19 @@ func routeHandler(req *Request, c conn) {
 
     ctx := Context{req, &c, false}
 
+    //set some default headers
+    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    ctx.SetHeader("Server", "web.go", true)
+
+    tm := time.LocalTime()
+    ctx.SetHeader("Date", webTime(tm), true)
+
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
     if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
         serveFile(&ctx, staticFile)
         return
     }
-
-    //set default encoding
-    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-    ctx.SetHeader("Server", "web.go", true)
 
     for i := 0; i < routes.Len(); i++ {
         route := routes.At(i).(route)
@@ -369,6 +370,14 @@ func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
     addRoute(route, "DELETE", handler)
+}
+
+func webTime(t *time.Time) string {
+    ftime := t.Format(time.RFC1123)
+    if strings.HasSuffix(ftime, "UTC") {
+        ftime = ftime[0:len(ftime)-3] + "GMT"
+    }
+    return ftime
 }
 
 func dirExists(dir string) bool {

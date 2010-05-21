@@ -1,10 +1,15 @@
 package web
 
 import (
+    "crypto/md5"
+    "fmt"
     "io"
     "mime"
     "os"
     "path"
+    "strconv"
+    "strings"
+    "time"
     "utf8"
 )
 
@@ -32,6 +37,12 @@ func isText(b []byte) bool {
     return true
 }
 
+func getmd5(data string) string {
+    hash := md5.New()
+    hash.Write([]byte(data))
+    return fmt.Sprintf("%x", hash.Sum())
+}
+
 func serveFile(ctx *Context, name string) {
     f, err := os.Open(name, os.O_RDONLY, 0)
 
@@ -41,8 +52,21 @@ func serveFile(ctx *Context, name string) {
     }
 
     defer f.Close()
-    ext := path.Ext(name)
 
+    info, _ := os.Stat(name)
+    //set content-length
+    ctx.SetHeader("Content-Length", strconv.Itoa64(info.Size), true)
+
+    lm := time.SecondsToLocalTime(info.Mtime_ns / 1e9)
+    //set the last-modified header
+    ctx.SetHeader("Last-Modified", lm.Format(time.RFC1123), true)
+
+    //generate a simple etag with heuristic MD5(filename, size, lastmod)
+    etagparts := []string{name, strconv.Itoa64(info.Size), strconv.Itoa64(info.Mtime_ns)}
+    etag := fmt.Sprintf(`"%s"`, getmd5(strings.Join(etagparts, "|")))
+    ctx.SetHeader("ETag", etag, true)
+
+    ext := path.Ext(name)
     if ctype := mime.TypeByExtension(ext); ctype != "" {
         ctx.SetHeader("Content-Type", ctype, true)
     } else {
@@ -55,7 +79,11 @@ func serveFile(ctx *Context, name string) {
         } else {
             ctx.SetHeader("Content-Type", "application/octet-stream", true) // generic binary
         }
-        ctx.Write(b)
+        if ctx.Request.Method != "HEAD" {
+            ctx.Write(b)
+        }
     }
-    io.Copy(ctx, f)
+    if ctx.Request.Method != "HEAD" {
+        io.Copy(ctx, f)
+    }
 }

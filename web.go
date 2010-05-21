@@ -252,7 +252,7 @@ func routeHandler(req *Request, c conn) {
 
     //try to serve a static file
     staticFile := path.Join(staticDir, requestPath)
-    if fileExists(staticFile) {
+    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
         serveFile(&ctx, staticFile)
         return
     }
@@ -384,11 +384,10 @@ func dirExists(dir string) bool {
 }
 
 func fileExists(dir string) bool {
-    d, e := os.Stat(dir)
-    switch {
-    case e != nil:
+    info, err := os.Stat(dir)
+    if err != nil {
         return false
-    case !d.IsRegular():
+    } else if !info.IsRegular() {
         return false
     }
 

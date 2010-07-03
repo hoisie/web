@@ -86,7 +86,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
     content := data[len(data)-clen:]
 
-    fields := bytes.Split(data[0:len(data)-clen], []byte{0}, 0)
+    fields := bytes.Split(data[0:len(data)-clen], []byte{0}, -1)
 
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])

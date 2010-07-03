@@ -48,7 +48,7 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
         response.body = contents[1]
     }
 
-    headers := strings.Split(header, "\r\n", 0)
+    headers := strings.Split(header, "\r\n", -1)
 
     statusParts := strings.Split(headers[0], " ", 3)
     response.statusCode, _ = strconv.Atoi(statusParts[1])

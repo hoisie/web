@@ -104,7 +104,7 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
 
 func parseForm(m map[string][]string, query string) (err os.Error) {
     data := make(map[string]*vector.StringVector)
-    for _, kv := range strings.Split(query, "&", 0) {
+    for _, kv := range strings.Split(query, "&", -1) {
         kvPair := strings.Split(kv, "=", 2)
 
         var key, value string
@@ -163,8 +163,8 @@ func (r *Request) parseParams() (err os.Error) {
             if b, err = ioutil.ReadAll(r.Body); err != nil {
                 return err
             }
-            parts := bytes.Split(b, []byte("--"+boundary+"--\r\n"), 0)
-            parts = bytes.Split(parts[0], []byte("--"+boundary+"\r\n"), 0)
+            parts := bytes.Split(b, []byte("--"+boundary+"--\r\n"), -1)
+            parts = bytes.Split(parts[0], []byte("--"+boundary+"\r\n"), -1)
             for _, data := range parts {
                 if len(data) < 2 {
                     continue
@@ -189,7 +189,7 @@ func (r *Request) parseParams() (err os.Error) {
                     n := strings.TrimSpace(header[0])
                     v := strings.TrimSpace(header[1])
                     if n == "Content-Disposition" {
-                        cdparts := strings.Split(v, ";", 0)
+                        cdparts := strings.Split(v, ";", -1)
                         for _, cdparam := range cdparts[1:] {
                             split := strings.Split(cdparam, "=", 2)
                             pname := strings.TrimSpace(split[0])
@@ -241,7 +241,7 @@ func (r *Request) parseCookies() (err os.Error) {
     r.Cookies = make(map[string]string)
 
     if v, ok := r.Headers["Cookie"]; ok {
-        cookies := strings.Split(v, ";", 0)
+        cookies := strings.Split(v, ";", -1)
         for _, cookie := range cookies {
             cookie = strings.TrimSpace(cookie)
             parts := strings.Split(cookie, "=", 2)

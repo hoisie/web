@@ -126,7 +126,7 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
     }
 
     for k, vec := range data {
-        m[k] = vec.Data()
+        m[k] = vec.Copy()
     }
 
     return

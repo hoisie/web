@@ -231,7 +231,7 @@ func routeHandler(req *Request, c conn) {
     if len(req.URL.RawQuery) == 0 {
         log.Stdout(req.Method + " " + requestPath)
     } else {
-        log.Stdout(requestPath + "?" + req.URL.RawQuery)
+        log.Stdout(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
     }
 
     //parse the form data (if it exists)

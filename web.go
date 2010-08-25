@@ -273,7 +273,7 @@ func routeHandler(req *Request, c conn) {
         if !cr.MatchString(requestPath) {
             continue
         }
-        match := cr.MatchStrings(requestPath)
+        match := cr.FindStringSubmatch(requestPath)
 
         if len(match[0]) != len(requestPath) {
             continue

@@ -71,8 +71,8 @@ func serveFile(ctx *Context, name string) {
         ctx.SetHeader("Content-Type", ctype, true)
     } else {
         // read first chunk to decide between utf-8 text and binary
-        var buf [1024]byte
-        n, _ := io.ReadFull(f, &buf)
+        buf := make([]byte, 1024)
+        n, _ := io.ReadFull(f, buf)
         b := buf[0:n]
         if isText(b) {
             ctx.SetHeader("Content-Type", "text-plain; charset=utf-8", true)

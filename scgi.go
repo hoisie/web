@@ -102,8 +102,8 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
 func handleScgiRequest(fd io.ReadWriteCloser) {
     var buf bytes.Buffer
-    var tmp [1024]byte
-    n, err := fd.Read(&tmp)
+    tmp := make([]byte, 1024)
+    n, err := fd.Read(tmp)
     if err != nil || n == 0 {
         return
     }
@@ -115,7 +115,7 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
     buf.Write(tmp[0:n])
 
     for read < length {
-        n, err := fd.Read(&tmp)
+        n, err := fd.Read(tmp)
         if err != nil || n == 0 {
             break
         }

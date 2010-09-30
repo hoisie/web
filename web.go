@@ -187,7 +187,7 @@ func addRoute(r string, method string, handler interface{}) {
 }
 
 type httpConn struct {
-    conn *http.Conn
+    conn http.ResponseWriter
 }
 
 func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
@@ -218,7 +218,7 @@ func (c *httpConn) Close() {
     }
 }
 
-func httpHandler(c *http.Conn, req *http.Request) {
+func httpHandler(c http.ResponseWriter, req *http.Request) {
     conn := httpConn{c}
     wreq := newRequest(req)
     routeHandler(wreq, &conn)

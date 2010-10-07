@@ -22,4 +22,5 @@ format:
 	${GOFMT} -w web.go
 	${GOFMT} -w web_test.go
 	${GOFMT} -w examples/hello.go
+	${GOFMT} -w examples/multipart.go
 	${GOFMT} -w examples/arcchallenge.go

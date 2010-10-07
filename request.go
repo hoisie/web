@@ -1,12 +1,13 @@
 package web
 
 import (
-    "bytes"
     "container/vector"
     "fmt"
     "http"
     "io"
     "io/ioutil"
+    "mime"
+    "mime/multipart"
     "os"
     "strings"
 )
@@ -148,6 +149,7 @@ func (r *Request) parseParams() (err os.Error) {
         if r.Body == nil {
             return os.ErrorString("missing form body")
         }
+
         ct, _ := r.Headers["Content-Type"]
         switch strings.Split(ct, ";", 2)[0] {
         case "text/plain", "application/x-www-form-urlencoded", "":
@@ -157,63 +159,36 @@ func (r *Request) parseParams() (err os.Error) {
             }
             query = string(b)
         case "multipart/form-data":
-            r.Files = make(map[string]filedata)
-            boundary := strings.Split(ct, "boundary=", 2)[1]
-            var b []byte
-            if b, err = ioutil.ReadAll(r.Body); err != nil {
-                return err
+            _, params := mime.ParseMediaType(ct)
+            boundary, ok := params["boundary"]
+            if !ok {
+                return os.NewError("Missing Boundary")
             }
-            parts := bytes.Split(b, []byte("--"+boundary+"--\r\n"), -1)
-            parts = bytes.Split(parts[0], []byte("--"+boundary+"\r\n"), -1)
-            for _, data := range parts {
-                if len(data) < 2 {
-                    continue
-                }
-                data = data[0 : len(data)-2] // remove the \r\n
-                var line []byte
-                var rest = data
-                //content-disposition params
-                cdparams := map[string]string{}
-                for {
-                    res := bytes.Split(rest, []byte{'\r', '\n'}, 2)
-                    if len(res) != 2 {
-                        break
-                    }
-                    line = res[0]
-                    rest = res[1]
-                    if len(line) == 0 {
-                        break
-                    }
-
-                    header := strings.Split(string(line), ":", 2)
-                    n := strings.TrimSpace(header[0])
-                    v := strings.TrimSpace(header[1])
-                    if n == "Content-Disposition" {
-                        cdparts := strings.Split(v, ";", -1)
-                        for _, cdparam := range cdparts[1:] {
-                            split := strings.Split(cdparam, "=", 2)
-                            pname := strings.TrimSpace(split[0])
-                            pval := strings.TrimSpace(split[1])
-                            cdparams[pname] = pval
-                        }
-                    }
-                }
-                //if the param doesn't have a name, ignore it
-                if _, ok := cdparams["name"]; !ok {
-                    continue
-                }
-                name := cdparams["name"]
-                //check if name is quoted
-                if strings.HasPrefix(name, `"`) {
-                    name = name[1 : len(name)-1]
+            reader := multipart.NewReader(r.Body, boundary)
+            r.Files = make(map[string]filedata)
+            for {
+                part, err := reader.NextPart()
+                if err != nil {
+                    return err
                 }
 
-                //if it's a file, store it in the Files member
-                if filename, ok := cdparams["filename"]; ok {
-                    if strings.HasPrefix(filename, `"`) {
-                        filename = filename[1 : len(filename)-1]
-                    }
-                    r.Files[name] = filedata{filename, rest}
+                if part == nil {
+                    break
+                }
+                //read the data
+                data, _ := ioutil.ReadAll(part)
+                //check for the 'filename' param
+                v, ok := part.Header["Content-Disposition"]
+                if !ok {
+                    continue
+                }
+                name := part.FormName()
+                d, params := mime.ParseMediaType(v)
+                if d != "form-data" {
+                    continue
+                }
+                if params["filename"] != "" {
+                    r.Files[name] = filedata{name, data}
                 } else {
                     _, ok := r.Params[name]
                     if !ok {
@@ -222,9 +197,10 @@ func (r *Request) parseParams() (err os.Error) {
                     curlen := len(r.Params[name])
                     newlst := make([]string, curlen+1)
                     copy(newlst, r.Params[name])
-                    newlst[curlen] = string(rest)
+                    newlst[curlen] = string(data)
                     r.Params[name] = newlst
                 }
+
             }
         default:
             return &badStringError{"unknown Content-Type", ct}

@@ -1,6 +1,6 @@
-include $(GOROOT)/src/Make.$(GOARCH)
+include $(GOROOT)/src/Make.inc
 
-ALL=hello arcchallenge
+ALL=hello arcchallenge multipart
 
 all: $(ALL)
 

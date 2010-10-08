@@ -220,7 +220,7 @@ func (c *httpConn) Close() {
 
 func httpHandler(c http.ResponseWriter, req *http.Request) {
     conn := httpConn{c}
-    wreq := newRequest(req)
+    wreq := newRequest(req, c)
     routeHandler(wreq, &conn)
 }
 

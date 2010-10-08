@@ -8,7 +8,9 @@ import (
     "io/ioutil"
     "mime"
     "mime/multipart"
+    "net"
     "os"
+    "strconv"
     "strings"
 )
 
@@ -33,6 +35,8 @@ type Request struct {
     Params     map[string][]string
     Cookies    map[string]string
     Files      map[string]filedata
+    RemoteAddr string
+    RemotePort int
 }
 
 
@@ -43,7 +47,10 @@ type badStringError struct {
 
 func (e *badStringError) String() string { return fmt.Sprintf("%s %q", e.what, e.str) }
 
-func newRequest(hr *http.Request) *Request {
+func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
+
+    remoteAddr, _ := net.ResolveTCPAddr(hc.RemoteAddr())
+
     req := Request{
         Method:     hr.Method,
         RawURL:     hr.RawURL,
@@ -58,6 +65,8 @@ func newRequest(hr *http.Request) *Request {
         Referer:    hr.Referer,
         UserAgent:  hr.UserAgent,
         Params:     hr.Form,
+        RemoteAddr: remoteAddr.IP.String(),
+        RemotePort: remoteAddr.Port,
     }
     return &req
 }
@@ -74,6 +83,8 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
     rawurl := "http://" + host + ":" + port + path
     url, _ := http.ParseURL(rawurl)
     useragent, _ := headers["USER_AGENT"]
+    remoteAddr, _ := headers["REMOTE_ADDR"]
+    remotePort, _ := strconv.Atoi(headers["REMOTE_PORT"])
 
     if cookie, ok := headers["HTTP_COOKIE"]; ok {
         httpheader["Cookie"] = cookie
@@ -90,14 +101,16 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
     }
 
     req := Request{
-        Method:    method,
-        RawURL:    rawurl,
-        URL:       url,
-        Proto:     proto,
-        Host:      host,
-        UserAgent: useragent,
-        Body:      body,
-        Headers:   httpheader,
+        Method:     method,
+        RawURL:     rawurl,
+        URL:        url,
+        Proto:      proto,
+        Host:       host,
+        UserAgent:  useragent,
+        Body:       body,
+        Headers:    httpheader,
+        RemoteAddr: remoteAddr,
+        RemotePort: remotePort,
     }
 
     return &req

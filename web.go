@@ -174,16 +174,14 @@ type route struct {
     handler *reflect.FuncValue
 }
 
-var routes vector.Vector
-
-func addRoute(r string, method string, handler interface{}) {
+func (s *Server) addRoute(r string, method string, handler interface{}) {
     cr, err := regexp.Compile(r)
     if err != nil {
         log.Stderrf("Error in route regex %q\n", r)
         return
     }
     fv := reflect.NewValue(handler).(*reflect.FuncValue)
-    routes.Push(route{r, cr, method, fv})
+    s.routes.Push(route{r, cr, method, fv})
 }
 
 type httpConn struct {
@@ -218,13 +216,13 @@ func (c *httpConn) Close() {
     }
 }
 
-func httpHandler(c http.ResponseWriter, req *http.Request) {
+func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     conn := httpConn{c}
     wreq := newRequest(req, c)
-    routeHandler(wreq, &conn)
+    s.routeHandler(wreq, &conn)
 }
 
-func routeHandler(req *Request, c conn) {
+func (s *Server) routeHandler(req *Request, c conn) {
     requestPath := req.URL.Path
 
     //log the request
@@ -262,8 +260,8 @@ func routeHandler(req *Request, c conn) {
         return
     }
 
-    for i := 0; i < routes.Len(); i++ {
-        route := routes.At(i).(route)
+    for i := 0; i < s.routes.Len(); i++ {
+        route := s.routes.At(i).(route)
         cr := route.cr
         //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
         if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
@@ -340,41 +338,87 @@ func routeHandler(req *Request, c conn) {
     ctx.Abort(404, "Page not found")
 }
 
-//runs the web application and serves http requests
-func Run(addr string) {
-    http.Handle("/", http.HandlerFunc(httpHandler))
+type Server struct {
+    routes vector.Vector
+}
 
+
+func (s *Server) Run(addr string) {
+    mux := http.NewServeMux()
+    mux.Handle("/", s)
     log.Stdoutf("web.go serving %s", addr)
-    err := http.ListenAndServe(addr, nil)
+    err := http.ListenAndServe(addr, mux)
     if err != nil {
         log.Exit("ListenAndServe:", err)
     }
 }
 
+//Adds a handler for the 'GET' http method.
+func (s *Server) Get(route string, handler interface{}) {
+    s.addRoute(route, "GET", handler)
+}
+
+//Adds a handler for the 'POST' http method.
+func (s *Server) Post(route string, handler interface{}) {
+    s.addRoute(route, "POST", handler)
+}
+
+//Adds a handler for the 'PUT' http method.
+func (s *Server) Put(route string, handler interface{}) {
+    s.addRoute(route, "PUT", handler)
+}
+
+//Adds a handler for the 'DELETE' http method.
+func (s *Server) Delete(route string, handler interface{}) {
+    s.addRoute(route, "DELETE", handler)
+}
+
+var mainServer Server
+
+//runs the web application and serves http requests
+func Run(addr string) {
+    mainServer.Run(addr)
+}
+
+func (s *Server) RunScgi(addr string) {
+    log.Stdoutf("web.go serving scgi %s", addr)
+    s.listenAndServeScgi(addr)
+}
+
 //runs the web application and serves scgi requests
 func RunScgi(addr string) {
-    log.Stdoutf("web.go serving scgi %s", addr)
-    listenAndServeScgi(addr)
+    mainServer.RunScgi(addr)
+}
+
+func (s *Server) RunFcgi(addr string) {
+    log.Stdoutf("web.go serving fcgi %s", addr)
+    s.listenAndServeFcgi(addr)
 }
 
 //runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
-    log.Stdoutf("web.go serving fcgi %s", addr)
-    listenAndServeFcgi(addr)
+    mainServer.RunFcgi(addr)
 }
 
 //Adds a handler for the 'GET' http method.
-func Get(route string, handler interface{}) { addRoute(route, "GET", handler) }
+func Get(route string, handler interface{}) {
+    mainServer.Get(route, handler)
+    //addRoute(route, "GET", handler) 
+}
 
 //Adds a handler for the 'POST' http method.
-func Post(route string, handler interface{}) { addRoute(route, "POST", handler) }
+func Post(route string, handler interface{}) {
+    mainServer.addRoute(route, "POST", handler)
+}
 
 //Adds a handler for the 'PUT' http method.
-func Put(route string, handler interface{}) { addRoute(route, "PUT", handler) }
+func Put(route string, handler interface{}) {
+    mainServer.addRoute(route, "PUT", handler)
+}
 
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
-    addRoute(route, "DELETE", handler)
+    mainServer.addRoute(route, "DELETE", handler)
 }
 
 func webTime(t *time.Time) string {

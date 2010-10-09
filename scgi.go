@@ -100,7 +100,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     return req, nil
 }
 
-func handleScgiRequest(fd io.ReadWriteCloser) {
+func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     var buf bytes.Buffer
     tmp := make([]byte, 1024)
     n, err := fd.Read(tmp)
@@ -132,11 +132,11 @@ func handleScgiRequest(fd io.ReadWriteCloser) {
     }
 
     sc := scgiConn{fd, make(map[string][]string), false}
-    routeHandler(req, &sc)
+    s.routeHandler(req, &sc)
     fd.Close()
 }
 
-func listenAndServeScgi(addr string) {
+func (s *Server) listenAndServeScgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
         log.Stderrf("SCGI listen error", err.String())
@@ -149,7 +149,7 @@ func listenAndServeScgi(addr string) {
             log.Stderrf("SCGI accept error", err.String())
             break
         }
-        go handleScgiRequest(fd)
+        go s.handleScgiRequest(fd)
 
     }
 }

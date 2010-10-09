@@ -226,7 +226,7 @@ func readFcgiParams(data []byte, storage map[string]string) {
     }
 }
 
-func handleFcgiConnection(fd io.ReadWriteCloser) {
+func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     br := bufio.NewReader(fd)
     var req *Request
     var fc *fcgiConn
@@ -265,7 +265,7 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
                 body.Write(content)
             } else if h.ContentLength == 0 {
                 req = newRequestCgi(headers, &body)
-                routeHandler(req, fc)
+                s.routeHandler(req, fc)
                 fc.complete()
             }
         case fcgiData:
@@ -277,7 +277,7 @@ func handleFcgiConnection(fd io.ReadWriteCloser) {
     }
 }
 
-func listenAndServeFcgi(addr string) {
+func (s *Server) listenAndServeFcgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
         log.Stderrf("FCGI listen error", err.String())
@@ -290,6 +290,6 @@ func listenAndServeFcgi(addr string) {
             log.Stderrf("FCGI accept error", err.String())
             break
         }
-        go handleFcgiConnection(fd)
+        go s.handleFcgiConnection(fd)
     }
 }

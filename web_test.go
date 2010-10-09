@@ -85,7 +85,7 @@ func getTestResponse(method string, path string, body string, headers map[string
 
     tcpb := tcpBuffer{nil, &buf}
     c := scgiConn{wroteHeaders: false, headers: make(map[string][]string), fd: &tcpb}
-    routeHandler(req, &c)
+    mainServer.routeHandler(req, &c)
     return buildTestResponse(&buf)
 
 }
@@ -308,7 +308,7 @@ func TestScgi(t *testing.T) {
         req := buildTestScgiRequest(test.method, test.path, test.body, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
-        handleScgiRequest(&nb)
+        mainServer.handleScgiRequest(&nb)
         resp := buildTestResponse(&output)
 
         if resp.statusCode != test.expectedStatus {
@@ -331,13 +331,13 @@ func TestScgiHead(t *testing.T) {
         req := buildTestScgiRequest("GET", test.path, test.body, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
-        handleScgiRequest(&nb)
+        mainServer.handleScgiRequest(&nb)
         getresp := buildTestResponse(&output)
 
         req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string]string))
         var output2 bytes.Buffer
         nb = tcpBuffer{input: req, output: &output2}
-        handleScgiRequest(&nb)
+        mainServer.handleScgiRequest(&nb)
         headresp := buildTestResponse(&output2)
 
         if getresp.statusCode != headresp.statusCode {
@@ -480,7 +480,7 @@ func TestFcgi(t *testing.T) {
         req := buildTestFcgiRequest(test.method, test.path, []string{test.body}, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
-        handleFcgiConnection(&nb)
+        mainServer.handleFcgiConnection(&nb)
         contents := getFcgiOutput(&output)
         resp := buildTestResponse(contents)
 
@@ -503,14 +503,14 @@ func TestFcgiHead(t *testing.T) {
         req := buildTestFcgiRequest("GET", test.path, []string{test.body}, make(map[string]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
-        handleFcgiConnection(&nb)
+        mainServer.handleFcgiConnection(&nb)
         contents := getFcgiOutput(&output)
         getresp := buildTestResponse(contents)
 
         req = buildTestFcgiRequest("HEAD", test.path, []string{test.body}, make(map[string]string))
         var output2 bytes.Buffer
         nb = tcpBuffer{input: req, output: &output2}
-        handleFcgiConnection(&nb)
+        mainServer.handleFcgiConnection(&nb)
         contents = getFcgiOutput(&output2)
         headresp := buildTestResponse(contents)
 
@@ -550,7 +550,7 @@ func TestFcgiChunks(t *testing.T) {
     req := buildTestFcgiRequest("POST", "/post/echoparam/b", bodychunks, make(map[string]string))
     var output bytes.Buffer
     nb := tcpBuffer{input: req, output: &output}
-    handleFcgiConnection(&nb)
+    mainServer.handleFcgiConnection(&nb)
     contents := getFcgiOutput(&output)
     resp := buildTestResponse(contents)
 
@@ -582,7 +582,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string]string))
     var output bytes.Buffer
     nb := tcpBuffer{input: req, output: &output}
-    handleFcgiConnection(&nb)
+    mainServer.handleFcgiConnection(&nb)
     contents := getFcgiOutput(&output)
     resp := buildTestResponse(contents)
     sval, ok := resp.cookies["a"]
@@ -595,7 +595,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     req = buildTestFcgiRequest("GET", "/securecookie/get/a", []string{}, map[string]string{"HTTP_COOKIE": cookie})
     var output2 bytes.Buffer
     nb = tcpBuffer{input: req, output: &output2}
-    handleFcgiConnection(&nb)
+    mainServer.handleFcgiConnection(&nb)
     contents = getFcgiOutput(&output2)
     resp = buildTestResponse(contents)
 

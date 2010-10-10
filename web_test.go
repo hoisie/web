@@ -560,7 +560,7 @@ func TestFcgiChunks(t *testing.T) {
 }
 
 func TestSecureCookie(t *testing.T) {
-    SetCookieSecret("7C19QRmwf3mHZ9CPAaPQ0hsWeufKd")
+    mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
     resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil)
     sval, ok := resp1.cookies["a"]
     if !ok {
@@ -576,7 +576,7 @@ func TestSecureCookie(t *testing.T) {
 
 
 func TestSecureCookieFcgi(t *testing.T) {
-    SetCookieSecret("7C19QRmwf3mHZ9CPAaPQ0hsWeufKd")
+    mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 
     //set the cookie
     req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string]string))

@@ -18,9 +18,6 @@ import (
     "time"
 )
 
-//secret key used to store cookies
-var secret = ""
-
 type conn interface {
     StartResponse(status int)
     SetHeader(hdr string, val string, unique bool)
@@ -30,6 +27,7 @@ type conn interface {
 
 type Context struct {
     *Request
+    *Server
     *conn
     responseStarted bool
 }
@@ -83,10 +81,8 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
     ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
-func SetCookieSecret(key string) { secret = key }
-
-func getCookieSig(val []byte, timestamp string) string {
-    hm := hmac.NewSHA1([]byte(secret))
+func getCookieSig(key string, val []byte, timestamp string) string {
+    hm := hmac.NewSHA1([]byte(key))
 
     hm.Write(val)
     hm.Write([]byte(timestamp))
@@ -97,7 +93,7 @@ func getCookieSig(val []byte, timestamp string) string {
 
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     //base64 encode the val
-    if len(secret) == 0 {
+    if len(ctx.Server.Config.CookieSecret) == 0 {
         log.Stderrf("Secret Key for secure cookies has not been set. Please call web.SetCookieSecret\n")
         return
     }
@@ -110,7 +106,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 
     timestamp := strconv.Itoa64(time.Seconds())
 
-    sig := getCookieSig(vb, timestamp)
+    sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 
@@ -131,7 +127,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
     timestamp := parts[1]
     sig := parts[2]
 
-    if getCookieSig([]byte(val), timestamp) != sig {
+    if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
         return "", false
     }
 
@@ -148,23 +144,28 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
     return string(res), true
 }
 
+// small optimization: cache the context type instead of repeteadly calling reflect.Typeof
 var contextType reflect.Type
-var staticDir string
+
+var exeFile string
+
+// default
+func defaultStaticDir() string {
+    root, _ := path.Split(exeFile)
+    return path.Join(root, "static")
+}
 
 func init() {
     contextType = reflect.Typeof(Context{})
     //find the location of the exe file
     arg0 := path.Clean(os.Args[0])
     wd, _ := os.Getwd()
-    var exeFile string
     if strings.HasPrefix(arg0, "/") {
         exeFile = arg0
     } else {
         //TODO for robustness, search each directory in $PATH
         exeFile = path.Join(wd, arg0)
     }
-    root, _ := path.Split(exeFile)
-    staticDir = path.Join(root, "static")
 }
 
 type route struct {
@@ -244,7 +245,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
 
-    ctx := Context{req, &c, false}
+    ctx := Context{req, s, &c, false}
 
     //set some default headers
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
@@ -254,6 +255,10 @@ func (s *Server) routeHandler(req *Request, c conn) {
     ctx.SetHeader("Date", webTime(tm), true)
 
     //try to serve a static file
+    staticDir := s.Config.StaticDir
+    if staticDir == "" {
+        staticDir = defaultStaticDir()
+    }
     staticFile := path.Join(staticDir, requestPath)
     if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
         serveFile(&ctx, staticFile)
@@ -338,10 +343,18 @@ func (s *Server) routeHandler(req *Request, c conn) {
     ctx.Abort(404, "Page not found")
 }
 
+var Config = &ServerConfig{}
+
+var mainServer = Server{Config: Config}
+
 type Server struct {
+    Config *ServerConfig
     routes vector.Vector
 }
 
+func NewServer() *Server {
+    return &Server{Config: &ServerConfig{}}
+}
 
 func (s *Server) Run(addr string) {
     mux := http.NewServeMux()
@@ -372,8 +385,6 @@ func (s *Server) Put(route string, handler interface{}) {
 func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
-
-var mainServer Server
 
 //runs the web application and serves http requests
 func Run(addr string) {
@@ -421,6 +432,13 @@ func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
 }
 
+type ServerConfig struct {
+    StaticDir    string
+    Addr         string
+    Port         int
+    CookieSecret string
+}
+
 func webTime(t *time.Time) string {
     ftime := t.Format(time.RFC1123)
     if strings.HasSuffix(ftime, "UTC") {
@@ -450,18 +468,6 @@ func fileExists(dir string) bool {
     }
 
     return true
-}
-
-//changes the location of the static directory. by default, it's under the 'static' folder
-//of the directory containing the web application
-func SetStaticDir(dir string) os.Error {
-    if !dirExists(dir) {
-        msg := fmt.Sprintf("Failed to set static directory %q - does not exist", dir)
-        return os.NewError(msg)
-    }
-    staticDir = dir
-
-    return nil
 }
 
 func Urlencode(data map[string]string) string {

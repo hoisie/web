@@ -203,15 +203,9 @@ func (r *Request) parseParams() (err os.Error) {
                 if params["filename"] != "" {
                     r.Files[name] = filedata{name, data}
                 } else {
-                    _, ok := r.Params[name]
-                    if !ok {
-                        r.Params[name] = []string{}
-                    }
-                    curlen := len(r.Params[name])
-                    newlst := make([]string, curlen+1)
-                    copy(newlst, r.Params[name])
-                    newlst[curlen] = string(data)
-                    r.Params[name] = newlst
+                    var params vector.StringVector = r.Params[name]
+                    params.Push(string(data))
+                    r.Params[name]=params
                 }
 
             }

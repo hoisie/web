@@ -1,6 +1,6 @@
 # web.go
 
-web.go is the simplest way to write web applications in the Go programming language. 
+web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 
 
 ## Overview
 
@@ -15,10 +15,11 @@ web.go should be familiar to people who've developed websites with higher-level 
 ## Installation
 
 1. Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go will always compile on the `release` tag.
+2. Make sure that $GOROOT is set. web.go installs itself as a Go package, so it requires $GOROOT. See Go's install instructions for more information about $GOROOT. 
 2. git clone git://github.com/hoisie/web.go.git
 3. cd web.go && make install
 
-Or simply run `goinstall github.com/hoisie/web.go`
+You can also install using `goinstall github.com/hoisie/web.go`, but if you do this, the import statement in your go programs will be `import github.com/hoisie/web.go`.  
 
 ## Example
     

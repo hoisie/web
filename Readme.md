@@ -14,12 +14,12 @@ web.go should be familiar to people who've developed websites with higher-level 
 
 ## Installation
 
-1. Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go will always compile on the `release` tag.
+1. Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the 'release' tag. To get the release tag, simply run `hg update -r release`. If you're running an outdated version of Go, or a version near the , it likely won't compile. 
 2. Make sure that $GOROOT is set. web.go installs itself as a Go package, so it requires $GOROOT. See Go's install instructions for more information about $GOROOT. 
 2. git clone git://github.com/hoisie/web.go.git
 3. cd web.go && make install
 
-You can also install using `goinstall github.com/hoisie/web.go`, but if you do this, the import statement in your go programs will be `import github.com/hoisie/web.go`.  
+You can also install using `goinstall github.com/hoisie/web.go`, but if you do this, the import statement in your go programs will be `import github.com/hoisie/web.go` instead of just `import web`.  
 
 ## Example
     

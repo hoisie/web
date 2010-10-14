@@ -105,7 +105,7 @@ func init() {
     Get("/echo/(.*)", func(s string) string { return s })
     Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
     Post("/post/echo/(.*)", func(s string) string { return s })
-    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name][0] })
+    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name] })
 
     Get("/error/code/(.*)", func(ctx *Context, code string) string {
         n, _ := strconv.Atoi(code)
@@ -136,7 +136,10 @@ func init() {
         }
         return val
     })
-    Get("/getparam", func(ctx *Context) string { return ctx.GetParam("a") })
+    Get("/getparam", func(ctx *Context) string { return ctx.Params["a"] })
+    Get("/fullparams", func(ctx *Context) string {
+        return strings.Join(ctx.FullParams["a"], ",")
+    })
 }
 
 var tests = []Test{
@@ -159,6 +162,7 @@ var tests = []Test{
     Test{"POST", "/posterror/code/410/failedrequest", "", 410, "failedrequest"},
     Test{"GET", "/getparam?a=abcd", "", 200, "abcd"},
     Test{"GET", "/getparam?b=abcd", "", 200, ""},
+    Test{"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

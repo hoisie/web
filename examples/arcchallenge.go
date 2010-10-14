@@ -18,7 +18,7 @@ func main() {
     web.Post("/say", func(ctx *web.Context) string {
         uid := strconv.Itoa64(rand.Int63())
         ctx.SetSecureCookie("user", uid, 3600)
-        users[uid] = ctx.Request.Params["said"][0]
+        users[uid] = ctx.Request.Params["said"]
         return `<a href="/final">Click Here</a>`
     })
     web.Get("/final", func(ctx *web.Context) string {

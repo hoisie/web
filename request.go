@@ -32,7 +32,8 @@ type Request struct {
     Host       string
     Referer    string
     UserAgent  string
-    Params     map[string][]string
+    FullParams map[string][]string
+    Params     map[string]string
     Cookies    map[string]string
     Files      map[string]filedata
     RemoteAddr string
@@ -46,6 +47,16 @@ type badStringError struct {
 }
 
 func (e *badStringError) String() string { return fmt.Sprintf("%s %q", e.what, e.str) }
+
+func flattenParams(fullParams map[string][]string) map[string]string {
+    params := map[string]string{}
+    for name, lst := range fullParams {
+        if len(lst) > 0 {
+            params[name] = lst[0]
+        }
+    }
+    return params
+}
 
 func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
@@ -64,7 +75,7 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
         Host:       hr.Host,
         Referer:    hr.Referer,
         UserAgent:  hr.UserAgent,
-        Params:     hr.Form,
+        FullParams: hr.Form,
         RemoteAddr: remoteAddr.IP.String(),
         RemotePort: remoteAddr.Port,
     }
@@ -152,8 +163,7 @@ func (r *Request) parseParams() (err os.Error) {
     if r.Params != nil {
         return
     }
-    r.Params = make(map[string][]string)
-
+    r.FullParams = make(map[string][]string)
     var query string
     switch r.Method {
     case "GET", "HEAD":
@@ -203,9 +213,9 @@ func (r *Request) parseParams() (err os.Error) {
                 if params["filename"] != "" {
                     r.Files[name] = filedata{name, data}
                 } else {
-                    var params vector.StringVector = r.Params[name]
+                    var params vector.StringVector = r.FullParams[name]
                     params.Push(string(data))
-                    r.Params[name]=params
+                    r.FullParams[name] = params
                 }
 
             }
@@ -213,7 +223,12 @@ func (r *Request) parseParams() (err os.Error) {
             return &badStringError{"unknown Content-Type", ct}
         }
     }
-    return parseForm(r.Params, query)
+    err = parseForm(r.FullParams, query)
+    if err != nil {
+        return err
+    }
+    r.Params = flattenParams(r.FullParams)
+    return nil
 }
 
 func (r *Request) parseCookies() (err os.Error) {
@@ -236,18 +251,6 @@ func (r *Request) parseCookies() (err os.Error) {
     }
 
     return nil
-}
-
-//Returns the first parameter given a name, or an empty string
-func (r *Request) GetParam(name string) string {
-    if r.Params == nil || len(r.Params) == 0 {
-        return ""
-    }
-    params, ok := r.Params[name]
-    if !ok || len(params) == 0 {
-        return ""
-    }
-    return params[0]
 }
 
 func (r *Request) HasFile(name string) bool {

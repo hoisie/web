@@ -28,7 +28,7 @@ type conn interface {
 type Context struct {
     *Request
     *Server
-    *conn
+    conn
     responseStarted bool
 }
 
@@ -245,7 +245,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
         log.Stderrf("Failed to parse cookies %q", perr.String())
     }
 
-    ctx := Context{req, s, &c, false}
+    ctx := Context{req, s, c, false}
 
     //set some default headers
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)

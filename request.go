@@ -10,6 +10,7 @@ import (
     "mime/multipart"
     "net"
     "os"
+    "reflect"
     "strconv"
     "strings"
 )
@@ -259,4 +260,99 @@ func (r *Request) HasFile(name string) bool {
     }
     _, ok := r.Files[name]
     return ok
+}
+
+func writeTo(s string, val reflect.Value) os.Error {
+    switch v := val.(type) {
+    // if we're writing to an interace value, just set the byte data
+    // TODO: should we support writing to a pointer?
+    case *reflect.InterfaceValue:
+        v.Set(reflect.NewValue(s))
+    case *reflect.BoolValue:
+        b, err := strconv.Atob(s)
+        if err != nil {
+            return err
+        }
+        v.Set(b)
+    case *reflect.IntValue:
+        i, err := strconv.Atoi64(s)
+        if err != nil {
+            return err
+        }
+        v.Set(i)
+    case *reflect.UintValue:
+        ui, err := strconv.Atoui64(s)
+        if err != nil {
+            return err
+        }
+        v.Set(ui)
+    case *reflect.FloatValue:
+        f, err := strconv.Atof64(s)
+        if err != nil {
+            return err
+        }
+        v.Set(f)
+
+    case *reflect.StringValue:
+        v.Set(s)
+    case *reflect.SliceValue:
+        typ := v.Type().(*reflect.SliceType)
+        if _, ok := typ.Elem().(*reflect.UintType); ok {
+            v.Set(reflect.NewValue([]byte(s)).(*reflect.SliceValue))
+        }
+    }
+    return nil
+}
+
+// matchName returns true if key should be written to a field named name.
+func matchName(key, name string) bool {
+    return strings.ToLower(key) == strings.ToLower(name)
+}
+
+func (r *Request) writeToContainer(val reflect.Value) os.Error {
+    switch v := val.(type) {
+    case *reflect.PtrValue:
+        return r.writeToContainer(reflect.Indirect(v))
+    case *reflect.InterfaceValue:
+        return r.writeToContainer(v.Elem())
+    case *reflect.MapValue:
+        if _, ok := v.Type().(*reflect.MapType).Key().(*reflect.StringType); !ok {
+            return os.NewError("Invalid map type")
+        }
+        elemtype := v.Type().(*reflect.MapType).Elem()
+        for pk, pv := range r.Params {
+            mk := reflect.NewValue(pk)
+            mv := reflect.MakeZero(elemtype)
+            writeTo(pv, mv)
+            v.SetElem(mk, mv)
+        }
+    case *reflect.StructValue:
+        for pk, pv := range r.Params {
+            //try case sensitive match
+            field := v.FieldByName(pk)
+            if field != nil {
+                writeTo(pv, field)
+            }
+
+            //try case insensitive matching
+            field = v.FieldByNameFunc(func(s string) bool { return matchName(pk, s) })
+            if field != nil {
+                writeTo(pv, field)
+            }
+
+        }
+    default:
+        return os.NewError("Invalid container type")
+    }
+    return nil
+}
+
+
+func (r *Request) UnmarshalParams(val interface{}) os.Error {
+    err := r.writeToContainer(reflect.NewValue(val))
+    if err != nil {
+        return err
+    }
+
+    return nil
 }

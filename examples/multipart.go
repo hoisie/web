@@ -39,8 +39,8 @@ func index() string { return page }
 
 func multipart(ctx *web.Context) string {
     var output bytes.Buffer
-    output.WriteString("<p>input1: " + ctx.Params["input1"][0] + "</p>")
-    output.WriteString("<p>input2: " + ctx.Params["input2"][0] + "</p>")
+    output.WriteString("<p>input1: " + ctx.Params["input1"] + "</p>")
+    output.WriteString("<p>input2: " + ctx.Params["input2"] + "</p>")
     output.WriteString("<p>file: " + ctx.Files["file"].Filename + " " + Md5(ctx.Files["file"].Data) + "</p>")
     return output.String()
 }

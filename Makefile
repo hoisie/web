@@ -25,3 +25,4 @@ format:
 	${GOFMT} -w examples/hello.go
 	${GOFMT} -w examples/multipart.go
 	${GOFMT} -w examples/multiserver.go
+	${GOFMT} -w examples/params.go

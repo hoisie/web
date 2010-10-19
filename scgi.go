@@ -7,6 +7,7 @@ import (
     "net"
     "os"
     "strconv"
+    "strings"
 )
 
 type scgiConn struct {
@@ -135,20 +136,30 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     fd.Close()
 }
 
-func (s *Server) listenAndServeScgi(addr string) {
-    l, err := net.Listen("tcp", addr)
+func (s *Server) listenAndServeScgi(addr string) os.Error {
+
+    var l net.Listener
+    var err os.Error
+
+    //if the path begins with a "/", assume it's a unix address
+    if strings.HasPrefix(addr, "/") {
+        l, err = net.Listen("unix", addr)
+    } else {
+        l, err = net.Listen("tcp", addr)
+    }
+
     if err != nil {
         s.Logger.Println("SCGI listen error", err.String())
-        return
+        return err
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
             s.Logger.Println("SCGI accept error", err.String())
-            break
+            return err
         }
         go s.handleScgiRequest(fd)
-
     }
+    return nil
 }

@@ -8,6 +8,7 @@ import (
     "io"
     "net"
     "os"
+    "strings"
 )
 
 const (
@@ -276,13 +277,21 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     }
 }
 
-func (s *Server) listenAndServeFcgi(addr string) {
-    l, err := net.Listen("tcp", addr)
-    if err != nil {
-        s.Logger.Println("FCGI listen error", err.String())
-        return
+func (s *Server) listenAndServeFcgi(addr string) os.Error {
+    var l net.Listener
+    var err os.Error
+
+    //if the path begins with a "/", assume it's a unix address
+    if strings.HasPrefix(addr, "/") {
+        l, err = net.Listen("unix", addr)
+    } else {
+        l, err = net.Listen("tcp", addr)
     }
 
+    if err != nil {
+        s.Logger.Println("FCGI listen error", err.String())
+        return err
+    }
     for {
         fd, err := l.Accept()
         if err != nil {
@@ -291,4 +300,5 @@ func (s *Server) listenAndServeFcgi(addr string) {
         }
         go s.handleFcgiConnection(fd)
     }
+    return nil
 }

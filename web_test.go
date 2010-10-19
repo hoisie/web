@@ -5,6 +5,7 @@ import (
     "encoding/binary"
     "fmt"
     "http"
+    "log"
     "os"
     "strconv"
     "strings"
@@ -101,6 +102,9 @@ type Test struct {
 
 //initialize the routes
 func init() {
+
+    f, _ := os.Open(os.DevNull, os.O_RDWR, 0644)
+    mainServer.SetLogger(log.New(f, "", 0))
     Get("/", func() string { return "index" })
     Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })

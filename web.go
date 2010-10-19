@@ -13,6 +13,7 @@ import (
     "path"
     "reflect"
     "regexp"
+    "runtime"
     "strconv"
     "strings"
     "time"
@@ -94,7 +95,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     //base64 encode the val
     if len(ctx.Server.Config.CookieSecret) == 0 {
-        log.Stderrf("Secret Key for secure cookies has not been set. Please call web.SetCookieSecret\n")
+        ctx.Logger.Println("Secret Key for secure cookies has not been set. Please call web.SetCookieSecret")
         return
     }
     var buf bytes.Buffer
@@ -103,20 +104,14 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     encoder.Close()
     vs := buf.String()
     vb := buf.Bytes()
-
     timestamp := strconv.Itoa64(time.Seconds())
-
     sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
-
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-
     ctx.SetCookie(name, cookie, age)
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-
     cookie, ok := ctx.Request.Cookies[name]
-
     if !ok {
         return "", false
     }
@@ -178,7 +173,7 @@ type route struct {
 func (s *Server) addRoute(r string, method string, handler interface{}) {
     cr, err := regexp.Compile(r)
     if err != nil {
-        log.Stderrf("Error in route regex %q\n", r)
+        s.Logger.Printf("Error in route regex %q\n", r)
         return
     }
     fv := reflect.NewValue(handler).(*reflect.FuncValue)
@@ -223,26 +218,51 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     s.routeHandler(wreq, &conn)
 }
 
+func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (resp []reflect.Value, e interface{}) {
+    defer func() {
+        if err := recover(); err != nil {
+            if !s.Config.RecoverPanic {
+                // go back to panic
+                panic(err)
+            } else {
+                e = err
+                resp = nil
+                s.Logger.Println("Handler crashed with error", err)
+                // i := 1
+                for i := 1; ; i += 1 {
+                    _, file, line, ok := runtime.Caller(i)
+                    if !ok {
+                        break
+                    }
+                    // i += 1
+                    s.Logger.Println(file, line)
+                }
+            }
+        }
+    }()
+    return function.Call(args), nil
+}
+
 func (s *Server) routeHandler(req *Request, c conn) {
     requestPath := req.URL.Path
 
     //log the request
     if len(req.URL.RawQuery) == 0 {
-        log.Stdout(req.Method + " " + requestPath)
+        s.Logger.Println(req.Method + " " + requestPath)
     } else {
-        log.Stdout(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
+        s.Logger.Println(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
     }
 
     //parse the form data (if it exists)
     perr := req.parseParams()
     if perr != nil {
-        log.Stderrf("Failed to parse form data %q", perr.String())
+        s.Logger.Printf("Failed to parse form data %q\n", perr.String())
     }
 
     //parse the cookies
     perr = req.parseCookies()
     if perr != nil {
-        log.Stderrf("Failed to parse cookies %q", perr.String())
+        s.Logger.Printf("Failed to parse cookies %q", perr.String())
     }
 
     ctx := Context{req, s, c, false}
@@ -301,7 +321,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
         }
 
         if args.Len() != handlerType.NumIn() {
-            log.Stderrf("Incorrect number of arguments for %s\n", requestPath)
+            s.Logger.Printf("Incorrect number of arguments for %s\n", requestPath)
             ctx.Abort(500, "Server Error")
             return
         }
@@ -311,7 +331,11 @@ func (s *Server) routeHandler(req *Request, c conn) {
             valArgs[i] = args.At(i).(reflect.Value)
         }
 
-        ret := route.handler.Call(valArgs)
+        ret, err := s.safelyCall(route.handler, valArgs)
+        if err != nil {
+            //there was a panic in the handler
+            ctx.Abort(500, "Server Error")
+        }
 
         if len(ret) == 0 {
             return
@@ -343,13 +367,19 @@ func (s *Server) routeHandler(req *Request, c conn) {
     ctx.Abort(404, "Page not found")
 }
 
-var Config = &ServerConfig{}
+var Config = &ServerConfig{
+    RecoverPanic: true,
+}
 
-var mainServer = Server{Config: Config}
+var mainServer = Server{
+    Config: Config,
+    Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+}
 
 type Server struct {
     Config *ServerConfig
     routes vector.Vector
+    Logger *log.Logger
 }
 
 func NewServer() *Server {
@@ -359,11 +389,36 @@ func NewServer() *Server {
 func (s *Server) Run(addr string) {
     mux := http.NewServeMux()
     mux.Handle("/", s)
-    log.Stdoutf("web.go serving %s", addr)
+    s.Logger.Printf("web.go serving %s\n", addr)
     err := http.ListenAndServe(addr, mux)
     if err != nil {
         log.Exit("ListenAndServe:", err)
     }
+}
+
+//runs the web application and serves http requests
+func Run(addr string) {
+    mainServer.Run(addr)
+}
+
+func (s *Server) RunScgi(addr string) {
+    s.Logger.Printf("web.go serving scgi %s\n", addr)
+    s.listenAndServeScgi(addr)
+}
+
+//runs the web application and serves scgi requests
+func RunScgi(addr string) {
+    mainServer.RunScgi(addr)
+}
+
+func (s *Server) RunFcgi(addr string) {
+    s.Logger.Printf("web.go serving fcgi %s\n", addr)
+    s.listenAndServeFcgi(addr)
+}
+
+//runs the web application by serving fastcgi requests
+func RunFcgi(addr string) {
+    mainServer.RunFcgi(addr)
 }
 
 //Adds a handler for the 'GET' http method.
@@ -384,31 +439,6 @@ func (s *Server) Put(route string, handler interface{}) {
 //Adds a handler for the 'DELETE' http method.
 func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
-}
-
-//runs the web application and serves http requests
-func Run(addr string) {
-    mainServer.Run(addr)
-}
-
-func (s *Server) RunScgi(addr string) {
-    log.Stdoutf("web.go serving scgi %s", addr)
-    s.listenAndServeScgi(addr)
-}
-
-//runs the web application and serves scgi requests
-func RunScgi(addr string) {
-    mainServer.RunScgi(addr)
-}
-
-func (s *Server) RunFcgi(addr string) {
-    log.Stdoutf("web.go serving fcgi %s", addr)
-    s.listenAndServeFcgi(addr)
-}
-
-//runs the web application by serving fastcgi requests
-func RunFcgi(addr string) {
-    mainServer.RunFcgi(addr)
 }
 
 //Adds a handler for the 'GET' http method.
@@ -432,11 +462,20 @@ func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
 }
 
+func (s *Server) SetLogger(logger *log.Logger) {
+    s.Logger = logger
+}
+
+func SetLogger(logger *log.Logger) {
+    mainServer.Logger = logger
+}
+
 type ServerConfig struct {
     StaticDir    string
     Addr         string
     Port         int
     CookieSecret string
+    RecoverPanic bool
 }
 
 func webTime(t *time.Time) string {

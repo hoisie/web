@@ -102,6 +102,7 @@ type Test struct {
 //initialize the routes
 func init() {
     Get("/", func() string { return "index" })
+    Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })
     Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
     Post("/post/echo/(.*)", func(s string) string { return s })
@@ -163,6 +164,7 @@ var tests = []Test{
     Test{"GET", "/getparam?a=abcd", "", 200, "abcd"},
     Test{"GET", "/getparam?b=abcd", "", 200, ""},
     Test{"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
+    Test{"GET", "/panic", "", 500, "Server Error"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

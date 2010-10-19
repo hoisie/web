@@ -6,7 +6,6 @@ import (
     "encoding/binary"
     "fmt"
     "io"
-    "log"
     "net"
     "os"
 )
@@ -240,7 +239,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
             break
         }
         if err != nil {
-            log.Stderrf("FCGI Error", err.String())
+            s.Logger.Println("FCGI Error", err.String())
             break
         }
         content := make([]byte, h.ContentLength)
@@ -280,14 +279,14 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
 func (s *Server) listenAndServeFcgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Stderrf("FCGI listen error", err.String())
+        s.Logger.Println("FCGI listen error", err.String())
         return
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
-            log.Stderrf("FCGI accept error", err.String())
+            s.Logger.Println("FCGI accept error", err.String())
             break
         }
         go s.handleFcgiConnection(fd)

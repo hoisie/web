@@ -4,7 +4,6 @@ import (
     "bytes"
     "fmt"
     "io"
-    "log"
     "net"
     "os"
     "strconv"
@@ -127,7 +126,7 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     req, err := readScgiRequest(&buf)
 
     if err != nil {
-        log.Stderrf("SCGI read error", err.String())
+        s.Logger.Println("SCGI read error", err.String())
         return
     }
 
@@ -139,14 +138,14 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
 func (s *Server) listenAndServeScgi(addr string) {
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Stderrf("SCGI listen error", err.String())
+        s.Logger.Println("SCGI listen error", err.String())
         return
     }
 
     for {
         fd, err := l.Accept()
         if err != nil {
-            log.Stderrf("SCGI accept error", err.String())
+            s.Logger.Println("SCGI accept error", err.String())
             break
         }
         go s.handleScgiRequest(fd)

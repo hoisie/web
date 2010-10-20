@@ -269,11 +269,7 @@ func writeTo(s string, val reflect.Value) os.Error {
     case *reflect.InterfaceValue:
         v.Set(reflect.NewValue(s))
     case *reflect.BoolValue:
-        b, err := strconv.Atob(s)
-        if err != nil {
-            return err
-        }
-        v.Set(b)
+        v.Set(true)
     case *reflect.IntValue:
         i, err := strconv.Atoi64(s)
         if err != nil {

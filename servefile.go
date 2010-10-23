@@ -20,7 +20,7 @@ func isText(b []byte) bool {
             // decoding error
             return false
         }
-        if 0x80 <= rune && rune <= 0x9F {
+        if 0x7F <= rune && rune <= 0x9F {
             return false
         }
         if rune < ' ' {
@@ -53,16 +53,19 @@ func serveFile(ctx *Context, name string) {
 
     defer f.Close()
 
-    info, _ := os.Stat(name)
+    info, _ := f.Stat()
+    size := strconv.Itoa64(info.Size)
+    mtime := strconv.Itoa64(info.Mtime_ns)
+
     //set content-length
-    ctx.SetHeader("Content-Length", strconv.Itoa64(info.Size), true)
+    ctx.SetHeader("Content-Length", size, true)
 
     //set the last-modified header
     lm := time.SecondsToLocalTime(info.Mtime_ns / 1e9)
     ctx.SetHeader("Last-Modified", webTime(lm), true)
 
     //generate a simple etag with heuristic MD5(filename, size, lastmod)
-    etagparts := []string{name, strconv.Itoa64(info.Size), strconv.Itoa64(info.Mtime_ns)}
+    etagparts := []string{name, size, mtime}
     etag := fmt.Sprintf(`"%s"`, getmd5(strings.Join(etagparts, "|")))
     ctx.SetHeader("ETag", etag, true)
 

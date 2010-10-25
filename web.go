@@ -65,6 +65,10 @@ func (ctx *Context) Redirect(status int, url string) {
     ctx.WriteString("Redirecting to: " + url)
 }
 
+func (ctx *Context) NotModified() {
+    ctx.StartResponse(304)
+}
+
 func (ctx *Context) NotFound(message string) {
     ctx.StartResponse(404)
     ctx.WriteString(message)
@@ -269,7 +273,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
     ctx.SetHeader("Server", "web.go", true)
 
-    tm := time.LocalTime()
+    tm := time.UTC()
     ctx.SetHeader("Date", webTime(tm), true)
 
     //try to serve a static file

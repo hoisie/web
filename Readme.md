@@ -43,13 +43,39 @@ To run the application, put the code in a file called hello.go and run:
 
 You can point your browser to http://localhost:9999/world . 
 
+### Getting parameters
+
+Route handlers may contain a pointer to web.Context as their first parameter. This variable serves many purposes -- it contains information about the request, and it provides methods to control the http connection. For instance, to iterate over the web parameters, either from the URL of a GET request, or the form data of a POST request, you can do the following:
+
+    package main
+    
+    import (
+        "web"
+    )
+    
+    func hello(ctx *web.Context, val string) { 
+	    for k,v := range ctx.Params {
+			println(k, v)
+		}
+	}
+    
+    func main() {
+        web.Get("/(.*)", hello)
+        web.Run("0.0.0.0:9999")
+    }
+
+In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the following printed out in the terminal:
+
+    a 1
+    b 2
+
 ## Documentation
 
 For a quickstart guide, check out [web.go's home page](http://www.getwebgo.com)
 
 There is also a [tutorial](http://www.getwebgo.com/tutorial)
 
-If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development effors on features that people will actually use. 
+If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development efforts on features that people will actually use. 
 
 ## About
 

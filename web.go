@@ -228,13 +228,11 @@ func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (
                 e = err
                 resp = nil
                 s.Logger.Println("Handler crashed with error", err)
-                // i := 1
                 for i := 1; ; i += 1 {
                     _, file, line, ok := runtime.Caller(i)
                     if !ok {
                         break
                     }
-                    // i += 1
                     s.Logger.Println(file, line)
                 }
             }
@@ -382,11 +380,19 @@ type Server struct {
     Logger *log.Logger
 }
 
-func NewServer() *Server {
-    return &Server{Config: &ServerConfig{}}
+func (s *Server) initServer() {
+    if s.Config == nil {
+        s.Config = &ServerConfig{}
+    }
+
+    if s.Logger == nil {
+        s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+    }
 }
 
 func (s *Server) Run(addr string) {
+    s.initServer()
+
     mux := http.NewServeMux()
     mux.Handle("/", s)
     s.Logger.Printf("web.go serving %s\n", addr)
@@ -402,6 +408,7 @@ func Run(addr string) {
 }
 
 func (s *Server) RunScgi(addr string) {
+    s.initServer()
     s.Logger.Printf("web.go serving scgi %s\n", addr)
     s.listenAndServeScgi(addr)
 }
@@ -412,6 +419,7 @@ func RunScgi(addr string) {
 }
 
 func (s *Server) RunFcgi(addr string) {
+    s.initServer()
     s.Logger.Printf("web.go serving fcgi %s\n", addr)
     s.listenAndServeFcgi(addr)
 }

@@ -148,27 +148,27 @@ func init() {
 }
 
 var tests = []Test{
-    Test{"GET", "/", "", 200, "index"},
-    Test{"GET", "/echo/hello", "", 200, "hello"},
-    Test{"GET", "/echo/hello", "", 200, "hello"},
-    Test{"GET", "/multiecho/a/b/c/d", "", 200, "abcd"},
-    Test{"POST", "/post/echo/hello", "", 200, "hello"},
-    Test{"POST", "/post/echo/hello", "", 200, "hello"},
-    Test{"POST", "/post/echoparam/a", "a=hello", 200, "hello"},
-    Test{"POST", "/post/echoparam/a", "a=hello\x00", 200, "hello\x00"},
+    {"GET", "/", "", 200, "index"},
+    {"GET", "/echo/hello", "", 200, "hello"},
+    {"GET", "/echo/hello", "", 200, "hello"},
+    {"GET", "/multiecho/a/b/c/d", "", 200, "abcd"},
+    {"POST", "/post/echo/hello", "", 200, "hello"},
+    {"POST", "/post/echo/hello", "", 200, "hello"},
+    {"POST", "/post/echoparam/a", "a=hello", 200, "hello"},
+    {"POST", "/post/echoparam/a", "a=hello\x00", 200, "hello\x00"},
     //long url
-    Test{"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
+    {"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
 
-    Test{"GET", "/writetest", "", 200, "hello"},
-    Test{"GET", "/error/notfound/notfound", "", 404, "notfound"},
-    Test{"GET", "/doesnotexist", "", 404, "Page not found"},
-    Test{"POST", "/doesnotexist", "", 404, "Page not found"},
-    Test{"GET", "/error/code/500", "", 500, statusText[500]},
-    Test{"POST", "/posterror/code/410/failedrequest", "", 410, "failedrequest"},
-    Test{"GET", "/getparam?a=abcd", "", 200, "abcd"},
-    Test{"GET", "/getparam?b=abcd", "", 200, ""},
-    Test{"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
-    Test{"GET", "/panic", "", 500, "Server Error"},
+    {"GET", "/writetest", "", 200, "hello"},
+    {"GET", "/error/notfound/notfound", "", 404, "notfound"},
+    {"GET", "/doesnotexist", "", 404, "Page not found"},
+    {"POST", "/doesnotexist", "", 404, "Page not found"},
+    {"GET", "/error/code/500", "", 500, statusText[500]},
+    {"POST", "/posterror/code/410/failedrequest", "", 410, "failedrequest"},
+    {"GET", "/getparam?a=abcd", "", 200, "abcd"},
+    {"GET", "/getparam?b=abcd", "", 200, ""},
+    {"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
+    {"GET", "/panic", "", 500, "Server Error"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

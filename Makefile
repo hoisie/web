@@ -1,7 +1,7 @@
 include $(GOROOT)/src/Make.inc
 
 TARG=web
-GOFMT=gofmt -spaces=true -tabindent=false -tabwidth=4
+GOFMT=gofmt -s -spaces=true -tabindent=false -tabwidth=4
 
 GOFILES=\
 	fcgi.go\

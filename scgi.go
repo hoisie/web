@@ -19,6 +19,7 @@ type scgiConn struct {
 func (conn *scgiConn) StartResponse(status int) {
     var buf bytes.Buffer
     text := statusText[status]
+
     fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
     conn.fd.Write(buf.Bytes())
 }
@@ -58,6 +59,23 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
 }
 
 func (conn *scgiConn) Close() { conn.fd.Close() }
+
+func (conn *scgiConn) finishRequest() os.Error {
+    var buf bytes.Buffer
+    if !conn.wroteHeaders {
+        conn.wroteHeaders = true
+
+        for k, v := range conn.headers {
+            for _, i := range v {
+                buf.WriteString(k + ": " + i + "\r\n")
+            }
+        }
+
+        buf.WriteString("\r\n")
+        conn.fd.Write(buf.Bytes())
+    }
+    return nil
+}
 
 func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     headers := make(map[string]string)
@@ -133,6 +151,8 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
 
     sc := scgiConn{fd, make(map[string][]string), false}
     s.routeHandler(req, &sc)
+    sc.finishRequest()
+
     fd.Close()
 }
 

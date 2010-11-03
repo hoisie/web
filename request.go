@@ -84,11 +84,20 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 }
 
 func newRequestCgi(headers map[string]string, body io.Reader) *Request {
-
     var httpheader = make(map[string]string)
 
+    //copy HTTP_ variables
+    for header, value := range headers {
+        if strings.HasPrefix(header, "HTTP_") {
+            newHeader := header[5:]
+            newHeader = strings.Replace(newHeader, "_", "-", -1)
+            newHeader = http.CanonicalHeaderKey(newHeader)
+            httpheader[newHeader] = value
+        }
+    }
+
+    host := httpheader["Host"]
     method, _ := headers["REQUEST_METHOD"]
-    host, _ := headers["HTTP_HOST"]
     path, _ := headers["REQUEST_URI"]
     port, _ := headers["SERVER_PORT"]
     proto, _ := headers["SERVER_PROTOCOL"]
@@ -97,10 +106,6 @@ func newRequestCgi(headers map[string]string, body io.Reader) *Request {
     useragent, _ := headers["USER_AGENT"]
     remoteAddr, _ := headers["REMOTE_ADDR"]
     remotePort, _ := strconv.Atoi(headers["REMOTE_PORT"])
-
-    if cookie, ok := headers["HTTP_COOKIE"]; ok {
-        httpheader["Cookie"] = cookie
-    }
 
     if method == "POST" {
         if ctype, ok := headers["CONTENT_TYPE"]; ok {

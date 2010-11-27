@@ -76,14 +76,15 @@ func (ctx *Context) NotFound(message string) {
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
-    if age == 0 {
-        //do some really long time
-    }
-
-    utctime := time.UTC()
-    utc1 := time.SecondsToUTC(utctime.Seconds() + 60*30)
-    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utc1))
-    ctx.SetHeader("Set-Cookie", cookie, false)
+	var utctime *time.Time
+	if age == 0 {
+		// 2^31 - 1 seconds (roughly 2038)
+		utctime = time.SecondsToUTC(2147483647)
+	} else {
+		utctime = time.SecondsToUTC(time.UTC().Seconds() + age)
+	}
+	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
+	ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {

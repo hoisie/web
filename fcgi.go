@@ -188,6 +188,7 @@ func (conn *fcgiConn) complete() {
 
     conn.fd.Write(hdr.bytes())
     conn.fd.Write(content)
+    conn.fd.Close()
 }
 
 func (conn *fcgiConn) Close() {}
@@ -266,7 +267,10 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
             } else if h.ContentLength == 0 {
                 req = newRequestCgi(headers, &body)
                 s.routeHandler(req, fc)
+                //we close the connection after processing
+                //TODO: is there a way to keep it open for future requests?
                 fc.complete()
+                return
             }
         case fcgiData:
             if h.ContentLength > 0 {

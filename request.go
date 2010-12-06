@@ -274,7 +274,11 @@ func writeTo(s string, val reflect.Value) os.Error {
     case *reflect.InterfaceValue:
         v.Set(reflect.NewValue(s))
     case *reflect.BoolValue:
-        v.Set(true)
+        if strings.ToLower(s) == "false" || s == "0" {
+            v.Set(false)
+        } else {
+            v.Set(true)
+        }
     case *reflect.IntValue:
         i, err := strconv.Atoi64(s)
         if err != nil {

@@ -5,6 +5,7 @@ import (
     "encoding/binary"
     "fmt"
     "http"
+    "json"
     "log"
     "os"
     "strconv"
@@ -145,6 +146,12 @@ func init() {
     Get("/fullparams", func(ctx *Context) string {
         return strings.Join(ctx.FullParams["a"], ",")
     })
+
+    Get("/json", func(ctx *Context) string {
+        ctx.ContentType("json")
+        data, _ := json.Marshal(ctx.Params)
+        return string(data)
+    })
 }
 
 var tests = []Test{
@@ -169,6 +176,7 @@ var tests = []Test{
     {"GET", "/getparam?b=abcd", "", 200, ""},
     {"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
     {"GET", "/panic", "", 500, "Server Error"},
+    {"GET", "/json?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

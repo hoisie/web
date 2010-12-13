@@ -9,6 +9,7 @@ import (
     "http"
     "io/ioutil"
     "log"
+    "mime"
     "os"
     "path"
     "reflect"
@@ -74,17 +75,29 @@ func (ctx *Context) NotFound(message string) {
     ctx.WriteString(message)
 }
 
+//Sets the content type by extension, as defined in the mime package. 
+//For example, ctx.ContentType("json") sets the content-type to "application/json"
+func (ctx *Context) ContentType(ext string) {
+    if !strings.HasPrefix(ext, ".") {
+        ext = "." + ext
+    }
+    ctype := mime.TypeByExtension(ext)
+    if ctype != "" {
+        ctx.SetHeader("Content-Type", ctype, true)
+    }
+}
+
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
-	var utctime *time.Time
-	if age == 0 {
-		// 2^31 - 1 seconds (roughly 2038)
-		utctime = time.SecondsToUTC(2147483647)
-	} else {
-		utctime = time.SecondsToUTC(time.UTC().Seconds() + age)
-	}
-	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
-	ctx.SetHeader("Set-Cookie", cookie, false)
+    var utctime *time.Time
+    if age == 0 {
+        // 2^31 - 1 seconds (roughly 2038)
+        utctime = time.SecondsToUTC(2147483647)
+    } else {
+        utctime = time.SecondsToUTC(time.UTC().Seconds() + age)
+    }
+    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
+    ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
@@ -457,7 +470,6 @@ func (s *Server) Delete(route string, handler interface{}) {
 //Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
-    //addRoute(route, "GET", handler) 
 }
 
 //Adds a handler for the 'POST' http method.

@@ -6,6 +6,7 @@ import (
     "http"
     "io"
     "io/ioutil"
+    "json"
     "mime"
     "mime/multipart"
     "net"
@@ -35,6 +36,7 @@ type Request struct {
     UserAgent  string
     FullParams map[string][]string
     Params     map[string]string
+    ParamData  []byte
     Cookies    map[string]string
     Files      map[string]filedata
     RemoteAddr string
@@ -187,6 +189,16 @@ func (r *Request) parseParams() (err os.Error) {
                 return err
             }
             query = string(b)
+        case "application/json":
+            //if we get JSON, do the best we can to convert it to a map[string]string
+            //we make the body available as r.ParamData
+            var b []byte
+            if b, err = ioutil.ReadAll(r.Body); err != nil {
+                return err
+            }
+            r.ParamData = b
+            r.Params = map[string]string{}
+            json.Unmarshal(b, r.Params)
         case "multipart/form-data":
             _, params := mime.ParseMediaType(ct)
             boundary, ok := params["boundary"]
@@ -354,9 +366,13 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
 
 
 func (r *Request) UnmarshalParams(val interface{}) os.Error {
-    err := r.writeToContainer(reflect.NewValue(val))
-    if err != nil {
-        return err
+    if strings.HasPrefix(r.Headers["Content-Type"], "application/json") {
+        return json.Unmarshal(r.ParamData, val)
+    } else {
+        err := r.writeToContainer(reflect.NewValue(val))
+        if err != nil {
+            return err
+        }
     }
 
     return nil

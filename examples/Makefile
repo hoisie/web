@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.inc
 
-ALL=hello arcchallenge multipart multiserver params logger
+ALL=hello arcchallenge multipart multiserver params logger methodhandler
 
 all: $(ALL)
 

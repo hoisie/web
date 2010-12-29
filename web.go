@@ -194,8 +194,13 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
         s.Logger.Printf("Error in route regex %q\n", r)
         return
     }
-    fv := reflect.NewValue(handler).(*reflect.FuncValue)
-    s.routes.Push(route{r, cr, method, fv})
+    //is this already a reflect.FuncValue?
+    if fv, ok := handler.(*reflect.FuncValue); ok {
+        s.routes.Push(route{r, cr, method, fv})
+    } else {
+        fv := reflect.NewValue(handler).(*reflect.FuncValue)
+        s.routes.Push(route{r, cr, method, fv})
+    }
 }
 
 type httpConn struct {
@@ -236,6 +241,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     s.routeHandler(wreq, &conn)
 }
 
+//Calls a function with recover block
 func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (resp []reflect.Value, e interface{}) {
     defer func() {
         if err := recover(); err != nil {
@@ -257,6 +263,40 @@ func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (
         }
     }()
     return function.Call(args), nil
+}
+
+//should the context be passed to the handler?
+func requiresContext(handlerType *reflect.FuncType) bool {
+    //if the method doesn't take arguments, no
+    if handlerType.NumIn() == 0 {
+        return false
+    }
+
+    //if the first argument is not a pointer, no
+    a0, ok := handlerType.In(0).(*reflect.PtrType)
+    if !ok {
+        return false
+    }
+
+    //if the first argument is a context, yes
+    if a0.Elem() == contextType {
+        return true
+    }
+
+    //another case -- the first argument is a method receiver, and the
+    //second argument is a web.Context
+
+    if handlerType.NumIn() > 1 {
+        a1, ok := handlerType.In(1).(*reflect.PtrType)
+        if !ok {
+            return false
+        }
+        if a1.Elem() == contextType {
+            return true
+        }
+    }
+
+    return false
 }
 
 func (s *Server) routeHandler(req *Request, c conn) {
@@ -319,27 +359,13 @@ func (s *Server) routeHandler(req *Request, c conn) {
         }
 
         var args vector.Vector
-
         handlerType := route.handler.Type().(*reflect.FuncType)
-
-        //check if the first arg in the handler is a context type
-        if handlerType.NumIn() > 0 {
-            if a0, ok := handlerType.In(0).(*reflect.PtrType); ok {
-                typ := a0.Elem()
-                if typ == contextType {
-                    args.Push(reflect.NewValue(&ctx))
-                }
-            }
+        if requiresContext(handlerType) {
+            args.Push(reflect.NewValue(&ctx))
         }
 
         for _, arg := range match[1:] {
             args.Push(reflect.NewValue(arg))
-        }
-
-        if args.Len() != handlerType.NumIn() {
-            s.Logger.Printf("Incorrect number of arguments for %s\n", requestPath)
-            ctx.Abort(500, "Server Error")
-            return
         }
 
         valArgs := make([]reflect.Value, args.Len())
@@ -349,7 +375,8 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
         ret, err := s.safelyCall(route.handler, valArgs)
         if err != nil {
-            //there was a panic in the handler
+            //there was an error or panic while calling the handler
+            s.Logger.Printf("Incorrect number of arguments for %s\n", requestPath)
             ctx.Abort(500, "Server Error")
         }
 
@@ -544,4 +571,20 @@ func Urlencode(data map[string]string) string {
     }
     s := buf.String()
     return s[0 : len(s)-1]
+}
+
+//Extracts the method "name" from the value represented by "val"
+func MethodHandler(val interface{}, name string) *reflect.FuncValue {
+    v := reflect.NewValue(val)
+    typ := v.Type()
+    n := typ.NumMethod()
+    for i := 0; i < n; i++ {
+        m := typ.Method(i)
+        if m.Name == name {
+            return v.Method(i)
+        }
+    }
+
+    panic("Could not find method: " + name)
+    return nil
 }

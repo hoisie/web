@@ -100,10 +100,24 @@ type Test struct {
     expectedBody   string
 }
 
+type StructHandler struct {
+    a string
+}
+
+func (s *StructHandler) method() string {
+    return s.a
+}
+
+func (s *StructHandler) method2(ctx *Context) string {
+    return s.a + ctx.Params["b"]
+}
+
+func (s *StructHandler) method3(ctx *Context, b string) string {
+    return s.a + b
+}
 
 //initialize the routes
 func init() {
-
     f, _ := os.Open(os.DevNull, os.O_RDWR, 0644)
     mainServer.SetLogger(log.New(f, "", 0))
     Get("/", func() string { return "index" })
@@ -152,6 +166,11 @@ func init() {
         data, _ := json.Marshal(ctx.Params)
         return string(data)
     })
+
+    s := &StructHandler{"a"}
+    Get("/methodhandler", MethodHandler(s, "method"))
+    Get("/methodhandler2", MethodHandler(s, "method2"))
+    Get("/methodhandler3/(.*)", MethodHandler(s, "method3"))
 }
 
 var tests = []Test{
@@ -177,6 +196,9 @@ var tests = []Test{
     {"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
     {"GET", "/panic", "", 500, "Server Error"},
     {"GET", "/json?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
+    {"GET", "/methodhandler", "", 200, `a`},
+    {"GET", "/methodhandler2?b=b", "", 200, `ab`},
+    {"GET", "/methodhandler3/b", "", 200, `ab`},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {

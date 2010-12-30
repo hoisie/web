@@ -10,6 +10,7 @@ import (
     "io/ioutil"
     "log"
     "mime"
+    "net"
     "os"
     "path"
     "reflect"
@@ -423,6 +424,9 @@ type Server struct {
     Config *ServerConfig
     routes vector.Vector
     Logger *log.Logger
+    //save the listener so it can be closed
+    l      net.Listener
+    closed bool
 }
 
 func (s *Server) initServer() {
@@ -441,15 +445,31 @@ func (s *Server) Run(addr string) {
     mux := http.NewServeMux()
     mux.Handle("/", s)
     s.Logger.Printf("web.go serving %s\n", addr)
-    err := http.ListenAndServe(addr, mux)
+
+    l, err := net.Listen("tcp", addr)
     if err != nil {
         log.Exit("ListenAndServe:", err)
     }
+    s.l = l
+    println("calling serve!", s.l)
+    err = http.Serve(s.l, mux)
+    s.l.Close()
 }
 
 //runs the web application and serves http requests
 func Run(addr string) {
     mainServer.Run(addr)
+}
+
+//Stops the web server
+func (s *Server) Close() {
+    s.l.Close()
+    s.closed = true
+}
+
+//runs the web application and serves http requests
+func Close() {
+    mainServer.Close()
 }
 
 func (s *Server) RunScgi(addr string) {
@@ -574,6 +594,7 @@ func Urlencode(data map[string]string) string {
 }
 
 //Extracts the method "name" from the value represented by "val"
+//This allows methods to be handlers
 func MethodHandler(val interface{}, name string) *reflect.FuncValue {
     v := reflect.NewValue(val)
     typ := v.Type()

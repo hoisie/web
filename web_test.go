@@ -8,11 +8,15 @@ import (
     "json"
     "log"
     "os"
+    "runtime"
     "strconv"
     "strings"
     "testing"
 )
 
+func init() {
+    runtime.GOMAXPROCS(4)
+}
 //this implements io.ReadWriteCloser, which means it can be passed around as a tcp connection
 type tcpBuffer struct {
     input  *bytes.Buffer
@@ -643,3 +647,21 @@ func TestSecureCookieFcgi(t *testing.T) {
         t.Fatalf("SecureCookie test failed")
     }
 }
+
+//Disabled until issue 1375 is fixed
+/*
+func TestCloseServer(t *testing.T) {
+    var server1 Server
+    server1.Get("/(.*)", func(s string) string { return s })
+    go server1.Run("0.0.0.0:22231")
+    //sleep 100ms
+    time.Sleep(1e9)
+    server1.Close()
+    time.Sleep(1e9)
+    //try to connect, should error
+    _,_,err := http.Get("http://127.0.0.1:22231")
+    if err == nil {
+        t.Fatalf("CloseServer test failed")
+    }
+}
+*/

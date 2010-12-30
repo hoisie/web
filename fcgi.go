@@ -292,6 +292,9 @@ func (s *Server) listenAndServeFcgi(addr string) os.Error {
         l, err = net.Listen("tcp", addr)
     }
 
+    //save the listener so it can be closed
+    s.l = l
+
     if err != nil {
         s.Logger.Println("FCGI listen error", err.String())
         return err

@@ -451,7 +451,6 @@ func (s *Server) Run(addr string) {
         log.Exit("ListenAndServe:", err)
     }
     s.l = l
-    println("calling serve!", s.l)
     err = http.Serve(s.l, mux)
     s.l.Close()
 }

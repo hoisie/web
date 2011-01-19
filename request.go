@@ -229,7 +229,7 @@ func (r *Request) parseParams() (err os.Error) {
                     continue
                 }
                 if params["filename"] != "" {
-                    r.Files[name] = filedata{name, data}
+                    r.Files[name] = filedata{params["filename"], data}
                 } else {
                     var params vector.StringVector = r.FullParams[name]
                     params.Push(string(data))

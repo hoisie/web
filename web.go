@@ -364,7 +364,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
         if requiresContext(handlerType) {
             args.Push(reflect.NewValue(&ctx))
         }
-
         for _, arg := range match[1:] {
             args.Push(reflect.NewValue(arg))
         }
@@ -377,7 +376,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
         ret, err := s.safelyCall(route.handler, valArgs)
         if err != nil {
             //there was an error or panic while calling the handler
-            s.Logger.Printf("Incorrect number of arguments for %s\n", requestPath)
             ctx.Abort(500, "Server Error")
         }
 

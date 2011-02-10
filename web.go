@@ -364,7 +364,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
         if requiresContext(handlerType) {
             args.Push(reflect.NewValue(&ctx))
         }
-
         for _, arg := range match[1:] {
             args.Push(reflect.NewValue(arg))
         }
@@ -377,7 +376,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
         ret, err := s.safelyCall(route.handler, valArgs)
         if err != nil {
             //there was an error or panic while calling the handler
-            s.Logger.Printf("Incorrect number of arguments for %s\n", requestPath)
             ctx.Abort(500, "Server Error")
         }
 
@@ -448,7 +446,7 @@ func (s *Server) Run(addr string) {
 
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Exit("ListenAndServe:", err)
+        log.Fatal("ListenAndServe:", err)
     }
     s.l = l
     err = http.Serve(s.l, mux)

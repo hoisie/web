@@ -172,10 +172,9 @@ func (r *Request) parseParams() (err os.Error) {
         return
     }
     r.FullParams = make(map[string][]string)
-    var query string
+    queryParams := r.URL.RawQuery
+    var bodyParams string
     switch r.Method {
-    case "GET", "HEAD":
-        query = r.URL.RawQuery
     case "POST":
         if r.Body == nil {
             return os.ErrorString("missing form body")
@@ -188,7 +187,7 @@ func (r *Request) parseParams() (err os.Error) {
             if b, err = ioutil.ReadAll(r.Body); err != nil {
                 return err
             }
-            query = string(b)
+            bodyParams = string(b)
         case "application/json":
             //if we get JSON, do the best we can to convert it to a map[string]string
             //we make the body available as r.ParamData
@@ -241,10 +240,20 @@ func (r *Request) parseParams() (err os.Error) {
             return &badStringError{"unknown Content-Type", ct}
         }
     }
-    err = parseForm(r.FullParams, query)
-    if err != nil {
-        return err
+    if queryParams != "" {
+        err = parseForm(r.FullParams, queryParams)
+        if err != nil {
+            return err
+        }
     }
+
+    if bodyParams != "" {
+        err = parseForm(r.FullParams, bodyParams)
+        if err != nil {
+            return err
+        }
+    }
+
     r.Params = flattenParams(r.FullParams)
     return nil
 }

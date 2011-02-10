@@ -185,6 +185,7 @@ var tests = []Test{
     {"POST", "/post/echo/hello", "", 200, "hello"},
     {"POST", "/post/echo/hello", "", 200, "hello"},
     {"POST", "/post/echoparam/a", "a=hello", 200, "hello"},
+    {"POST", "/post/echoparam/c?c=hello", "", 200, "hello"},
     {"POST", "/post/echoparam/a", "a=hello\x00", 200, "hello\x00"},
     //long url
     {"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},

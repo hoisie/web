@@ -491,42 +491,54 @@ func RunFcgi(addr string) {
     mainServer.RunFcgi(addr)
 }
 
-//Adds a handler for the 'GET' http method.
+// Adds a handler for the 'GET' http method.
+// Handlers take arguments as follows:
+// 1. They may optionally take a *web.Context
+// 2. They must take an argument for each captured token in the route regex
 func (s *Server) Get(route string, handler interface{}) {
     s.addRoute(route, "GET", handler)
 }
 
 //Adds a handler for the 'POST' http method.
+// See web.Get for handler arguments
 func (s *Server) Post(route string, handler interface{}) {
     s.addRoute(route, "POST", handler)
 }
 
 //Adds a handler for the 'PUT' http method.
+// See web.Get for handler arguments
 func (s *Server) Put(route string, handler interface{}) {
     s.addRoute(route, "PUT", handler)
 }
 
 //Adds a handler for the 'DELETE' http method.
+// See web.Get for handler arguments
 func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
 
 //Adds a handler for the 'GET' http method.
+// Handlers take arguments as follows:
+// 1. They may optionally take a *web.Context
+// 2. They must take an argument for each captured token in the route regex
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
 }
 
 //Adds a handler for the 'POST' http method.
+// See web.Get for handler arguments
 func Post(route string, handler interface{}) {
     mainServer.addRoute(route, "POST", handler)
 }
 
 //Adds a handler for the 'PUT' http method.
+// See web.Get for handler arguments
 func Put(route string, handler interface{}) {
     mainServer.addRoute(route, "PUT", handler)
 }
 
 //Adds a handler for the 'DELETE' http method.
+// See web.Get for handler arguments
 func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
 }

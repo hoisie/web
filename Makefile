@@ -10,6 +10,7 @@ GOFILES=\
 	servefile.go\
 	status.go\
 	web.go\
+  webapp.go\
 
 include $(GOROOT)/src/Make.pkg
 

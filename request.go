@@ -28,7 +28,7 @@ type Request struct {
     Proto      string    // "HTTP/1.0"
     ProtoMajor int       // 1
     ProtoMinor int       // 0
-    Headers    map[string]string
+    Headers    http.Header
     Body       io.Reader
     Close      bool
     Host       string
@@ -85,29 +85,19 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
     return &req
 }
 
-func newRequestCgi(headers map[string]string, body io.Reader) *Request {
-    var httpheader = make(map[string]string)
+func newRequestCgi(headers http.Header, body io.Reader) *Request {
+    var httpheader = make(http.Header)
 
-    //copy HTTP_ variables
-    for header, value := range headers {
-        if strings.HasPrefix(header, "HTTP_") {
-            newHeader := header[5:]
-            newHeader = strings.Replace(newHeader, "_", "-", -1)
-            newHeader = http.CanonicalHeaderKey(newHeader)
-            httpheader[newHeader] = value
-        }
-    }
-
-    host := httpheader["Host"]
-    method, _ := headers["REQUEST_METHOD"]
-    path, _ := headers["REQUEST_URI"]
-    port, _ := headers["SERVER_PORT"]
-    proto, _ := headers["SERVER_PROTOCOL"]
+    host := httpheader.Get("Host")
+    method := headers.Get("REQUEST_METHOD")
+    path := headers.Get("REQUEST_URI")
+    port := headers.Get("SERVER_PORT")
+    proto := headers.Get("SERVER_PROTOCOL")
     rawurl := "http://" + host + ":" + port + path
     url, _ := http.ParseURL(rawurl)
-    useragent, _ := headers["USER_AGENT"]
-    remoteAddr, _ := headers["REMOTE_ADDR"]
-    remotePort, _ := strconv.Atoi(headers["REMOTE_PORT"])
+    useragent := headers.Get("USER_AGENT")
+    remoteAddr := headers.Get("REMOTE_ADDR")
+    remotePort, _ := strconv.Atoi(headers.Get("REMOTE_PORT"))
 
     if method == "POST" {
         if ctype, ok := headers["CONTENT_TYPE"]; ok {
@@ -180,7 +170,7 @@ func (r *Request) parseParams() (err os.Error) {
             return os.ErrorString("missing form body")
         }
 
-        ct, _ := r.Headers["Content-Type"]
+        ct := r.Headers.Get("Content-Type")
         switch strings.Split(ct, ";", 2)[0] {
         case "text/plain", "application/x-www-form-urlencoded", "":
             var b []byte
@@ -265,15 +255,17 @@ func (r *Request) parseCookies() (err os.Error) {
 
     r.Cookies = make(map[string]string)
 
-    if v, ok := r.Headers["Cookie"]; ok {
-        cookies := strings.Split(v, ";", -1)
-        for _, cookie := range cookies {
-            cookie = strings.TrimSpace(cookie)
-            parts := strings.Split(cookie, "=", 2)
-            if len(parts) != 2 {
-                continue
-            }
-            r.Cookies[parts[0]] = parts[1]
+    if va, ok := r.Headers["Cookie"]; ok {
+        for _, v := range va {
+			cookies := strings.Split(v, ";", -1)
+			for _, cookie := range cookies {
+				cookie = strings.TrimSpace(cookie)
+				parts := strings.Split(cookie, "=", 2)
+				if len(parts) != 2 {
+					continue
+				}
+				r.Cookies[parts[0]] = parts[1]
+        	}
         }
     }
 
@@ -375,7 +367,7 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
 
 
 func (r *Request) UnmarshalParams(val interface{}) os.Error {
-    if strings.HasPrefix(r.Headers["Content-Type"], "application/json") {
+    if strings.HasPrefix(r.Headers.Get("Content-Type"), "application/json") {
         return json.Unmarshal(r.ParamData, val)
     } else {
         err := r.writeToContainer(reflect.NewValue(val))

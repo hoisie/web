@@ -3,6 +3,7 @@ package web
 import (
     "bytes"
     "fmt"
+    "http"
     "io"
     "net"
     "os"
@@ -78,7 +79,7 @@ func (conn *scgiConn) finishRequest() os.Error {
 }
 
 func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
-    headers := make(map[string]string)
+    headers := make(http.Header)
 
     data := buf.Bytes()
     var clen int
@@ -109,7 +110,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])
         value := string(fields[i+1])
-        headers[key] = value
+        headers.Set(key, value)
     }
 
     body := bytes.NewBuffer(content)

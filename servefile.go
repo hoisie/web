@@ -82,8 +82,8 @@ func serveFile(ctx *Context, name string) {
         }
     }
 
-    if ctx.Request.Headers["If-None-Match"] != "" {
-        inm := ctx.Request.Headers["If-None-Match"]
+    if ctx.Request.Headers.Get("If-None-Match") != "" {
+        inm := ctx.Request.Headers.Get("If-None-Match")
         if inm == etag {
             ctx.NotModified()
             return
@@ -91,8 +91,8 @@ func serveFile(ctx *Context, name string) {
 
     }
 
-    if ctx.Request.Headers["If-Modified-Since"] != "" {
-        ims := ctx.Request.Headers["If-Modified-Since"]
+    if ctx.Request.Headers.Get("If-Modified-Since") != "" {
+        ims := ctx.Request.Headers.Get("If-Modified-Since")
         imstime, err := time.Parse(time.RFC1123, ims)
         if err == nil && imstime.Seconds() >= lm.Seconds() {
             ctx.NotModified()

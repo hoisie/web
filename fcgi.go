@@ -5,6 +5,7 @@ import (
     "bufio"
     "encoding/binary"
     "fmt"
+    "http"
     "io"
     "net"
     "os"
@@ -91,7 +92,7 @@ func (er fcgiEndReq) bytes() []byte {
 type fcgiConn struct {
     requestId    uint16
     fd           io.ReadWriteCloser
-    headers      map[string][]string
+    headers      http.Header
     wroteHeaders bool
 }
 
@@ -213,7 +214,7 @@ func readFcgiParamSize(data []byte, index int) (int, int) {
 }
 
 //read the fcgi parameters contained in data, and store them in storage
-func readFcgiParams(data []byte, storage map[string]string) {
+func readFcgiParams(data []byte, storage http.Header) {
     for idx := 0; len(data) > idx; {
         keySize, shift := readFcgiParamSize(data, idx)
         idx += shift
@@ -223,7 +224,7 @@ func readFcgiParams(data []byte, storage map[string]string) {
         idx += keySize
         val := data[idx : idx+valSize]
         idx += valSize
-        storage[string(key)] = string(val)
+        storage.Set(string(key), string(val))
     }
 }
 
@@ -232,7 +233,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     var req *Request
     var fc *fcgiConn
     var body bytes.Buffer
-    headers := map[string]string{}
+    headers := make(http.Header)
 
     for {
         var h fcgiHeader

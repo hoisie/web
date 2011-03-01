@@ -87,6 +87,14 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
 func newRequestCgi(headers http.Header, body io.Reader) *Request {
     var httpheader = make(http.Header)
+    for header, value := range headers {
+        if strings.HasPrefix(header, "Http_") {
+            newHeader := header[5:]
+            newHeader = strings.Replace(newHeader, "_", "-", -1)
+            newHeader = http.CanonicalHeaderKey(newHeader)
+            httpheader[newHeader] = value
+        }
+    }
 
     host := httpheader.Get("Host")
     method := headers.Get("REQUEST_METHOD")
@@ -257,15 +265,15 @@ func (r *Request) parseCookies() (err os.Error) {
 
     if va, ok := r.Headers["Cookie"]; ok {
         for _, v := range va {
-			cookies := strings.Split(v, ";", -1)
-			for _, cookie := range cookies {
-				cookie = strings.TrimSpace(cookie)
-				parts := strings.Split(cookie, "=", 2)
-				if len(parts) != 2 {
-					continue
-				}
-				r.Cookies[parts[0]] = parts[1]
-        	}
+            cookies := strings.Split(v, ";", -1)
+            for _, cookie := range cookies {
+                cookie = strings.TrimSpace(cookie)
+                parts := strings.Split(cookie, "=", 2)
+                if len(parts) != 2 {
+                    continue
+                }
+                r.Cookies[parts[0]] = parts[1]
+            }
         }
     }
 

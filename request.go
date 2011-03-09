@@ -216,9 +216,9 @@ func (r *Request) parseParams() (err os.Error) {
                 //read the data
                 data, _ := ioutil.ReadAll(part)
                 //check for the 'filename' param
-                v, ok := part.Header["Content-Disposition"]
-                if !ok {
-                    continue
+                v := part.Header.Get("Content-Disposition")
+                if len(v)==0 {
+                   continue
                 }
                 name := part.FormName()
                 d, params := mime.ParseMediaType(v)

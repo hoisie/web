@@ -77,7 +77,6 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
             i := strings.Index(value, ";")
             cookie := value[0:i]
             cookieParts := strings.Split(cookie, "=", 2)
-
             response.cookies[strings.TrimSpace(cookieParts[0])] = strings.TrimSpace(cookieParts[1])
         }
     }
@@ -85,7 +84,7 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
     return &response
 }
 
-func getTestResponse(method string, path string, body string, headers map[string]string) *testResponse {
+func getTestResponse(method string, path string, body string, headers map[string][]string) *testResponse {
     req := buildTestRequest(method, path, body, headers)
     var buf bytes.Buffer
 
@@ -206,7 +205,7 @@ var tests = []Test{
     {"GET", "/methodhandler3/b", "", 200, `ab`},
 }
 
-func buildTestRequest(method string, path string, body string, headers map[string]string) *Request {
+func buildTestRequest(method string, path string, body string, headers map[string][]string) *Request {
     host := "127.0.0.1"
     port := "80"
     rawurl := "http://" + host + ":" + port + path
@@ -216,12 +215,12 @@ func buildTestRequest(method string, path string, body string, headers map[strin
     useragent := "web.go test framework"
 
     if headers == nil {
-        headers = map[string]string{}
+        headers = map[string][]string{}
     }
 
     if method == "POST" {
-        headers["Content-Length"] = fmt.Sprintf("%d", len(body))
-        headers["Content-Type"] = "text/plain"
+        headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
+        headers["Content-Type"] = []string{"text/plain"}
     }
 
     req := Request{Method: method,
@@ -239,7 +238,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 func TestRouting(t *testing.T) {
     for _, test := range tests {
-        resp := getTestResponse(test.method, test.path, test.body, make(map[string]string))
+        resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string))
 
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
@@ -263,8 +262,8 @@ func TestHead(t *testing.T) {
         if test.method != "GET" {
             continue
         }
-        getresp := getTestResponse("GET", test.path, test.body, make(map[string]string))
-        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string]string))
+        getresp := getTestResponse("GET", test.path, test.body, make(map[string][]string))
+        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string][]string))
 
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
@@ -612,7 +611,7 @@ func TestSecureCookie(t *testing.T) {
         t.Fatalf("Failed to get cookie ")
     }
     cookie := fmt.Sprintf("a=%s", sval)
-    resp2 := getTestResponse("GET", "/securecookie/get/a", "", map[string]string{"Cookie": cookie})
+    resp2 := getTestResponse("GET", "/securecookie/get/a", "", map[string][]string{"Cookie": {cookie}})
 
     if resp2.body != "1" {
         t.Fatalf("SecureCookie test failed")
@@ -625,6 +624,7 @@ func TestSecureCookieFcgi(t *testing.T) {
 
     //set the cookie
     req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string]string))
+
     var output bytes.Buffer
     nb := tcpBuffer{input: req, output: &output}
     mainServer.handleFcgiConnection(&nb)
@@ -645,7 +645,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     resp = buildTestResponse(contents)
 
     if resp.body != "1" {
-        t.Fatalf("SecureCookie test failed")
+        t.Fatalf("SecureCookie test failed body")
     }
 }
 

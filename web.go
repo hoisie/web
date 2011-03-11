@@ -130,32 +130,34 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-    cookie, ok := ctx.Request.Cookies[name]
-    if !ok {
-        return "", false
+    for _, cookie := range ctx.Request.Cookie {
+        if cookie.Name != name {
+            continue
+        }
+
+        parts := strings.Split(cookie.Value, "|", 3)
+
+        val := parts[0]
+        timestamp := parts[1]
+        sig := parts[2]
+
+        if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
+            return "", false
+        }
+
+        ts, _ := strconv.Atoi64(timestamp)
+
+        if time.Seconds()-31*86400 > ts {
+            return "", false
+        }
+
+        buf := bytes.NewBufferString(val)
+        encoder := base64.NewDecoder(base64.StdEncoding, buf)
+
+        res, _ := ioutil.ReadAll(encoder)
+        return string(res), true
     }
-
-    parts := strings.Split(cookie, "|", 3)
-
-    val := parts[0]
-    timestamp := parts[1]
-    sig := parts[2]
-
-    if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
-        return "", false
-    }
-
-    ts, _ := strconv.Atoi64(timestamp)
-
-    if time.Seconds()-31*86400 > ts {
-        return "", false
-    }
-
-    buf := bytes.NewBufferString(val)
-    encoder := base64.NewDecoder(base64.StdEncoding, buf)
-
-    res, _ := ioutil.ReadAll(encoder)
-    return string(res), true
+    return "", false
 }
 
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof
@@ -226,7 +228,7 @@ func (c *httpConn) Write(content []byte) (n int, err os.Error) {
 }
 
 func (c *httpConn) Close() {
-	rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
+    rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
     if buf != nil {
         buf.Flush()
     }
@@ -314,12 +316,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
     perr := req.parseParams()
     if perr != nil {
         s.Logger.Printf("Failed to parse form data %q\n", perr.String())
-    }
-
-    //parse the cookies
-    perr = req.parseCookies()
-    if perr != nil {
-        s.Logger.Printf("Failed to parse cookies %q", perr.String())
     }
 
     ctx := Context{req, s, c, false}

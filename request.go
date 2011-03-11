@@ -38,6 +38,7 @@ type Request struct {
     Params     map[string]string
     ParamData  []byte
     Cookies    map[string]string
+    Cookie     []*http.Cookie
     Files      map[string]filedata
     RemoteAddr string
     RemotePort int
@@ -79,6 +80,7 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
         Referer:    hr.Referer,
         UserAgent:  hr.UserAgent,
         FullParams: hr.Form,
+        Cookie:     hr.Cookie,
         RemoteAddr: remoteAddr.IP.String(),
         RemotePort: remoteAddr.Port,
     }
@@ -253,30 +255,6 @@ func (r *Request) parseParams() (err os.Error) {
     }
 
     r.Params = flattenParams(r.FullParams)
-    return nil
-}
-
-func (r *Request) parseCookies() (err os.Error) {
-    if r.Cookies != nil {
-        return
-    }
-
-    r.Cookies = make(map[string]string)
-
-    if va, ok := r.Headers["Cookie"]; ok {
-        for _, v := range va {
-            cookies := strings.Split(v, ";", -1)
-            for _, cookie := range cookies {
-                cookie = strings.TrimSpace(cookie)
-                parts := strings.Split(cookie, "=", 2)
-                if len(parts) != 2 {
-                    continue
-                }
-                r.Cookies[parts[0]] = parts[1]
-            }
-        }
-    }
-
     return nil
 }
 

@@ -226,7 +226,7 @@ func (c *httpConn) Write(content []byte) (n int, err os.Error) {
 }
 
 func (c *httpConn) Close() {
-    rwc, buf, _ := c.conn.Hijack()
+	rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
     if buf != nil {
         buf.Flush()
     }

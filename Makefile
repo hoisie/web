@@ -4,6 +4,7 @@ TARG=web
 GOFMT=gofmt -s -spaces=true -tabindent=false -tabwidth=4
 
 GOFILES=\
+  cookie.go\
 	fcgi.go\
 	request.go\
 	scgi.go\
@@ -14,13 +15,7 @@ GOFILES=\
 include $(GOROOT)/src/Make.pkg
 
 format:
-	${GOFMT} -w fcgi.go
-	${GOFMT} -w request.go
-	${GOFMT} -w scgi.go
-	${GOFMT} -w servefile.go
-	${GOFMT} -w status.go
-	${GOFMT} -w web.go
-	${GOFMT} -w web_test.go
+	${GOFMT} -w ${GOFILES}
 	${GOFMT} -w examples/arcchallenge.go
 	${GOFMT} -w examples/hello.go
 	${GOFMT} -w examples/methodhandler.go

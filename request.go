@@ -118,6 +118,9 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
             httpheader["Content-Length"] = clength
         }
     }
+    
+    //read the cookies
+    cookies := readCookies(httpheader)    
 
     req := Request{
         Method:     method,
@@ -130,6 +133,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
         Headers:    httpheader,
         RemoteAddr: remoteAddr,
         RemotePort: remotePort,
+        Cookie: cookies,
     }
 
     return &req

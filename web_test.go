@@ -84,8 +84,8 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
     return &response
 }
 
-func getTestResponse(method string, path string, body string, headers map[string][]string) *testResponse {
-    req := buildTestRequest(method, path, body, headers)
+func getTestResponse(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *testResponse {
+    req := buildTestRequest(method, path, body, headers, cookies)
     var buf bytes.Buffer
 
     tcpb := tcpBuffer{nil, &buf}
@@ -205,7 +205,7 @@ var tests = []Test{
     {"GET", "/methodhandler3/b", "", 200, `ab`},
 }
 
-func buildTestRequest(method string, path string, body string, headers map[string][]string) *Request {
+func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *Request {
     host := "127.0.0.1"
     port := "80"
     rawurl := "http://" + host + ":" + port + path
@@ -225,6 +225,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
     req := Request{Method: method,
         RawURL:    rawurl,
+        Cookie:     cookies,
         URL:       url,
         Proto:     proto,
         Host:      host,
@@ -238,7 +239,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 func TestRouting(t *testing.T) {
     for _, test := range tests {
-        resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string))
+        resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string), nil)
 
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
@@ -262,8 +263,8 @@ func TestHead(t *testing.T) {
         if test.method != "GET" {
             continue
         }
-        getresp := getTestResponse("GET", test.path, test.body, make(map[string][]string))
-        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string][]string))
+        getresp := getTestResponse("GET", test.path, test.body, make(map[string][]string), nil)
+        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string][]string), nil)
 
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
@@ -603,15 +604,28 @@ func TestFcgiChunks(t *testing.T) {
     }
 }
 
+func makeCookie(vals map[string]string) []*http.Cookie {
+    var cookies []*http.Cookie
+    for k,v := range vals {
+        c := &http.Cookie{
+            Name:   k,
+            Value:  v,
+        }
+        cookies = append(cookies, c)
+    }
+    return cookies
+}
+
 func TestSecureCookie(t *testing.T) {
     mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
-    resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil)
+    resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil, nil)
     sval, ok := resp1.cookies["a"]
     if !ok {
         t.Fatalf("Failed to get cookie ")
     }
-    cookie := fmt.Sprintf("a=%s", sval)
-    resp2 := getTestResponse("GET", "/securecookie/get/a", "", map[string][]string{"Cookie": {cookie}})
+    cookies := makeCookie(map[string]string {"a": sval});
+    
+    resp2 := getTestResponse("GET", "/securecookie/get/a", "", nil, cookies)
 
     if resp2.body != "1" {
         t.Fatalf("SecureCookie test failed")

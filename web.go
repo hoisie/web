@@ -19,6 +19,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "websocket"
 )
 
 type conn interface {
@@ -76,7 +77,7 @@ func (ctx *Context) NotFound(message string) {
     ctx.WriteString(message)
 }
 
-//Sets the content type by extension, as defined in the mime package. 
+//Sets the content type by extension, as defined in the mime package.
 //For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
     if !strings.HasPrefix(ext, ".") {
@@ -189,21 +190,31 @@ type route struct {
     cr      *regexp.Regexp
     method  string
     handler *reflect.FuncValue
+    httpHandler http.Handler
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
+  cr, err := regexp.Compile(r)
+  if err != nil {
+      s.Logger.Printf("Error in route regex %q\n", r)
+      return
+  }
+  //is this already a reflect.FuncValue?
+  if fv, ok := handler.(*reflect.FuncValue); ok {
+      s.routes.Push(route{r, cr, method, fv, nil})
+  } else {
+      fv := reflect.NewValue(handler).(*reflect.FuncValue)
+      s.routes.Push(route{r, cr, method, fv, nil})
+  }
+}
+
+func (s *Server) addRouteHttpHandler(r string, method string, httpHandler http.Handler) {
     cr, err := regexp.Compile(r)
     if err != nil {
         s.Logger.Printf("Error in route regex %q\n", r)
         return
     }
-    //is this already a reflect.FuncValue?
-    if fv, ok := handler.(*reflect.FuncValue); ok {
-        s.routes.Push(route{r, cr, method, fv})
-    } else {
-        fv := reflect.NewValue(handler).(*reflect.FuncValue)
-        s.routes.Push(route{r, cr, method, fv})
-    }
+    s.routes.Push(route{r, cr, method, nil, httpHandler})
 }
 
 type httpConn struct {
@@ -241,7 +252,10 @@ func (c *httpConn) Close() {
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     conn := httpConn{c}
     wreq := newRequest(req, c)
-    s.routeHandler(wreq, &conn)
+    route := s.routeHandler(wreq, &conn)
+    if route != nil {
+      route.httpHandler.ServeHTTP(c, req)
+    }
 }
 
 //Calls a function with recover block
@@ -302,7 +316,12 @@ func requiresContext(handlerType *reflect.FuncType) bool {
     return false
 }
 
-func (s *Server) routeHandler(req *Request, c conn) {
+// Tries to handle the given request.
+// Finds the route matching the request, and execute the callback associated
+// with it.  In case of custom http handlers, this function returns an "unused"
+// route. The caller is then responsible for calling the httpHandler associated
+// with the returned route.
+func (s *Server) routeHandler(req *Request, c conn) (unused *route) {
     requestPath := req.URL.Path
 
     //log the request
@@ -355,8 +374,15 @@ func (s *Server) routeHandler(req *Request, c conn) {
             continue
         }
 
+        if route.httpHandler != nil {
+          unused = &route
+          // We can not handle custom http handlers here, give back to the caller.
+          return
+        }
+
         var args vector.Vector
         handlerType := route.handler.Type().(*reflect.FuncType)
+
         if requiresContext(handlerType) {
             args.Push(reflect.NewValue(&ctx))
         }
@@ -403,6 +429,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
     }
 
     ctx.Abort(404, "Page not found")
+    return
 }
 
 var Config = &ServerConfig{
@@ -507,6 +534,16 @@ func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
 
+//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func (s *Server) Handler(route string, method string, httpHandler http.Handler) {
+    s.addRouteHttpHandler(route, method, httpHandler)
+}
+
+//Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
+    s.addRouteHttpHandler(route, "GET", httpHandler)
+}
+
 //Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
@@ -525,6 +562,16 @@ func Put(route string, handler interface{}) {
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
+}
+
+//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func Handler(route string, method string, httpHandler http.Handler) {
+    mainServer.Handler(route, method, httpHandler)
+}
+
+//Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func Websocket(route string, httpHandler websocket.Handler) {
+    mainServer.Websocket(route, httpHandler)
 }
 
 func (s *Server) SetLogger(logger *log.Logger) {

@@ -199,22 +199,16 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
       s.Logger.Printf("Error in route regex %q\n", r)
       return
   }
-  //is this already a reflect.FuncValue?
-  if fv, ok := handler.(*reflect.FuncValue); ok {
-      s.routes.Push(route{r, cr, method, fv, nil})
-  } else {
+  switch handler := handler.(type) {
+  case http.Handler:
+      s.routes.Push(route{r, cr, method, nil, handler})
+  case *reflect.FuncValue:
+      //is this already a reflect.FuncValue?
+      s.routes.Push(route{r, cr, method, handler, nil})
+  default:
       fv := reflect.NewValue(handler).(*reflect.FuncValue)
       s.routes.Push(route{r, cr, method, fv, nil})
   }
-}
-
-func (s *Server) addRouteHttpHandler(r string, method string, httpHandler http.Handler) {
-    cr, err := regexp.Compile(r)
-    if err != nil {
-        s.Logger.Printf("Error in route regex %q\n", r)
-        return
-    }
-    s.routes.Push(route{r, cr, method, nil, httpHandler})
 }
 
 type httpConn struct {
@@ -536,12 +530,12 @@ func (s *Server) Delete(route string, handler interface{}) {
 
 //Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Handler(route string, method string, httpHandler http.Handler) {
-    s.addRouteHttpHandler(route, method, httpHandler)
+    s.addRoute(route, method, httpHandler)
 }
 
 //Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
-    s.addRouteHttpHandler(route, "GET", httpHandler)
+    s.addRoute(route, "GET", httpHandler)
 }
 
 //Adds a handler for the 'GET' http method.

@@ -213,7 +213,7 @@ func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
     //right now unique can't be implemented through the http package.
     //see issue 488
-    c.conn.SetHeader(hdr, val)
+    c.conn.Header().Set(hdr, val)
 }
 
 func (c *httpConn) WriteString(content string) {

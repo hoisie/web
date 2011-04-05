@@ -11,7 +11,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -30,9 +29,6 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
 		b.Reset()
 		// TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
 		fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(c.Name), c.Value)
-		if c.Version > 0 {
-			fmt.Fprintf(&b, "Version=%d; ", c.Version)
-		}
 		if len(c.Path) > 0 {
 			fmt.Fprintf(&b, "; Path=%s", http.URLEscape(c.Path))
 		}
@@ -50,9 +46,6 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
 		}
 		if c.Secure {
 			fmt.Fprintf(&b, "; Secure")
-		}
-		if len(c.Comment) > 0 {
-			fmt.Fprintf(&b, "; Comment=%s", http.URLEscape(c.Comment))
 		}
 		lines = append(lines, "Set-Cookie: "+b.String()+"\r\n")
 	}
@@ -75,9 +68,6 @@ func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
 	for _, c := range kk {
 		b.Reset()
 		n := c.Name
-		if c.Version > 0 {
-			fmt.Fprintf(&b, "$Version=%d; ", c.Version)
-		}
 		// TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
 		fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(n), c.Value)
 		if len(c.Path) > 0 {
@@ -88,9 +78,6 @@ func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
 		}
 		if c.HttpOnly {
 			fmt.Fprintf(&b, "; $HttpOnly")
-		}
-		if len(c.Comment) > 0 {
-			fmt.Fprintf(&b, "; $Comment=%s", http.URLEscape(c.Comment))
 		}
 		lines = append(lines, "Cookie: "+b.String()+"\r\n")
 	}
@@ -120,10 +107,8 @@ func readCookies(h http.Header) []*http.Cookie {
 		}
 		// Per-line attributes
 		var lineCookies = make(map[string]string)
-		var version int
 		var path string
 		var domain string
-		var comment string
 		var httponly bool
 		for i := 0; i < len(parts); i++ {
 			parts[i] = strings.TrimSpace(parts[i])
@@ -142,20 +127,12 @@ func readCookies(h http.Header) []*http.Cookie {
 			switch strings.ToLower(attr) {
 			case "$httponly":
 				httponly = true
-			case "$version":
-				version, err = strconv.Atoi(val)
-				if err != nil {
-					version = 0
-					continue
-				}
 			case "$domain":
 				domain = val
 				// TODO: Add domain parsing
 			case "$path":
 				path = val
 				// TODO: Add path parsing
-			case "$comment":
-				comment = val
 			default:
 				lineCookies[attr] = val
 			}
@@ -169,8 +146,6 @@ func readCookies(h http.Header) []*http.Cookie {
 				Value:    v,
 				Path:     path,
 				Domain:   domain,
-				Comment:  comment,
-				Version:  version,
 				HttpOnly: httponly,
 				MaxAge:   -1,
 				Raw:      line,

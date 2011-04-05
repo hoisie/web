@@ -64,7 +64,7 @@ func flattenParams(fullParams map[string][]string) map[string]string {
 
 func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
-    remoteAddr, _ := net.ResolveTCPAddr(hc.RemoteAddr())
+    remoteAddr, _ := net.ResolveTCPAddr(hr.RemoteAddr)
 
     req := Request{
         Method:     hr.Method,

@@ -4,18 +4,20 @@ web.go is the simplest way to write web applications in the Go programming langu
 
 ## Overview
 
-web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra, pylons, or web.py. It is designed to be a lightweight web framework that doesn't impose any scaffolding on the user. Some features include:
+web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra or web.py. It is designed to be a lightweight web framework that doesn't impose any scaffolding on the user. Some features include:
 
 * Routing to url handlers based on regular expressions
 * Secure cookies
 * Support for fastcgi and scgi
-* Web applications are compiled to native code. This means very fast execution and page render speed ( benchmarks coming soon :)
+* Web applications are compiled to native code. This means very fast execution and page render speed
 * Serving static files
 
 ## Installation
 
-1. Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the 'release' tag. To get the release tag, simply run `hg update -r release`. If you're running an outdated version of Go, or a version near the , it likely won't compile. 
-2. Make sure that $GOROOT is set. web.go installs itself as a Go package, so it requires $GOROOT. See Go's install instructions for more information about $GOROOT. 
+Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `weekly` release. Go is a fast-changing language, and it's easier to keep with the weekly branch than to maintain separate branches.
+
+To use web.go with Go's `weekly` branch:
+1. Run `hg update -r weekly`. If you're running an outdated version of Go, or the `release` version, it likely won't compile. 
 2. git clone git://github.com/hoisie/web.go.git
 3. cd web.go && make install
 

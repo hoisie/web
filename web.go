@@ -172,7 +172,7 @@ func defaultStaticDir() string {
 }
 
 func init() {
-    contextType = reflect.Typeof(Context{})
+    contextType = reflect.TypeOf(Context{})
     //find the location of the exe file
     arg0 := path.Clean(os.Args[0])
     wd, _ := os.Getwd()
@@ -188,7 +188,7 @@ type route struct {
     r       string
     cr      *regexp.Regexp
     method  string
-    handler *reflect.FuncValue
+    handler reflect.Value
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
@@ -198,10 +198,10 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
         return
     }
     //is this already a reflect.FuncValue?
-    if fv, ok := handler.(*reflect.FuncValue); ok {
+    if fv, ok := handler.(reflect.Value); ok {
         s.routes.Push(route{r, cr, method, fv})
     } else {
-        fv := reflect.NewValue(handler).(*reflect.FuncValue)
+        fv := reflect.ValueOf(handler)
         s.routes.Push(route{r, cr, method, fv})
     }
 }
@@ -215,7 +215,11 @@ func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
     //right now unique can't be implemented through the http package.
     //see issue 488
-    c.conn.SetHeader(hdr, val)
+    if unique {
+        c.conn.Header().Set(hdr, val)
+    } else {
+        c.conn.Header().Add(hdr, val)
+    }
 }
 
 func (c *httpConn) WriteString(content string) {
@@ -245,7 +249,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 }
 
 //Calls a function with recover block
-func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (resp []reflect.Value, e interface{}) {
+func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
     defer func() {
         if err := recover(); err != nil {
             if !s.Config.RecoverPanic {
@@ -269,18 +273,18 @@ func (s *Server) safelyCall(function *reflect.FuncValue, args []reflect.Value) (
 }
 
 //should the context be passed to the handler?
-func requiresContext(handlerType *reflect.FuncType) bool {
+func requiresContext(handlerType reflect.Type) bool {
+    //fmt.Printf("type %v\n", handlerType)
     //if the method doesn't take arguments, no
     if handlerType.NumIn() == 0 {
         return false
     }
 
     //if the first argument is not a pointer, no
-    a0, ok := handlerType.In(0).(*reflect.PtrType)
-    if !ok {
+    a0 := handlerType.In(0)
+    if a0.Kind() != reflect.Ptr {
         return false
     }
-
     //if the first argument is a context, yes
     if a0.Elem() == contextType {
         return true
@@ -288,10 +292,9 @@ func requiresContext(handlerType *reflect.FuncType) bool {
 
     //another case -- the first argument is a method receiver, and the
     //second argument is a web.Context
-
     if handlerType.NumIn() > 1 {
-        a1, ok := handlerType.In(1).(*reflect.PtrType)
-        if !ok {
+        a1 := handlerType.In(1)
+        if a1.Kind() != reflect.Ptr {
             return false
         }
         if a1.Elem() == contextType {
@@ -356,12 +359,12 @@ func (s *Server) routeHandler(req *Request, c conn) {
         }
 
         var args vector.Vector
-        handlerType := route.handler.Type().(*reflect.FuncType)
+        handlerType := route.handler.Type()
         if requiresContext(handlerType) {
-            args.Push(reflect.NewValue(&ctx))
+            args.Push(reflect.ValueOf(&ctx))
         }
         for _, arg := range match[1:] {
-            args.Push(reflect.NewValue(arg))
+            args.Push(reflect.ValueOf(arg))
         }
 
         valArgs := make([]reflect.Value, args.Len())
@@ -371,6 +374,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
         ret, err := s.safelyCall(route.handler, valArgs)
         if err != nil {
+            //fmt.Printf("%v\n", err)
             //there was an error or panic while calling the handler
             ctx.Abort(500, "Server Error")
         }
@@ -379,10 +383,11 @@ func (s *Server) routeHandler(req *Request, c conn) {
             return
         }
 
-        sval, ok := ret[0].(*reflect.StringValue)
+        sval := ret[0]
 
-        if ok && !ctx.responseStarted {
-            content := []byte(sval.Get())
+        if sval.Kind() == reflect.String &&
+            !ctx.responseStarted {
+            content := []byte(sval.String())
             ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
             ctx.StartResponse(200)
             ctx.Write(content)
@@ -588,8 +593,8 @@ func Urlencode(data map[string]string) string {
 
 //Extracts the method "name" from the value represented by "val"
 //This allows methods to be handlers
-func MethodHandler(val interface{}, name string) *reflect.FuncValue {
-    v := reflect.NewValue(val)
+func MethodHandler(val interface{}, name string) reflect.Value {
+    v := reflect.ValueOf(val)
     typ := v.Type()
     n := typ.NumMethod()
     for i := 0; i < n; i++ {
@@ -599,6 +604,5 @@ func MethodHandler(val interface{}, name string) *reflect.FuncValue {
         }
     }
 
-    panic("Could not find method: " + name)
-    return nil
+    return reflect.ValueOf(nil)
 }

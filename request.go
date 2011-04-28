@@ -64,7 +64,7 @@ func flattenParams(fullParams map[string][]string) map[string]string {
 
 func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
-    remoteAddr, _ := net.ResolveTCPAddr(hc.RemoteAddr())
+    remoteAddr, _ := net.ResolveTCPAddr("tcp", hr.RemoteAddr)
 
     req := Request{
         Method:     hr.Method,
@@ -118,9 +118,9 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
             httpheader["Content-Length"] = clength
         }
     }
-    
+
     //read the cookies
-    cookies := readCookies(httpheader)    
+    cookies := readCookies(httpheader)
 
     req := Request{
         Method:     method,
@@ -133,7 +133,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
         Headers:    httpheader,
         RemoteAddr: remoteAddr,
         RemotePort: remotePort,
-        Cookie: cookies,
+        Cookie:     cookies,
     }
 
     return &req
@@ -271,42 +271,42 @@ func (r *Request) HasFile(name string) bool {
 }
 
 func writeTo(s string, val reflect.Value) os.Error {
-    switch v := val.(type) {
+    switch v := val; v.Kind() {
     // if we're writing to an interace value, just set the byte data
     // TODO: should we support writing to a pointer?
-    case *reflect.InterfaceValue:
-        v.Set(reflect.NewValue(s))
-    case *reflect.BoolValue:
+    case reflect.Interface:
+        v.Set(reflect.ValueOf(s))
+    case reflect.Bool:
         if strings.ToLower(s) == "false" || s == "0" {
-            v.Set(false)
+            v.SetBool(false)
         } else {
-            v.Set(true)
+            v.SetBool(true)
         }
-    case *reflect.IntValue:
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
         i, err := strconv.Atoi64(s)
         if err != nil {
             return err
         }
-        v.Set(i)
-    case *reflect.UintValue:
+        v.SetInt(i)
+    case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
         ui, err := strconv.Atoui64(s)
         if err != nil {
             return err
         }
-        v.Set(ui)
-    case *reflect.FloatValue:
+        v.SetUint(ui)
+    case reflect.Float32, reflect.Float64:
         f, err := strconv.Atof64(s)
         if err != nil {
             return err
         }
-        v.Set(f)
+        v.SetFloat(f)
 
-    case *reflect.StringValue:
-        v.Set(s)
-    case *reflect.SliceValue:
-        typ := v.Type().(*reflect.SliceType)
-        if _, ok := typ.Elem().(*reflect.UintType); ok {
-            v.Set(reflect.NewValue([]byte(s)).(*reflect.SliceValue))
+    case reflect.String:
+        v.SetString(s)
+    case reflect.Slice:
+        typ := v.Type()
+        if typ.Elem().Kind() == reflect.Uint || typ.Elem().Kind() == reflect.Uint8 || typ.Elem().Kind() == reflect.Uint16 || typ.Elem().Kind() == reflect.Uint32 || typ.Elem().Kind() == reflect.Uint64 || typ.Elem().Kind() == reflect.Uintptr {
+            v.Set(reflect.ValueOf([]byte(s)))
         }
     }
     return nil
@@ -318,33 +318,33 @@ func matchName(key, name string) bool {
 }
 
 func (r *Request) writeToContainer(val reflect.Value) os.Error {
-    switch v := val.(type) {
-    case *reflect.PtrValue:
+    switch v := val; v.Kind() {
+    case reflect.Ptr:
         return r.writeToContainer(reflect.Indirect(v))
-    case *reflect.InterfaceValue:
+    case reflect.Interface:
         return r.writeToContainer(v.Elem())
-    case *reflect.MapValue:
-        if _, ok := v.Type().(*reflect.MapType).Key().(*reflect.StringType); !ok {
+    case reflect.Map:
+        if v.Type().Key().Kind() != reflect.String {
             return os.NewError("Invalid map type")
         }
-        elemtype := v.Type().(*reflect.MapType).Elem()
+        elemtype := v.Type().Elem()
         for pk, pv := range r.Params {
-            mk := reflect.NewValue(pk)
-            mv := reflect.MakeZero(elemtype)
+            mk := reflect.ValueOf(pk)
+            mv := reflect.Zero(elemtype)
             writeTo(pv, mv)
-            v.SetElem(mk, mv)
+            v.SetMapIndex(mk, mv)
         }
-    case *reflect.StructValue:
+    case reflect.Struct:
         for pk, pv := range r.Params {
             //try case sensitive match
             field := v.FieldByName(pk)
-            if field != nil {
+            if field.IsValid() {
                 writeTo(pv, field)
             }
 
             //try case insensitive matching
             field = v.FieldByNameFunc(func(s string) bool { return matchName(pk, s) })
-            if field != nil {
+            if field.IsValid() {
                 writeTo(pv, field)
             }
 
@@ -360,7 +360,7 @@ func (r *Request) UnmarshalParams(val interface{}) os.Error {
     if strings.HasPrefix(r.Headers.Get("Content-Type"), "application/json") {
         return json.Unmarshal(r.ParamData, val)
     } else {
-        err := r.writeToContainer(reflect.NewValue(val))
+        err := r.writeToContainer(reflect.ValueOf(val))
         if err != nil {
             return err
         }

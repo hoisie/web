@@ -16,6 +16,7 @@ include $(GOROOT)/src/Make.pkg
 
 format:
 	${GOFMT} -w ${GOFILES}
+	${GOFMT} -w web_test.go
 	${GOFMT} -w examples/arcchallenge.go
 	${GOFMT} -w examples/hello.go
 	${GOFMT} -w examples/methodhandler.go

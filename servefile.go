@@ -44,7 +44,7 @@ func getmd5(data string) string {
 }
 
 func serveFile(ctx *Context, name string) {
-    f, err := os.Open(name, os.O_RDONLY, 0)
+    f, err := os.Open(name)
 
     if err != nil {
         ctx.Abort(404, "Invalid file")

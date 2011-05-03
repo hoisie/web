@@ -7,6 +7,7 @@ import (
     "encoding/base64"
     "fmt"
     "http"
+    "http/pprof"
     "io/ioutil"
     "log"
     "mime"
@@ -442,7 +443,13 @@ func (s *Server) Run(addr string) {
     s.initServer()
 
     mux := http.NewServeMux()
+
+    mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+    mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+    mux.Handle("/debug/pprof/heap", http.HandlerFunc(pprof.Heap))
+    mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
     mux.Handle("/", s)
+
     s.Logger.Printf("web.go serving %s\n", addr)
 
     l, err := net.Listen("tcp", addr)

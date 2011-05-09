@@ -115,7 +115,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     //base64 encode the val
     if len(ctx.Server.Config.CookieSecret) == 0 {
-        ctx.Logger.Println("Secret Key for secure cookies has not been set. Please call web.SetCookieSecret")
+        ctx.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
         return
     }
     var buf bytes.Buffer
@@ -439,6 +439,7 @@ func (s *Server) initServer() {
     }
 }
 
+//Runs the web application and serves http requests
 func (s *Server) Run(addr string) {
     s.initServer()
 
@@ -461,7 +462,7 @@ func (s *Server) Run(addr string) {
     s.l.Close()
 }
 
-//runs the web application and serves http requests
+//Runs the web application and serves http requests
 func Run(addr string) {
     mainServer.Run(addr)
 }
@@ -472,7 +473,7 @@ func (s *Server) Close() {
     s.closed = true
 }
 
-//runs the web application and serves http requests
+//Stops the web server
 func Close() {
     mainServer.Close()
 }
@@ -483,18 +484,19 @@ func (s *Server) RunScgi(addr string) {
     s.listenAndServeScgi(addr)
 }
 
-//runs the web application and serves scgi requests
+//Runs the web application and serves scgi requests
 func RunScgi(addr string) {
     mainServer.RunScgi(addr)
 }
 
+//Runs the web application and serves scgi requests for this Server object.
 func (s *Server) RunFcgi(addr string) {
     s.initServer()
     s.Logger.Printf("web.go serving fcgi %s\n", addr)
     s.listenAndServeFcgi(addr)
 }
 
-//runs the web application by serving fastcgi requests
+//Runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
     mainServer.RunFcgi(addr)
 }

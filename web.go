@@ -172,7 +172,7 @@ func defaultStaticDir() string {
 }
 
 func init() {
-    contextType = reflect.Typeof(Context{})
+    contextType = reflect.TypeOf(Context{})
     //find the location of the exe file
     arg0 := path.Clean(os.Args[0])
     wd, _ := os.Getwd()
@@ -201,7 +201,7 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     if fv, ok := handler.(reflect.Value); ok {
         s.routes.Push(route{r, cr, method, fv})
     } else {
-        fv := reflect.NewValue(handler)
+        fv := reflect.ValueOf(handler)
         s.routes.Push(route{r, cr, method, fv})
     }
 }
@@ -358,10 +358,10 @@ func (s *Server) routeHandler(req *Request, c conn) {
         var args vector.Vector
         handlerType := route.handler.Type()
         if requiresContext(handlerType) {
-            args.Push(reflect.NewValue(&ctx))
+            args.Push(reflect.ValueOf(&ctx))
         }
         for _, arg := range match[1:] {
-            args.Push(reflect.NewValue(arg))
+            args.Push(reflect.ValueOf(arg))
         }
 
         valArgs := make([]reflect.Value, args.Len())
@@ -590,7 +590,7 @@ func Urlencode(data map[string]string) string {
 //Extracts the method "name" from the value represented by "val"
 //This allows methods to be handlers
 func MethodHandler(val interface{}, name string) reflect.Value {
-    v := reflect.NewValue(val)
+    v := reflect.ValueOf(val)
     typ := v.Type()
     n := typ.NumMethod()
     for i := 0; i < n; i++ {

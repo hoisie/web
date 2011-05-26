@@ -64,7 +64,7 @@ func flattenParams(fullParams map[string][]string) map[string]string {
 
 func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
-    remoteAddr, _ := net.ResolveTCPAddr(hr.RemoteAddr)
+    remoteAddr, _ := net.ResolveTCPAddr("tcp", hr.RemoteAddr)
 
     req := Request{
         Method:     hr.Method,
@@ -275,7 +275,7 @@ func writeTo(s string, val reflect.Value) os.Error {
     // if we're writing to an interace value, just set the byte data
     // TODO: should we support writing to a pointer?
     case reflect.Interface:
-        v.Set(reflect.NewValue(s))
+        v.Set(reflect.ValueOf(s))
     case reflect.Bool:
         if strings.ToLower(s) == "false" || s == "0" {
             v.SetBool(false)
@@ -306,7 +306,7 @@ func writeTo(s string, val reflect.Value) os.Error {
     case reflect.Slice:
         typ := v.Type()
         if typ.Elem().Kind() == reflect.Uint || typ.Elem().Kind() == reflect.Uint8 || typ.Elem().Kind() == reflect.Uint16 || typ.Elem().Kind() == reflect.Uint32 || typ.Elem().Kind() == reflect.Uint64 || typ.Elem().Kind() == reflect.Uintptr {
-            v.Set(reflect.NewValue([]byte(s)))
+            v.Set(reflect.ValueOf([]byte(s)))
         }
     }
     return nil
@@ -329,7 +329,7 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
         }
         elemtype := v.Type().Elem()
         for pk, pv := range r.Params {
-            mk := reflect.NewValue(pk)
+            mk := reflect.ValueOf(pk)
             mv := reflect.Zero(elemtype)
             writeTo(pv, mv)
             v.SetMapIndex(mk, mv)
@@ -360,7 +360,7 @@ func (r *Request) UnmarshalParams(val interface{}) os.Error {
     if strings.HasPrefix(r.Headers.Get("Content-Type"), "application/json") {
         return json.Unmarshal(r.ParamData, val)
     } else {
-        err := r.writeToContainer(reflect.NewValue(val))
+        err := r.writeToContainer(reflect.ValueOf(val))
         if err != nil {
             return err
         }

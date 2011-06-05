@@ -82,21 +82,23 @@ func serveFile(ctx *Context, name string) {
         }
     }
 
-    if ctx.Request.Headers.Get("If-None-Match") != "" {
-        inm := ctx.Request.Headers.Get("If-None-Match")
-        if inm == etag {
-            ctx.NotModified()
-            return
-        }
-
+    if ctx.Request.Headers.Get("If-None-Match") == etag {
+        ctx.NotModified()
+        return
     }
 
-    if ctx.Request.Headers.Get("If-Modified-Since") != "" {
-        ims := ctx.Request.Headers.Get("If-Modified-Since")
-        imstime, err := time.Parse(time.RFC1123, ims)
-        if err == nil && imstime.Seconds() >= lm.Seconds() {
-            ctx.NotModified()
-            return
+    if ims := ctx.Request.Headers.Get("If-Modified-Since"); ims != "" {
+        // All the formats must be accepted (RFC 2616, 3.3.1)
+        formats := []string{time.RFC1123, time.RFC850, time.ANSIC}
+        for _, f := formats {
+            imstime, err := time.Parse(f, ims)
+            if err == nil {
+                if imstime.Seconds() >= lm.Seconds() {
+                    ctx.NotModified()
+                    return
+                }
+                break
+            }
         }
     }
 

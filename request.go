@@ -77,10 +77,10 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
         Body:       hr.Body,
         Close:      hr.Close,
         Host:       hr.Host,
-        Referer:    hr.Referer,
-        UserAgent:  hr.UserAgent,
+        Referer:    hr.Referer(),
+        UserAgent:  hr.UserAgent(),
         FullParams: hr.Form,
-        Cookie:     hr.Cookie,
+        Cookie:     hr.Cookies(),
         RemoteAddr: remoteAddr.IP.String(),
         RemotePort: remoteAddr.Port,
     }

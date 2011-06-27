@@ -467,6 +467,11 @@ func Run(addr string) {
     mainServer.Run(addr)
 }
 
+//Serve the web server
+func ServeHTTP(c http.ResponseWriter, req *http.Request) {
+	mainServer.ServeHTTP(c, req)
+}
+
 //Stops the web server
 func (s *Server) Close() {
     s.l.Close()

@@ -262,6 +262,10 @@ func (r *Request) parseParams() (err os.Error) {
     return nil
 }
 
+func (r *Request) GetParams() map[string]string {
+    return r.Params
+}    
+
 func (r *Request) HasFile(name string) bool {
     if r.Files == nil || len(r.Files) == 0 {
         return false

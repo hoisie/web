@@ -181,7 +181,7 @@ func (r *Request) parseParams() (err os.Error) {
     switch r.Method {
     case "POST":
         if r.Body == nil {
-            return os.ErrorString("missing form body")
+            return os.NewError("missing form body")
         }
 
         ct := r.Headers.Get("Content-Type")

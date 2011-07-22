@@ -86,20 +86,19 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
     var b bytes.Buffer
     for _, c := range kk {
         b.Reset()
-        fmt.Fprintf(&b, "%s=%s", sanitizeName(c.Name), sanitizeValue(c.Value))
+        // TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
+        fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(c.Name), c.Value)
         if len(c.Path) > 0 {
-            fmt.Fprintf(&b, "; Path=%s", sanitizeValue(c.Path))
+            fmt.Fprintf(&b, "; Path=%s", http.URLEscape(c.Path))
         }
         if len(c.Domain) > 0 {
-            fmt.Fprintf(&b, "; Domain=%s", sanitizeValue(c.Domain))
+            fmt.Fprintf(&b, "; Domain=%s", http.URLEscape(c.Domain))
         }
         if len(c.Expires.Zone) > 0 {
             fmt.Fprintf(&b, "; Expires=%s", c.Expires.Format(time.RFC1123))
         }
-        if c.MaxAge > 0 {
+        if c.MaxAge >= 0 {
             fmt.Fprintf(&b, "; Max-Age=%d", c.MaxAge)
-        } else if c.MaxAge < 0 {
-            fmt.Fprintf(&b, "; Max-Age=0")
         }
         if c.HttpOnly {
             fmt.Fprintf(&b, "; HttpOnly")
@@ -124,8 +123,22 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
 // line-length, so it seems safer to place cookies on separate lines.
 func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
     lines := make([]string, 0, len(kk))
+    var b bytes.Buffer
     for _, c := range kk {
-        lines = append(lines, fmt.Sprintf("Cookie: %s=%s\r\n", sanitizeName(c.Name), sanitizeValue(c.Value)))
+        b.Reset()
+        n := c.Name
+        // TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
+        fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(n), c.Value)
+        if len(c.Path) > 0 {
+            fmt.Fprintf(&b, "; $Path=%s", http.URLEscape(c.Path))
+        }
+        if len(c.Domain) > 0 {
+            fmt.Fprintf(&b, "; $Domain=%s", http.URLEscape(c.Domain))
+        }
+        if c.HttpOnly {
+            fmt.Fprintf(&b, "; $HttpOnly")
+        }
+        lines = append(lines, "Cookie: "+b.String()+"\r\n")
     }
     sort.SortStrings(lines)
     for _, l := range lines {
@@ -152,28 +165,50 @@ func readCookies(h http.Header) []*http.Cookie {
             continue
         }
         // Per-line attributes
-        parsedPairs := 0
+        var lineCookies = make(map[string]string)
+        var path string
+        var domain string
+        var httponly bool
         for i := 0; i < len(parts); i++ {
             parts[i] = strings.TrimSpace(parts[i])
             if len(parts[i]) == 0 {
                 continue
             }
             attr, val := parts[i], ""
+            var err os.Error
             if j := strings.Index(attr, "="); j >= 0 {
                 attr, val = attr[:j], attr[j+1:]
+                val, err = http.URLUnescape(val)
+                if err != nil {
+                    continue
+                }
             }
-            if !isCookieNameValid(attr) {
-                continue
+            switch strings.ToLower(attr) {
+            case "$httponly":
+                httponly = true
+            case "$domain":
+                domain = val
+                // TODO: Add domain parsing
+            case "$path":
+                path = val
+                // TODO: Add path parsing
+            default:
+                lineCookies[attr] = val
             }
-            val, success := parseCookieValue(val)
-            if !success {
-                continue
-            }
-            cookies = append(cookies, &http.Cookie{Name: attr, Value: val})
-            parsedPairs++
         }
-        if parsedPairs == 0 {
+        if len(lineCookies) == 0 {
             unparsedLines = append(unparsedLines, line)
+        }
+        for n, v := range lineCookies {
+            cookies = append(cookies, &http.Cookie{
+                Name:     n,
+                Value:    v,
+                Path:     path,
+                Domain:   domain,
+                HttpOnly: httponly,
+                MaxAge:   -1,
+                Raw:      line,
+            })
         }
     }
     h["Cookie"] = unparsedLines, len(unparsedLines) > 0

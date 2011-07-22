@@ -198,7 +198,7 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
         s.Logger.Printf("Error in route regex %q\n", r)
         return
     }
-    //is this already a reflect.FuncValue?
+
     if fv, ok := handler.(reflect.Value); ok {
         s.routes.Push(route{r, cr, method, fv})
     } else {
@@ -216,11 +216,7 @@ func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
     //right now unique can't be implemented through the http package.
     //see issue 488
-    if unique {
-        c.conn.Header().Set(hdr, val)
-    } else {
-        c.conn.Header().Add(hdr, val)
-    }
+    c.conn.Header().Set(hdr, val)
 }
 
 func (c *httpConn) WriteString(content string) {
@@ -275,7 +271,6 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
 
 //should the context be passed to the handler?
 func requiresContext(handlerType reflect.Type) bool {
-    //fmt.Printf("type %v\n", handlerType)
     //if the method doesn't take arguments, no
     if handlerType.NumIn() == 0 {
         return false
@@ -289,18 +284,6 @@ func requiresContext(handlerType reflect.Type) bool {
     //if the first argument is a context, yes
     if a0.Elem() == contextType {
         return true
-    }
-
-    //another case -- the first argument is a method receiver, and the
-    //second argument is a web.Context
-    if handlerType.NumIn() > 1 {
-        a1 := handlerType.In(1)
-        if a1.Kind() != reflect.Ptr {
-            return false
-        }
-        if a1.Elem() == contextType {
-            return true
-        }
     }
 
     return false
@@ -598,20 +581,4 @@ func Urlencode(data map[string]string) string {
     }
     s := buf.String()
     return s[0 : len(s)-1]
-}
-
-//Extracts the method "name" from the value represented by "val"
-//This allows methods to be handlers
-func MethodHandler(val interface{}, name string) reflect.Value {
-    v := reflect.ValueOf(val)
-    typ := v.Type()
-    n := typ.NumMethod()
-    for i := 0; i < n; i++ {
-        m := typ.Method(i)
-        if m.Name == name {
-            return v.Method(i)
-        }
-    }
-
-    return reflect.ValueOf(nil)
 }

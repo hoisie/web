@@ -9,7 +9,7 @@ import (
 func hello(val string) string { return "hello " + val }
 
 func main() {
-    f, err := os.Open("server.log", os.O_RDWR|os.O_CREATE, 0644)
+    f, err := os.Create("server.log")
     if err != nil {
         println(err.String())
         return

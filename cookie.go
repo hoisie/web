@@ -109,7 +109,7 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
         }
         lines = append(lines, "Set-Cookie: "+b.String()+"\r\n")
     }
-    sort.SortStrings(lines)
+    sort.Strings(lines)
     for _, l := range lines {
         if _, err := io.WriteString(w, l); err != nil {
             return err
@@ -127,7 +127,7 @@ func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
     for _, c := range kk {
         lines = append(lines, fmt.Sprintf("Cookie: %s=%s\r\n", sanitizeName(c.Name), sanitizeValue(c.Value)))
     }
-    sort.SortStrings(lines)
+    sort.Strings(lines)
     for _, l := range lines {
         if _, err := io.WriteString(w, l); err != nil {
             return err
@@ -147,7 +147,7 @@ func readCookies(h http.Header) []*http.Cookie {
     }
     unparsedLines := []string{}
     for _, line := range lines {
-        parts := strings.Split(strings.TrimSpace(line), ";", -1)
+        parts := strings.Split(strings.TrimSpace(line), ";")
         if len(parts) == 1 && parts[0] == "" {
             continue
         }

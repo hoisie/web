@@ -46,7 +46,7 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
     response := testResponse{headers: make(map[string][]string), cookies: make(map[string]string)}
     s := buf.String()
 
-    contents := strings.Split(s, "\r\n\r\n", 2)
+    contents := strings.SplitN(s, "\r\n\r\n", 2)
 
     header := contents[0]
 
@@ -54,13 +54,13 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
         response.body = contents[1]
     }
 
-    headers := strings.Split(header, "\r\n", -1)
+    headers := strings.Split(header, "\r\n")
 
-    statusParts := strings.Split(headers[0], " ", 3)
+    statusParts := strings.SplitN(headers[0], " ", 3)
     response.statusCode, _ = strconv.Atoi(statusParts[1])
 
     for _, h := range headers[1:] {
-        split := strings.Split(h, ":", 2)
+        split := strings.SplitN(h, ":", 2)
         name := strings.TrimSpace(split[0])
         value := strings.TrimSpace(split[1])
         if _, ok := response.headers[name]; !ok {
@@ -76,7 +76,7 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
         if name == "Set-Cookie" {
             i := strings.Index(value, ";")
             cookie := value[0:i]
-            cookieParts := strings.Split(cookie, "=", 2)
+            cookieParts := strings.SplitN(cookie, "=", 2)
             response.cookies[strings.TrimSpace(cookieParts[0])] = strings.TrimSpace(cookieParts[1])
         }
     }

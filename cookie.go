@@ -13,6 +13,7 @@ import (
     "sort"
     "strings"
     "time"
+    "url"
 )
 
 // writeSetCookies writes the wire representation of the set-cookies
@@ -30,10 +31,10 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
         // TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
         fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(c.Name), c.Value)
         if len(c.Path) > 0 {
-            fmt.Fprintf(&b, "; Path=%s", http.URLEscape(c.Path))
+            fmt.Fprintf(&b, "; Path=%s", url.QueryEscape(c.Path))
         }
         if len(c.Domain) > 0 {
-            fmt.Fprintf(&b, "; Domain=%s", http.URLEscape(c.Domain))
+            fmt.Fprintf(&b, "; Domain=%s", url.QueryEscape(c.Domain))
         }
         if len(c.Expires.Zone) > 0 {
             fmt.Fprintf(&b, "; Expires=%s", c.Expires.Format(time.RFC1123))
@@ -71,10 +72,10 @@ func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
         // TODO(petar): c.Value (below) should be unquoted if it is recognized as quoted
         fmt.Fprintf(&b, "%s=%s", http.CanonicalHeaderKey(n), c.Value)
         if len(c.Path) > 0 {
-            fmt.Fprintf(&b, "; $Path=%s", http.URLEscape(c.Path))
+            fmt.Fprintf(&b, "; $Path=%s", url.QueryEscape(c.Path))
         }
         if len(c.Domain) > 0 {
-            fmt.Fprintf(&b, "; $Domain=%s", http.URLEscape(c.Domain))
+            fmt.Fprintf(&b, "; $Domain=%s", url.QueryEscape(c.Domain))
         }
         if c.HttpOnly {
             fmt.Fprintf(&b, "; $HttpOnly")
@@ -119,7 +120,7 @@ func readCookies(h http.Header) []*http.Cookie {
             var err os.Error
             if j := strings.Index(attr, "="); j >= 0 {
                 attr, val = attr[:j], attr[j+1:]
-                val, err = http.URLUnescape(val)
+                val, err = url.QueryUnescape(val)
                 if err != nil {
                     continue
                 }

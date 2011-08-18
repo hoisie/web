@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"url"
 )
 
 func init() {
@@ -209,7 +210,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 	host := "127.0.0.1"
 	port := "80"
 	rawurl := "http://" + host + ":" + port + path
-	url, _ := http.ParseURL(rawurl)
+	url_, _ := url.Parse(rawurl)
 
 	proto := "HTTP/1.1"
 	useragent := "web.go test framework"
@@ -226,7 +227,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 	req := Request{Method: method,
 		RawURL:    rawurl,
 		Cookie:    cookies,
-		URL:       url,
+		URL:       url_,
 		Proto:     proto,
 		Host:      host,
 		UserAgent: useragent,
@@ -413,7 +414,6 @@ func TestScgiHead(t *testing.T) {
 		}
 	}
 }
-
 
 func buildFcgiKeyValue(key string, val string) []byte {
 
@@ -631,7 +631,6 @@ func TestSecureCookie(t *testing.T) {
 		t.Fatalf("SecureCookie test failed")
 	}
 }
-
 
 func TestSecureCookieFcgi(t *testing.T) {
 	mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"

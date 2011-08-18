@@ -19,6 +19,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "url"
 )
 
 type conn interface {
@@ -61,10 +62,10 @@ func (ctx *Context) Abort(status int, body string) {
     ctx.WriteString(body)
 }
 
-func (ctx *Context) Redirect(status int, url string) {
-    ctx.SetHeader("Location", url, true)
+func (ctx *Context) Redirect(status int, url_ string) {
+    ctx.SetHeader("Location", url_, true)
     ctx.StartResponse(status)
-    ctx.WriteString("Redirecting to: " + url)
+    ctx.WriteString("Redirecting to: " + url_)
 }
 
 func (ctx *Context) NotModified() {
@@ -578,9 +579,9 @@ func fileExists(dir string) bool {
 func Urlencode(data map[string]string) string {
     var buf bytes.Buffer
     for k, v := range data {
-        buf.WriteString(http.URLEscape(k))
+        buf.WriteString(url.QueryEscape(k))
         buf.WriteByte('=')
-        buf.WriteString(http.URLEscape(v))
+        buf.WriteString(url.QueryEscape(v))
         buf.WriteByte('&')
     }
     s := buf.String()

@@ -14,6 +14,7 @@ import (
     "reflect"
     "strconv"
     "strings"
+    "url"
 )
 
 type filedata struct {
@@ -22,12 +23,12 @@ type filedata struct {
 }
 
 type Request struct {
-    Method     string    // GET, POST, PUT, etc.
-    RawURL     string    // The raw URL given in the request.
-    URL        *http.URL // Parsed URL.
-    Proto      string    // "HTTP/1.0"
-    ProtoMajor int       // 1
-    ProtoMinor int       // 0
+    Method     string   // GET, POST, PUT, etc.
+    RawURL     string   // The raw URL given in the request.
+    URL        *url.URL // Parsed URL.
+    Proto      string   // "HTTP/1.0"
+    ProtoMajor int      // 1
+    ProtoMinor int      // 0
     Headers    http.Header
     Body       io.Reader
     Close      bool
@@ -43,7 +44,6 @@ type Request struct {
     RemoteAddr string
     RemotePort int
 }
-
 
 type badStringError struct {
     what string
@@ -104,7 +104,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     port := headers.Get("SERVER_PORT")
     proto := headers.Get("SERVER_PROTOCOL")
     rawurl := "http://" + host + ":" + port + path
-    url, _ := http.ParseURL(rawurl)
+    urlstruct, _ := url.Parse(rawurl)
     useragent := headers.Get("USER_AGENT")
     remoteAddr := headers.Get("REMOTE_ADDR")
     remotePort, _ := strconv.Atoi(headers.Get("REMOTE_PORT"))
@@ -125,7 +125,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     req := Request{
         Method:     method,
         RawURL:     rawurl,
-        URL:        url,
+        URL:        urlstruct,
         Proto:      proto,
         Host:       host,
         UserAgent:  useragent,
@@ -146,9 +146,9 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
 
         var key, value string
         var e os.Error
-        key, e = http.URLUnescape(kvPair[0])
+        key, e = url.QueryUnescape(kvPair[0])
         if e == nil && len(kvPair) > 1 {
-            value, e = http.URLUnescape(kvPair[1])
+            value, e = url.QueryUnescape(kvPair[1])
         }
         if e != nil {
             err = e
@@ -354,7 +354,6 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
     }
     return nil
 }
-
 
 func (r *Request) UnmarshalParams(val interface{}) os.Error {
     if strings.HasPrefix(r.Headers.Get("Content-Type"), "application/json") {

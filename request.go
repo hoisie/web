@@ -212,7 +212,7 @@ func (r *Request) parseParams() (err os.Error) {
             r.Files = make(map[string]filedata)
             for {
                 part, err := reader.NextPart()
-                if err != nil {
+                if err != nil && err != os.EOF {
                     return err
                 }
 

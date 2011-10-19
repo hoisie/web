@@ -153,6 +153,10 @@ func readCookies(h http.Header) []*http.Cookie {
             })
         }
     }
-    h["Cookie"] = unparsedLines, len(unparsedLines) > 0
+    if len(unparsedLines) > 0 {
+        h["Cookie"] = unparsedLines
+    } else {
+        delete(h, "Cookie")
+    }
     return cookies
 }

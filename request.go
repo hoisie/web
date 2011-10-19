@@ -1,7 +1,6 @@
 package web
 
 import (
-    "container/vector"
     "fmt"
     "http"
     "io"
@@ -23,12 +22,12 @@ type filedata struct {
 }
 
 type Request struct {
-    Method     string    // GET, POST, PUT, etc.
-    RawURL     string    // The raw URL given in the request.
+    Method string // GET, POST, PUT, etc.
+    //RawURL     string   // The raw URL given in the request.
     URL        *url.URL // Parsed URL.
-    Proto      string    // "HTTP/1.0"
-    ProtoMajor int       // 1
-    ProtoMinor int       // 0
+    Proto      string   // "HTTP/1.0"
+    ProtoMajor int      // 1
+    ProtoMinor int      // 0
     Headers    http.Header
     Body       io.Reader
     Close      bool
@@ -67,8 +66,8 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
     remoteAddr, _ := net.ResolveTCPAddr("tcp", hr.RemoteAddr)
 
     req := Request{
-        Method:     hr.Method,
-        RawURL:     hr.RawURL,
+        Method: hr.Method,
+        //RawURL:     hr.RawURL,
         URL:        hr.URL,
         Proto:      hr.Proto,
         ProtoMajor: hr.ProtoMajor,
@@ -123,8 +122,8 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     cookies := readCookies(httpheader)
 
     req := Request{
-        Method:     method,
-        RawURL:     rawurl,
+        Method: method,
+        //RawURL:     rawurl,
         URL:        url_,
         Proto:      proto,
         Host:       host,
@@ -140,7 +139,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
 }
 
 func parseForm(m map[string][]string, query string) (err os.Error) {
-    data := make(map[string]*vector.StringVector)
+    data := make(map[string][]string)
     for _, kv := range strings.Split(query, "&") {
         kvPair := strings.SplitN(kv, "=", 2)
 
@@ -154,16 +153,11 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
             err = e
         }
 
-        vec, ok := data[key]
-        if !ok {
-            vec = new(vector.StringVector)
-            data[key] = vec
-        }
-        vec.Push(value)
+        data[key] = append(data[key], value)
     }
 
     for k, vec := range data {
-        m[k] = vec.Copy()
+        m[k] = vec
     }
 
     return
@@ -234,8 +228,8 @@ func (r *Request) parseParams() (err os.Error) {
                 if params["filename"] != "" {
                     r.Files[name] = filedata{params["filename"], data}
                 } else {
-                    var params vector.StringVector = r.FullParams[name]
-                    params.Push(string(data))
+                    var params []string = r.FullParams[name]
+                    params = append(params, string(data))
                     r.FullParams[name] = params
                 }
 

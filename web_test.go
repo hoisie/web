@@ -225,7 +225,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 	}
 
 	req := Request{Method: method,
-		RawURL:    rawurl,
+		//RawURL:    rawurl,
 		Cookie:    cookies,
 		URL:       url_,
 		Proto:     proto,

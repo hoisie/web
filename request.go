@@ -195,7 +195,10 @@ func (r *Request) parseParams() (err os.Error) {
             r.Params = map[string]string{}
             json.Unmarshal(b, r.Params)
         case "multipart/form-data":
-            _, params := mime.ParseMediaType(ct)
+            _, params, err := mime.ParseMediaType(ct)
+            if err != nil {
+                return err
+            }
             boundary, ok := params["boundary"]
             if !ok {
                 return os.NewError("Missing Boundary")
@@ -221,7 +224,10 @@ func (r *Request) parseParams() (err os.Error) {
                     continue
                 }
                 name := part.FormName()
-                d, params := mime.ParseMediaType(v)
+                d, params, err := mime.ParseMediaType(v)
+                if err != nil {
+                    return err
+                }
                 if d != "form-data" {
                     continue
                 }

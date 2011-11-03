@@ -25,7 +25,7 @@ import (
 type conn interface {
     StartResponse(status int)
     SetHeader(hdr string, val string, unique bool)
-    Write(data []byte) (n int, err os.Error)
+    Write(data []byte) (n int, err error)
     Close()
 }
 
@@ -41,7 +41,7 @@ func (ctx *Context) StartResponse(status int) {
     ctx.responseStarted = true
 }
 
-func (ctx *Context) Write(data []byte) (n int, err os.Error) {
+func (ctx *Context) Write(data []byte) (n int, err error) {
     if !ctx.responseStarted {
         ctx.StartResponse(200)
     }
@@ -77,7 +77,7 @@ func (ctx *Context) NotFound(message string) {
     ctx.WriteString(message)
 }
 
-//Sets the content type by extension, as defined in the mime package. 
+//Sets the content type by extension, as defined in the mime package.
 //For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
     if !strings.HasPrefix(ext, ".") {
@@ -224,7 +224,7 @@ func (c *httpConn) WriteString(content string) {
     c.conn.Write(buf.Bytes())
 }
 
-func (c *httpConn) Write(content []byte) (n int, err os.Error) {
+func (c *httpConn) Write(content []byte) (n int, err error) {
     return c.conn.Write(content)
 }
 
@@ -302,7 +302,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
     //parse the form data (if it exists)
     perr := req.parseParams()
     if perr != nil {
-        s.Logger.Printf("Failed to parse form data %q\n", perr.String())
+        s.Logger.Printf("Failed to parse form data %q\n", perr.Error())
     }
 
     ctx := Context{req, s, c, false}

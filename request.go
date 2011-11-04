@@ -63,7 +63,12 @@ func flattenParams(fullParams map[string][]string) map[string]string {
 
 func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
+    remoteAddrIP, remotePort := hr.RemoteAddr, 0
     remoteAddr, _ := net.ResolveTCPAddr("tcp", hr.RemoteAddr)
+    if remoteAddr != nil {
+        remoteAddrIP = remoteAddr.IP.String()
+        remotePort = remoteAddr.Port
+    }
 
     req := Request{
         Method:     hr.Method,
@@ -79,8 +84,8 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
         UserAgent:  hr.UserAgent(),
         FullParams: hr.Form,
         Cookie:     hr.Cookies(),
-        RemoteAddr: remoteAddr.IP.String(),
-        RemotePort: remoteAddr.Port,
+        RemoteAddr: remoteAddrIP,
+        RemotePort: remotePort,
     }
     return &req
 }

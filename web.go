@@ -2,7 +2,6 @@ package web
 
 import (
     "bytes"
-    "container/vector"
     "crypto/hmac"
     "encoding/base64"
     "fmt"
@@ -201,10 +200,10 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 
     if fv, ok := handler.(reflect.Value); ok {
-        s.routes.Push(route{r, cr, method, fv})
+        s.routes = append(s.routes, route{r, cr, method, fv})
     } else {
         fv := reflect.ValueOf(handler)
-        s.routes.Push(route{r, cr, method, fv})
+        s.routes = append(s.routes, route{r, cr, method, fv})
     }
 }
 
@@ -326,8 +325,8 @@ func (s *Server) routeHandler(req *Request, c conn) {
         return
     }
 
-    for i := 0; i < s.routes.Len(); i++ {
-        route := s.routes.At(i).(route)
+    for i := 0; i < len(s.routes); i++ {
+        route := s.routes[i]
         cr := route.cr
         //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
         if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
@@ -343,21 +342,16 @@ func (s *Server) routeHandler(req *Request, c conn) {
             continue
         }
 
-        var args vector.Vector
+        var args []reflect.Value
         handlerType := route.handler.Type()
         if requiresContext(handlerType) {
-            args.Push(reflect.ValueOf(&ctx))
+            args = append(args, reflect.ValueOf(&ctx))
         }
         for _, arg := range match[1:] {
-            args.Push(reflect.ValueOf(arg))
+            args = append(args, reflect.ValueOf(arg))
         }
 
-        valArgs := make([]reflect.Value, args.Len())
-        for i := 0; i < args.Len(); i++ {
-            valArgs[i] = args.At(i).(reflect.Value)
-        }
-
-        ret, err := s.safelyCall(route.handler, valArgs)
+        ret, err := s.safelyCall(route.handler, args)
         if err != nil {
             //fmt.Printf("%v\n", err)
             //there was an error or panic while calling the handler
@@ -406,7 +400,7 @@ var mainServer = Server{
 
 type Server struct {
     Config *ServerConfig
-    routes vector.Vector
+    routes []route
     Logger *log.Logger
     //save the listener so it can be closed
     l      net.Listener

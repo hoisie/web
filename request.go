@@ -1,7 +1,6 @@
 package web
 
 import (
-    "container/vector"
     "fmt"
     "http"
     "io"
@@ -68,7 +67,6 @@ func newRequest(hr *http.Request, hc http.ResponseWriter) *Request {
 
     req := Request{
         Method:     hr.Method,
-        RawURL:     hr.RawURL,
         URL:        hr.URL,
         Proto:      hr.Proto,
         ProtoMajor: hr.ProtoMajor,
@@ -140,7 +138,6 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
 }
 
 func parseForm(m map[string][]string, query string) (err os.Error) {
-    data := make(map[string]*vector.StringVector)
     for _, kv := range strings.Split(query, "&") {
         kvPair := strings.SplitN(kv, "=", 2)
 
@@ -154,16 +151,11 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
             err = e
         }
 
-        vec, ok := data[key]
+        vec, ok := m[key]
         if !ok {
-            vec = new(vector.StringVector)
-            data[key] = vec
+            vec = []string{}
         }
-        vec.Push(value)
-    }
-
-    for k, vec := range data {
-        m[k] = vec.Copy()
+        m[key] = append(vec, value)
     }
 
     return
@@ -208,17 +200,19 @@ func (r *Request) parseParams() (err os.Error) {
             if !ok {
                 return os.NewError("Missing Boundary")
             }
+
             reader := multipart.NewReader(r.Body, boundary)
             r.Files = make(map[string]filedata)
             for {
                 part, err := reader.NextPart()
-                if err != nil && err != os.EOF {
+                if part == nil && err == os.EOF {
+                    break
+                }
+
+                if err != nil {
                     return err
                 }
 
-                if part == nil {
-                    break
-                }
                 //read the data
                 data, _ := ioutil.ReadAll(part)
                 //check for the 'filename' param
@@ -234,8 +228,8 @@ func (r *Request) parseParams() (err os.Error) {
                 if params["filename"] != "" {
                     r.Files[name] = filedata{params["filename"], data}
                 } else {
-                    var params vector.StringVector = r.FullParams[name]
-                    params.Push(string(data))
+                    var params []string = r.FullParams[name]
+                    params = append(params, string(data))
                     r.FullParams[name] = params
                 }
 
@@ -244,6 +238,7 @@ func (r *Request) parseParams() (err os.Error) {
             return &badStringError{"unknown Content-Type", ct}
         }
     }
+
     if queryParams != "" {
         err = parseForm(r.FullParams, queryParams)
         if err != nil {

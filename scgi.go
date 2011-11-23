@@ -89,7 +89,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     var err os.Error
     //find the CONTENT_LENGTH
 
-    clfields := bytes.Split(data, []byte{0}, 3)
+    clfields := bytes.SplitN(data, []byte{0}, 3)
     if len(clfields) != 3 {
         return nil, os.NewError("Invalid SCGI Request -- no fields")
     }
@@ -105,7 +105,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
     content := data[len(data)-clen:]
 
-    fields := bytes.Split(data[0:len(data)-clen], []byte{0}, -1)
+    fields := bytes.Split(data[0:len(data)-clen], []byte{0})
 
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])

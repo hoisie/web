@@ -11,7 +11,7 @@ func hello(val string) string { return "hello " + val }
 func main() {
     f, err := os.Create("server.log")
     if err != nil {
-        println(err.String())
+        println(err.Error())
         return
     }
     logger := log.New(f, "", log.Ldate|log.Ltime)

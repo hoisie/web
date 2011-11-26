@@ -4,7 +4,7 @@
 
 package web
 
-import "http"
+import "net/http"
 
 var statusText = map[int]string{
     http.StatusContinue:           "Continue",

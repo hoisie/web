@@ -10,7 +10,7 @@ import (
     "strconv"
     "strings"
     "time"
-    "utf8"
+    "unicode/utf8"
 )
 
 func isText(b []byte) bool {

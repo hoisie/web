@@ -1,7 +1,7 @@
 package main
 
 import (
-    "rand"
+    "math/rand"
     "strconv"
     "time"
     "web"

@@ -152,7 +152,7 @@ func writeCookies(w io.Writer, kk []*http.Cookie) error {
 // readCookies parses all "Cookie" values from
 // the header h, removes the successfully parsed values from the
 // "Cookie" key in h and returns the parsed Cookies.
-func readCookies(h http.Header) []*http.Cookie {
+func ReadCookies(h http.Header) []*http.Cookie {
     cookies := []*http.Cookie{}
     lines, ok := h["Cookie"]
     if !ok {

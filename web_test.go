@@ -92,7 +92,7 @@ func getTestResponse(method string, path string, body string, headers map[string
 
     tcpb := tcpBuffer{nil, &buf}
     c := scgiConn{wroteHeaders: false, headers: make(map[string][]string), fd: &tcpb}
-    mainServer.routeHandler(req, &c)
+    mainServer.RouteHandler(req, &c)
     return buildTestResponse(&buf)
 
 }

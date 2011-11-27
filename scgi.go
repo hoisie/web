@@ -19,7 +19,7 @@ type scgiConn struct {
 
 func (conn *scgiConn) StartResponse(status int) {
     var buf bytes.Buffer
-    text := statusText[status]
+    text := StatusText[status]
 
     fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
     conn.fd.Write(buf.Bytes())
@@ -151,7 +151,7 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     }
 
     sc := scgiConn{fd, make(map[string][]string), false}
-    s.routeHandler(req, &sc)
+    s.RouteHandler(req, &sc)
     sc.finishRequest()
 
     fd.Close()

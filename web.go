@@ -11,7 +11,6 @@ import (
     "net"
     "net/http"
     "net/http/pprof"
-    //"net/http/httputil"
     "net/url"
     "os"
     "path"
@@ -243,7 +242,7 @@ func (c *httpConn) Close() {
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     conn := httpConn{c}
     wreq := newRequest(req, c)
-    s.routeHandler(wreq, &conn)
+    s.RouteHandler(wreq, &conn)
 }
 
 //Calls a function with recover block
@@ -290,7 +289,7 @@ func requiresContext(handlerType reflect.Type) bool {
     return false
 }
 
-func (s *Server) routeHandler(req *Request, c conn) {
+func (s *Server) RouteHandler(req *Request, c conn) {
     requestPath := req.URL.Path
 
     //log the request
@@ -301,7 +300,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
     }
 
     //parse the form data (if it exists)
-    perr := req.parseParams()
+    perr := req.ParseParams()
     if perr != nil {
         s.Logger.Printf("Failed to parse form data %q\n", perr.Error())
     }
@@ -317,14 +316,17 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
     //try to serve a static file
     staticDir := s.Config.StaticDir
-    if staticDir == "" {
-        staticDir = defaultStaticDir()
+    if staticDir != "NONE" {
+        if staticDir == "" {
+            staticDir = defaultStaticDir()
+        }
+        staticFile := path.Join(staticDir, requestPath)
+        if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+            serveFile(&ctx, staticFile)
+            return
+        }
     }
-    staticFile := path.Join(staticDir, requestPath)
-    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-        serveFile(&ctx, staticFile)
-        return
-    }
+    
 
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
@@ -390,6 +392,11 @@ func (s *Server) routeHandler(req *Request, c conn) {
     ctx.Abort(404, "Page not found")
 }
 
+type Listener interface {
+    Listen(s *Server)
+}
+
+
 var Config = &ServerConfig{
     RecoverPanic: true,
 }
@@ -419,8 +426,7 @@ func (s *Server) initServer() {
 }
 
 //Runs the web application and serves http requests
-func (s *Server) Run(addr string) {
-    s.initServer()
+func NativeRunner(s *Server, addr string) {
 
     mux := http.NewServeMux()
 
@@ -441,9 +447,10 @@ func (s *Server) Run(addr string) {
     s.l.Close()
 }
 
+
 //Runs the web application and serves http requests
 func Run(addr string) {
-    mainServer.Run(addr)
+    Runner(addr, NativeRunner)
 }
 
 //Stops the web server
@@ -457,27 +464,30 @@ func Close() {
     mainServer.Close()
 }
 
-func (s *Server) RunScgi(addr string) {
-    s.initServer()
+func Runner(addr string, runner func(s *Server, addr string)()){
+    mainServer.initServer()
+    runner(&mainServer, addr)
+}
+
+func ScgiRunner(s *Server, addr string) {
     s.Logger.Printf("web.go serving scgi %s\n", addr)
     s.listenAndServeScgi(addr)
 }
 
 //Runs the web application and serves scgi requests
 func RunScgi(addr string) {
-    mainServer.RunScgi(addr)
+    Runner(addr, ScgiRunner)
 }
 
 //Runs the web application and serves scgi requests for this Server object.
-func (s *Server) RunFcgi(addr string) {
-    s.initServer()
+func FcgiRunner(s *Server, addr string) {
     s.Logger.Printf("web.go serving fcgi %s\n", addr)
     s.listenAndServeFcgi(addr)
 }
 
 //Runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
-    mainServer.RunFcgi(addr)
+    Runner(addr,FcgiRunner)
 }
 
 //Adds a handler for the 'GET' http method.

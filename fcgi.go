@@ -152,7 +152,7 @@ func (conn *fcgiConn) Write(data []byte) (n int, err error) {
 
 func (conn *fcgiConn) StartResponse(status int) {
     var buf bytes.Buffer
-    text := statusText[status]
+    text := StatusText[status]
     fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
     conn.fcgiWrite(buf.Bytes())
 }
@@ -266,7 +266,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
                 body.Write(content)
             } else if h.ContentLength == 0 {
                 req = newRequestCgi(headers, &body)
-                s.routeHandler(req, fc)
+                s.RouteHandler(req, fc)
                 //we close the connection after processing
                 //TODO: is there a way to keep it open for future requests?
                 fc.complete()

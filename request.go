@@ -51,7 +51,7 @@ type badStringError struct {
 
 func (e *badStringError) Error() string { return fmt.Sprintf("%s %q", e.what, e.str) }
 
-func flattenParams(fullParams map[string][]string) map[string]string {
+func FlattenParams(fullParams map[string][]string) map[string]string {
     params := map[string]string{}
     for name, lst := range fullParams {
         if len(lst) > 0 {
@@ -118,7 +118,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     }
 
     //read the cookies
-    cookies := readCookies(httpheader)
+    cookies := ReadCookies(httpheader)
 
     req := Request{
         Method:     method,
@@ -137,7 +137,7 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     return &req
 }
 
-func parseForm(m map[string][]string, query string) (err error) {
+func ParseForm(m map[string][]string, query string) (err error) {
     for _, kv := range strings.Split(query, "&") {
         kvPair := strings.SplitN(kv, "=", 2)
 
@@ -163,7 +163,7 @@ func parseForm(m map[string][]string, query string) (err error) {
 
 // ParseForm parses the request body as a form for POST requests, or the raw query for GET requests.
 // It is idempotent.
-func (r *Request) parseParams() (err error) {
+func (r *Request) ParseParams() (err error) {
     if r.Params != nil {
         return
     }
@@ -246,20 +246,20 @@ func (r *Request) parseParams() (err error) {
     }
 
     if queryParams != "" {
-        err = parseForm(r.FullParams, queryParams)
+        err = ParseForm(r.FullParams, queryParams)
         if err != nil {
             return err
         }
     }
 
     if bodyParams != "" {
-        err = parseForm(r.FullParams, bodyParams)
+        err = ParseForm(r.FullParams, bodyParams)
         if err != nil {
             return err
         }
     }
 
-    r.Params = flattenParams(r.FullParams)
+    r.Params = FlattenParams(r.FullParams)
     return nil
 }
 

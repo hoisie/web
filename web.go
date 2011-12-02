@@ -91,12 +91,12 @@ func (ctx *Context) ContentType(ext string) {
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
-	var utctime *time.Time
+	var utctime time.Time
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
-		utctime = time.SecondsToUTC(2147483647)
+		utctime = time.Unix(2147483647, 0).UTC()
 	} else {
-		utctime = time.SecondsToUTC(time.UTC().Seconds() + age)
+		utctime = time.Unix(int64(time.Now().UTC().Second())+age, 0).UTC()
 	}
 	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
 	ctx.SetHeader("Set-Cookie", cookie, false)
@@ -108,7 +108,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 	hm.Write(val)
 	hm.Write([]byte(timestamp))
 
-	hex := fmt.Sprintf("%02x", hm.Sum())
+	hex := fmt.Sprintf("%02x", hm.Sum(nil))
 	return hex
 }
 
@@ -124,7 +124,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
-	timestamp := strconv.Itoa64(time.Seconds())
+	timestamp := strconv.Itoa64(time.Now().UnixNano())
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	ctx.SetCookie(name, cookie, age)
@@ -148,7 +148,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 
 		ts, _ := strconv.Atoi64(timestamp)
 
-		if time.Seconds()-31*86400 > ts {
+		if time.Now().Sub(time.Unix(0, ts)) > time.Duration(31*86400) {
 			return "", false
 		}
 
@@ -311,7 +311,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
 	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 	ctx.SetHeader("Server", "web.go", true)
 
-	tm := time.UTC()
+	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
 	//try to serve a static file
@@ -535,7 +535,7 @@ type ServerConfig struct {
 	RecoverPanic bool
 }
 
-func webTime(t *time.Time) string {
+func webTime(t time.Time) string {
 	ftime := t.Format(time.RFC1123)
 	if strings.HasSuffix(ftime, "UTC") {
 		ftime = ftime[0:len(ftime)-3] + "GMT"
@@ -548,7 +548,7 @@ func dirExists(dir string) bool {
 	switch {
 	case e != nil:
 		return false
-	case !d.IsDirectory():
+	case !d.IsDir():
 		return false
 	}
 
@@ -559,7 +559,7 @@ func fileExists(dir string) bool {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return false
-	} else if !info.IsRegular() {
+	} else if !!info.IsDir() {
 		return false
 	}
 

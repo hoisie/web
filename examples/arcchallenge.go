@@ -12,7 +12,7 @@ var form = `<form action="say" method="POST"><input name="said"><input type="sub
 var users = map[string]string{}
 
 func main() {
-	rand.Seed(time.Nanoseconds())
+	rand.Seed(time.Now())
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 	web.Get("/said", func() string { return form })
 	web.Post("/say", func(ctx *web.Context) string {

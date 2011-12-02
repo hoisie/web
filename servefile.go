@@ -40,7 +40,7 @@ func isText(b []byte) bool {
 func getmd5(data string) string {
 	hash := md5.New()
 	hash.Write([]byte(data))
-	return fmt.Sprintf("%x", hash.Sum())
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func serveFile(ctx *Context, name string) {
@@ -54,10 +54,10 @@ func serveFile(ctx *Context, name string) {
 	defer f.Close()
 
 	info, _ := f.Stat()
-	size := strconv.Itoa64(info.Size)
-	mtime := strconv.Itoa64(info.Mtime_ns)
+	size := strconv.Itoa64(info.Size())
+	mtime := strconv.Itoa64(info.ModTime().UnixNano())
 	//set the last-modified header
-	lm := time.SecondsToUTC(info.Mtime_ns / 1e9)
+	lm := time.Unix(info.ModTime().UnixNano()/1e9, 0).UTC()
 	ctx.SetHeader("Last-Modified", webTime(lm), true)
 
 	//generate a simple etag with heuristic MD5(filename, size, lastmod)
@@ -94,7 +94,7 @@ func serveFile(ctx *Context, name string) {
 	if ctx.Request.Headers.Get("If-Modified-Since") != "" {
 		ims := ctx.Request.Headers.Get("If-Modified-Since")
 		imstime, err := time.Parse(time.RFC1123, ims)
-		if err == nil && imstime.Seconds() >= lm.Seconds() {
+		if err == nil && imstime.Unix() >= lm.Unix() {
 			ctx.NotModified()
 			return
 		}

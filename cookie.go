@@ -94,7 +94,7 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) error {
         if len(c.Domain) > 0 {
             fmt.Fprintf(&b, "; Domain=%s", url.QueryEscape(c.Domain))
         }
-        if len(c.Expires.Zone) > 0 {
+        if _, offset := c.Expires.Zone(); offset > 0 {
             fmt.Fprintf(&b, "; Expires=%s", c.Expires.Format(time.RFC1123))
         }
         if c.MaxAge >= 0 {

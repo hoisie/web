@@ -4,9 +4,9 @@
 
 package web
 
-import "http"
+import "net/http"
 
-var statusText = map[int]string{
+var StatusText = map[int]string{
     http.StatusContinue:           "Continue",
     http.StatusSwitchingProtocols: "Switching Protocols",
 

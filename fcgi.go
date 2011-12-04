@@ -5,10 +5,9 @@ import (
     "bufio"
     "encoding/binary"
     "fmt"
-    "http"
     "io"
     "net"
-    "os"
+    "net/http"
     "strings"
 )
 
@@ -96,7 +95,7 @@ type fcgiConn struct {
     wroteHeaders bool
 }
 
-func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
+func (conn *fcgiConn) fcgiWrite(data []byte) (err error) {
     l := len(data)
     // round to the nearest 8
     padding := make([]byte, uint8(-l&7))
@@ -129,7 +128,7 @@ func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
     return err
 }
 
-func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
+func (conn *fcgiConn) Write(data []byte) (n int, err error) {
     var buf bytes.Buffer
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
@@ -153,7 +152,7 @@ func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
 
 func (conn *fcgiConn) StartResponse(status int) {
     var buf bytes.Buffer
-    text := statusText[status]
+    text := StatusText[status]
     fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
     conn.fcgiWrite(buf.Bytes())
 }
@@ -238,11 +237,11 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
-        if err == os.EOF {
+        if err == io.EOF {
             break
         }
         if err != nil {
-            s.Logger.Println("FCGI Error", err.String())
+            s.Logger.Println("FCGI Error", err.Error())
             break
         }
         content := make([]byte, h.ContentLength)
@@ -267,7 +266,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
                 body.Write(content)
             } else if h.ContentLength == 0 {
                 req = newRequestCgi(headers, &body)
-                s.routeHandler(req, fc)
+                s.RouteHandler(req, fc)
                 //we close the connection after processing
                 //TODO: is there a way to keep it open for future requests?
                 fc.complete()
@@ -282,9 +281,9 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     }
 }
 
-func (s *Server) listenAndServeFcgi(addr string) os.Error {
+func (s *Server) listenAndServeFcgi(addr string) error {
     var l net.Listener
-    var err os.Error
+    var err error
 
     //if the path begins with a "/", assume it's a unix address
     if strings.HasPrefix(addr, "/") {
@@ -297,13 +296,13 @@ func (s *Server) listenAndServeFcgi(addr string) os.Error {
     s.l = l
 
     if err != nil {
-        s.Logger.Println("FCGI listen error", err.String())
+        s.Logger.Println("FCGI listen error", err.Error())
         return err
     }
     for {
         fd, err := l.Accept()
         if err != nil {
-            s.Logger.Println("FCGI accept error", err.String())
+            s.Logger.Println("FCGI accept error", err.Error())
             break
         }
         go s.handleFcgiConnection(fd)

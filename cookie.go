@@ -7,13 +7,12 @@ package web
 import (
     "bytes"
     "fmt"
-    "http"
     "io"
-    "os"
+    "net/http"
+    "net/url"
     "sort"
     "strings"
     "time"
-    "url"
 )
 
 func sanitizeName(n string) string {
@@ -79,7 +78,7 @@ func isCookieNameValid(raw string) bool {
 // to w. Each cookie is written on a separate "Set-Cookie: " line.
 // This choice is made because HTTP parsers tend to have a limit on
 // line-length, so it seems safer to place cookies on separate lines.
-func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
+func writeSetCookies(w io.Writer, kk []*http.Cookie) error {
     if kk == nil {
         return nil
     }
@@ -95,7 +94,7 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
         if len(c.Domain) > 0 {
             fmt.Fprintf(&b, "; Domain=%s", url.QueryEscape(c.Domain))
         }
-        if len(c.Expires.Zone) > 0 {
+        if _, offset := c.Expires.Zone(); offset > 0 {
             fmt.Fprintf(&b, "; Expires=%s", c.Expires.Format(time.RFC1123))
         }
         if c.MaxAge >= 0 {
@@ -122,7 +121,7 @@ func writeSetCookies(w io.Writer, kk []*http.Cookie) os.Error {
 // to w. Each cookie is written on a separate "Cookie: " line.
 // This choice is made because HTTP parsers tend to have a limit on
 // line-length, so it seems safer to place cookies on separate lines.
-func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
+func writeCookies(w io.Writer, kk []*http.Cookie) error {
     lines := make([]string, 0, len(kk))
     var b bytes.Buffer
     for _, c := range kk {
@@ -153,7 +152,7 @@ func writeCookies(w io.Writer, kk []*http.Cookie) os.Error {
 // readCookies parses all "Cookie" values from
 // the header h, removes the successfully parsed values from the
 // "Cookie" key in h and returns the parsed Cookies.
-func readCookies(h http.Header) []*http.Cookie {
+func ReadCookies(h http.Header) []*http.Cookie {
     cookies := []*http.Cookie{}
     lines, ok := h["Cookie"]
     if !ok {
@@ -176,7 +175,7 @@ func readCookies(h http.Header) []*http.Cookie {
                 continue
             }
             attr, val := parts[i], ""
-            var err os.Error
+            var err error
             if j := strings.Index(attr, "="); j >= 0 {
                 attr, val = attr[:j], attr[j+1:]
                 val, err = url.QueryUnescape(val)
@@ -212,6 +211,8 @@ func readCookies(h http.Header) []*http.Cookie {
             })
         }
     }
-    h["Cookie"] = unparsedLines, len(unparsedLines) > 0
+    for _,line := range unparsedLines  {
+        h.Set("Cookie", line)
+    }
     return cookies
 }

@@ -241,6 +241,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 func TestRouting(t *testing.T) {
 	for _, test := range tests {
+    fmt.Printf("testing %v\n", test.path)
 		resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string), nil)
 
 		if resp.statusCode != test.expectedStatus {

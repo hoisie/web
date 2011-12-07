@@ -91,14 +91,14 @@ func (ctx *Context) ContentType(ext string) {
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
 	var utctime time.Time
-  var tdelta time.Duration
+	var tdelta time.Duration
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 27 years from now)
-    tdelta = time.Second * 2147483647
+		tdelta = time.Second * 2147483647
 	} else {
-    tdelta = time.Second * time.Duration(age)
+		tdelta = time.Second * time.Duration(age)
 	}
-  utctime = time.Now().Add(tdelta).UTC()
+	utctime = time.Now().Add(tdelta).UTC()
 	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
 	ctx.SetHeader("Set-Cookie", cookie, false)
 }
@@ -124,7 +124,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
-	timestamp := strconv.Itoa64(time.Now().Unix())
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	ctx.SetCookie(name, cookie, age)
@@ -146,9 +146,9 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 			return "", false
 		}
 
-		ts, _ := strconv.Atoi64(timestamp)
+		ts, _ := strconv.ParseInt(timestamp, 10, 64)
 
-		if time.Now().Unix() - (31*86400) > ts {
+		if time.Now().Unix()-(31*86400) > ts {
 			return "", false
 		}
 

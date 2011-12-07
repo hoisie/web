@@ -53,8 +53,8 @@ func serveFile(ctx *Context, name string) {
 	defer f.Close()
 
 	info, _ := f.Stat()
-	size := strconv.Itoa64(info.Size())
-	mtime := strconv.Itoa64(info.ModTime().UnixNano())
+	size := strconv.FormatInt(info.Size(), 10)
+	mtime := strconv.FormatInt(info.ModTime().UnixNano(), 10)
 	//set the last-modified header
 	lm := info.ModTime().UTC()
 	ctx.SetHeader("Last-Modified", webTime(lm), true)

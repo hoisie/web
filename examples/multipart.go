@@ -1,16 +1,16 @@
 package main
 
 import (
-    "bytes"
-    "crypto/md5"
-    "fmt"
-    "web"
+	"bytes"
+	"crypto/md5"
+	"fmt"
+	"web"
 )
 
 func Md5(b []byte) string {
-    hash := md5.New()
-    hash.Write(b)
-    return fmt.Sprintf("%x", hash.Sum())
+	hash := md5.New()
+	hash.Write(b)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 
 }
 
@@ -38,15 +38,15 @@ var page = `
 func index() string { return page }
 
 func multipart(ctx *web.Context) string {
-    var output bytes.Buffer
-    output.WriteString("<p>input1: " + ctx.Params["input1"] + "</p>")
-    output.WriteString("<p>input2: " + ctx.Params["input2"] + "</p>")
-    output.WriteString("<p>file: " + ctx.Files["file"].Filename + " " + Md5(ctx.Files["file"].Data) + "</p>")
-    return output.String()
+	var output bytes.Buffer
+	output.WriteString("<p>input1: " + ctx.Params["input1"] + "</p>")
+	output.WriteString("<p>input2: " + ctx.Params["input2"] + "</p>")
+	output.WriteString("<p>file: " + ctx.Files["file"].Filename + " " + Md5(ctx.Files["file"].Data) + "</p>")
+	return output.String()
 }
 
 func main() {
-    web.Get("/", index)
-    web.Post("/multipart", multipart)
-    web.Run("0.0.0.0:9999")
+	web.Get("/", index)
+	web.Post("/multipart", multipart)
+	web.Run("0.0.0.0:9999")
 }

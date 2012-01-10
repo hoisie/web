@@ -124,7 +124,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
-	timestamp := strconv.Itoa64(time.Now().UnixNano())
+	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	ctx.SetCookie(name, cookie, age)
@@ -146,7 +146,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 			return "", false
 		}
 
-		ts, _ := strconv.Atoi64(timestamp)
+		ts, _ := strconv.ParseInt(timestamp, 10, 64)
 
 		if time.Now().Sub(time.Unix(0, ts)) > time.Duration(31*86400) {
 			return "", false

@@ -278,19 +278,19 @@ func writeTo(s string, val reflect.Value) error {
 			v.SetBool(true)
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		i, err := strconv.Atoi64(s)
+		i, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
 			return err
 		}
 		v.SetInt(i)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		ui, err := strconv.Atoui64(s)
+		ui, err := strconv.ParseUint(s, 0, 64)
 		if err != nil {
 			return err
 		}
 		v.SetUint(ui)
 	case reflect.Float32, reflect.Float64:
-		f, err := strconv.Atof64(s)
+		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
 			return err
 		}

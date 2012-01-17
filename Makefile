@@ -1,10 +1,10 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=web
+TARG=github.com/hoisie/web.go
 GOFMT=gofmt -s -spaces=true -tabindent=false -tabwidth=4
 
 GOFILES=\
-  cookie.go\
+	cookie.go\
 	fcgi.go\
 	request.go\
 	scgi.go\

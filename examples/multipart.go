@@ -4,7 +4,7 @@ import (
     "bytes"
     "crypto/md5"
     "fmt"
-    "web"
+    "github.com/hoisie/web.go"
 )
 
 func Md5(b []byte) string {

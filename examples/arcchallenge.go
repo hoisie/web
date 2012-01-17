@@ -4,7 +4,7 @@ import (
     "rand"
     "strconv"
     "time"
-    "web"
+    "github.com/hoisie/web.go"
 )
 
 var form = `<form action="say" method="POST"><input name="said"><input type="submit"></form>`

@@ -14,22 +14,23 @@ web.go should be familiar to people who've developed websites with higher-level 
 
 ## Installation
 
-Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `weekly` release. Go is a fast-changing language, and it's easier to keep with the weekly branch than to maintain separate branches.
+Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `release` branch. If you use the `weekly` branch you may have difficulty compiling web.go. There's an alternative web.go branch, `weekly`, that attempts to keep up with the weekly branch.
 
-To use web.go with Go's `weekly` branch:
+To install web.go, simply run:
 
-1. Run `hg update -r weekly`. If you're running an outdated version of Go, or the `release` version, it likely won't compile. 
-2. git clone git://github.com/hoisie/web.go.git
-3. cd web.go && make install
+    goinstall github.com/hoisie/web.go
 
-You can also install using `goinstall github.com/hoisie/web.go`, but if you do this, the import statement in your go programs will be `import github.com/hoisie/web.go` instead of just `import web`.  
+To compile it from source:
+
+    git clone git://github.com/hoisie/web.go.git
+    cd web.go && make install
 
 ## Example
     
     package main
     
     import (
-        "web"
+        "github.com/hoisie/web.go"
     )
     
     func hello(val string) string { return "hello " + val } 
@@ -53,7 +54,7 @@ Route handlers may contain a pointer to web.Context as their first parameter. Th
     package main
     
     import (
-        "web"
+        "github.com/hoisie/web.go"
     )
     
     func hello(ctx *web.Context, val string) { 

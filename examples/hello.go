@@ -1,7 +1,7 @@
 package main
 
 import (
-    "web"
+    "github.com/hoisie/web.go"
 )
 
 func hello(val string) string { return "hello " + val }

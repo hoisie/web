@@ -2,7 +2,7 @@ package main
 
 import (
     "fmt"
-    "web"
+    "github.com/hoisie/web.go"
 )
 
 type mytype struct {

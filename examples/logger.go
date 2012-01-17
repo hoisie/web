@@ -3,7 +3,7 @@ package main
 import (
     "log"
     "os"
-    "web"
+    "github.com/hoisie/web.go"
 )
 
 func hello(val string) string { return "hello " + val }

@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"crypto/hmac"
+	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -104,7 +105,7 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
-	hm := hmac.NewSHA1([]byte(key))
+	hm := hmac.New(sha1.New, []byte(key))
 
 	hm.Write(val)
 

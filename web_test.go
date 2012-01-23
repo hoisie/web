@@ -171,6 +171,12 @@ func init() {
         return string(data)
     })
 
+    Post("/parsejson", func(ctx *Context) string {
+        var tmp = struct{ A string; B string }{}
+        json.NewDecoder(ctx.Request.Body).Decode(&tmp)
+        return tmp.A + " " + tmp.B
+    })
+
     //s := &StructHandler{"a"}
     //Get("/methodhandler", MethodHandler(s, "method"))
     //Get("/methodhandler2", MethodHandler(s, "method2"))
@@ -204,6 +210,7 @@ var tests = []Test{
     //{"GET", "/methodhandler", "", 200, `a`},
     //{"GET", "/methodhandler2?b=b", "", 200, `ab`},
     //{"GET", "/methodhandler3/b", "", 200, `ab`},
+    {"POST", "/parsejson", `{"a":"hello", "b":"world"}`, 200, "hello world"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *Request {
@@ -213,7 +220,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
     url_, _ := url.Parse(rawurl)
 
     proto := "HTTP/1.1"
-    useragent := "web.go test framework"
+    useragent := "web.go test"
 
     if headers == nil {
         headers = map[string][]string{}
@@ -221,7 +228,9 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
     if method == "POST" {
         headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
-        headers["Content-Type"] = []string{"text/plain"}
+        if headers["Content-Type"] == nil {
+            headers["Content-Type"] = []string{"text/plain"}
+        } 
     }
 
     req := Request{Method: method,
@@ -662,6 +671,7 @@ func TestSecureCookieFcgi(t *testing.T) {
         t.Fatalf("SecureCookie test failed body")
     }
 }
+
 
 //Disabled until issue 1375 is fixed
 /*

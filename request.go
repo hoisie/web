@@ -1,11 +1,11 @@
 package web
 
 import (
+    "bytes"
     "fmt"
     "http"
     "io"
     "io/ioutil"
-    "json"
     "mime"
     "mime/multipart"
     "net"
@@ -164,12 +164,12 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
 // ParseForm parses the request body as a form for POST requests, or the raw query for GET requests.
 // It is idempotent.
 func (r *Request) parseParams() (err os.Error) {
+
     if r.Params != nil {
         return
     }
     r.FullParams = make(map[string][]string)
     queryParams := r.URL.RawQuery
-    var bodyParams string
     switch r.Method {
     case "POST":
         if r.Body == nil {
@@ -183,17 +183,7 @@ func (r *Request) parseParams() (err os.Error) {
             if b, err = ioutil.ReadAll(r.Body); err != nil {
                 return err
             }
-            bodyParams = string(b)
-        case "application/json":
-            //if we get JSON, do the best we can to convert it to a map[string]string
-            //we make the body available as r.ParamData
-            var b []byte
-            if b, err = ioutil.ReadAll(r.Body); err != nil {
-                return err
-            }
             r.ParamData = b
-            r.Params = map[string]string{}
-            json.Unmarshal(b, r.Params)
         case "multipart/form-data":
             _, params := mime.ParseMediaType(ct)
             boundary, ok := params["boundary"]
@@ -246,11 +236,12 @@ func (r *Request) parseParams() (err os.Error) {
         }
     }
 
-    if bodyParams != "" {
-        err = parseForm(r.FullParams, bodyParams)
+    if len(r.ParamData) > 0 {
+        err = parseForm(r.FullParams, string(r.ParamData))
         if err != nil {
             return err
         }
+        r.Body = bytes.NewBuffer(r.ParamData)
     }
 
     r.Params = flattenParams(r.FullParams)
@@ -347,18 +338,5 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
     default:
         return os.NewError("Invalid container type")
     }
-    return nil
-}
-
-func (r *Request) UnmarshalParams(val interface{}) os.Error {
-    if strings.HasPrefix(r.Headers.Get("Content-Type"), "application/json") {
-        return json.Unmarshal(r.ParamData, val)
-    } else {
-        err := r.writeToContainer(reflect.ValueOf(val))
-        if err != nil {
-            return err
-        }
-    }
-
     return nil
 }

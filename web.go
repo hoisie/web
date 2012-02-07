@@ -90,7 +90,7 @@ func (ctx *Context) ContentType(ext string) {
 }
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, age int64) {
+func (ctx *Context) SetCookie(name string, value string, age int64, settings ...string) {
 	var utctime time.Time
 	var tdelta time.Duration
 	if age == 0 {
@@ -101,6 +101,9 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 	}
 	utctime = time.Now().Add(tdelta).UTC()
 	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
+    for _, setting := range settings {
+        cookie = fmt.Sprintf("%s; %s", cookie, setting)
+    }
 	ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
@@ -217,7 +220,11 @@ func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
 	//right now unique can't be implemented through the http package.
 	//see issue 488
-	c.conn.Header().Set(hdr, val)
+    if unique {
+        c.conn.Header().Set(hdr, val)
+        return
+    }
+    c.conn.Header().Add(hdr, val)
 }
 
 func (c *httpConn) WriteString(content string) {

@@ -224,6 +224,7 @@ func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
         c.conn.Header().Set(hdr, val)
         return
     }
+    println(hdr)
     c.conn.Header().Add(hdr, val)
 }
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-    "rand"
+    "crypto/rand"
     "strconv"
     "time"
     "github.com/hoisie/web.go"

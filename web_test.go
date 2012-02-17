@@ -4,7 +4,7 @@ import (
     "bytes"
     "encoding/binary"
     "fmt"
-    "http"
+    "net/http"
     "json"
     "log"
     "os"
@@ -12,7 +12,7 @@ import (
     "strconv"
     "strings"
     "testing"
-    "url"
+    "net/url"
 )
 
 func init() {
@@ -24,15 +24,15 @@ type tcpBuffer struct {
     output *bytes.Buffer
 }
 
-func (buf *tcpBuffer) Write(p []uint8) (n int, err os.Error) {
+func (buf *tcpBuffer) Write(p []uint8) (n int, err error) {
     return buf.output.Write(p)
 }
 
-func (buf *tcpBuffer) Read(p []byte) (n int, err os.Error) {
+func (buf *tcpBuffer) Read(p []byte) (n int, err error) {
     return buf.input.Read(p)
 }
 
-func (buf *tcpBuffer) Close() os.Error { return nil }
+func (buf *tcpBuffer) Close() error { return nil }
 
 type testResponse struct {
     statusCode int
@@ -234,7 +234,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
     }
 
     req := Request{Method: method,
-        RawURL:    rawurl,
+        //RawURL:    rawurl,
         Cookie:    cookies,
         URL:       url_,
         Proto:     proto,
@@ -508,7 +508,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
-        if err == os.EOF {
+        if err == io.EOF {
             break
         }
 

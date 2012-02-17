@@ -3,16 +3,16 @@ package web
 import (
     "bytes"
     "crypto/hmac"
-	"crypto/sha1"
+    "crypto/sha1"
     "encoding/base64"
     "fmt"
-    "net/http"
-    "net/http/pprof"
-    "net/url"
     "io/ioutil"
     "log"
     "mime"
     "net"
+    "net/http"
+    "net/http/pprof"
+    "net/url"
     "os"
     "path"
     "reflect"
@@ -24,43 +24,43 @@ import (
 )
 
 type conn interface {
-	StartResponse(status int)
-	SetHeader(hdr string, val string, unique bool)
-	Write(data []byte) (n int, err error)
-	Close()
+    StartResponse(status int)
+    SetHeader(hdr string, val string, unique bool)
+    Write(data []byte) (n int, err error)
+    Close()
 }
 
 type Context struct {
-	*Request
-	*Server
-	conn
-	responseStarted bool
+    *Request
+    *Server
+    conn
+    responseStarted bool
 }
 
 func (ctx *Context) StartResponse(status int) {
-	ctx.conn.StartResponse(status)
-	ctx.responseStarted = true
+    ctx.conn.StartResponse(status)
+    ctx.responseStarted = true
 }
 
 func (ctx *Context) Write(data []byte) (n int, err error) {
-	if !ctx.responseStarted {
-		ctx.StartResponse(200)
-	}
+    if !ctx.responseStarted {
+        ctx.StartResponse(200)
+    }
 
-	//if it's a HEAD request, we just write blank data
-	if ctx.Request.Method == "HEAD" {
-		data = []byte{}
-	}
+    //if it's a HEAD request, we just write blank data
+    if ctx.Request.Method == "HEAD" {
+        data = []byte{}
+    }
 
-	return ctx.conn.Write(data)
+    return ctx.conn.Write(data)
 }
 func (ctx *Context) WriteString(content string) {
-	ctx.Write([]byte(content))
+    ctx.Write([]byte(content))
 }
 
 func (ctx *Context) Abort(status int, body string) {
-	ctx.StartResponse(status)
-	ctx.WriteString(body)
+    ctx.StartResponse(status)
+    ctx.WriteString(body)
 }
 
 func (ctx *Context) Redirect(status int, url_ string) {
@@ -70,48 +70,48 @@ func (ctx *Context) Redirect(status int, url_ string) {
 }
 
 func (ctx *Context) NotModified() {
-	ctx.StartResponse(304)
+    ctx.StartResponse(304)
 }
 
 func (ctx *Context) NotFound(message string) {
-	ctx.StartResponse(404)
-	ctx.WriteString(message)
+    ctx.StartResponse(404)
+    ctx.WriteString(message)
 }
 
 //Sets the content type by extension, as defined in the mime package. 
 //For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
-	if !strings.HasPrefix(ext, ".") {
-		ext = "." + ext
-	}
-	ctype := mime.TypeByExtension(ext)
-	if ctype != "" {
-		ctx.SetHeader("Content-Type", ctype, true)
-	}
+    if !strings.HasPrefix(ext, ".") {
+        ext = "." + ext
+    }
+    ctype := mime.TypeByExtension(ext)
+    if ctype != "" {
+        ctx.SetHeader("Content-Type", ctype, true)
+    }
 }
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
-	var utctime time.Time
-	var tdelta time.Duration
-	if age == 0 {
-		// 2^31 - 1 seconds (roughly 27 years from now)
-		tdelta = time.Second * 2147483647
-	} else {
-		tdelta = time.Second * time.Duration(age)
-	}
-	utctime = time.Now().Add(tdelta).UTC()
-	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
-	ctx.SetHeader("Set-Cookie", cookie, false)
+    var utctime time.Time
+    var tdelta time.Duration
+    if age == 0 {
+        // 2^31 - 1 seconds (roughly 27 years from now)
+        tdelta = time.Second * 2147483647
+    } else {
+        tdelta = time.Second * time.Duration(age)
+    }
+    utctime = time.Now().Add(tdelta).UTC()
+    cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
+    ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
-	hm := hmac.New(sha1.New, []byte(key))
+    hm := hmac.New(sha1.New, []byte(key))
 
-	hm.Write(val)
+    hm.Write(val)
 
-	hex := fmt.Sprintf("%02x", hm.Sum([]byte(timestamp)))
-	return hex
+    hex := fmt.Sprintf("%02x", hm.Sum([]byte(timestamp)))
+    return hex
 }
 
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
@@ -133,34 +133,34 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-	for _, cookie := range ctx.Request.Cookie {
-		if cookie.Name != name {
-			continue
-		}
+    for _, cookie := range ctx.Request.Cookie {
+        if cookie.Name != name {
+            continue
+        }
 
-		parts := strings.SplitN(cookie.Value, "|", 3)
+        parts := strings.SplitN(cookie.Value, "|", 3)
 
-		val := parts[0]
-		timestamp := parts[1]
-		sig := parts[2]
+        val := parts[0]
+        timestamp := parts[1]
+        sig := parts[2]
 
-		if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
-			return "", false
-		}
+        if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
+            return "", false
+        }
 
-		ts, _ := strconv.ParseInt(timestamp, 10, 64)
+        ts, _ := strconv.ParseInt(timestamp, 10, 64)
 
-		if time.Now().Unix()-(31*86400) > ts {
-			return "", false
-		}
+        if time.Now().Unix()-(31*86400) > ts {
+            return "", false
+        }
 
-		buf := bytes.NewBufferString(val)
-		encoder := base64.NewDecoder(base64.StdEncoding, buf)
+        buf := bytes.NewBufferString(val)
+        encoder := base64.NewDecoder(base64.StdEncoding, buf)
 
-		res, _ := ioutil.ReadAll(encoder)
-		return string(res), true
-	}
-	return "", false
+        res, _ := ioutil.ReadAll(encoder)
+        return string(res), true
+    }
+    return "", false
 }
 
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof
@@ -170,28 +170,28 @@ var exeFile string
 
 // default
 func defaultStaticDir() string {
-	root, _ := path.Split(exeFile)
-	return path.Join(root, "static")
+    root, _ := path.Split(exeFile)
+    return path.Join(root, "static")
 }
 
 func init() {
-	contextType = reflect.TypeOf(Context{})
-	//find the location of the exe file
-	arg0 := path.Clean(os.Args[0])
-	wd, _ := os.Getwd()
-	if strings.HasPrefix(arg0, "/") {
-		exeFile = arg0
-	} else {
-		//TODO for robustness, search each directory in $PATH
-		exeFile = path.Join(wd, arg0)
-	}
+    contextType = reflect.TypeOf(Context{})
+    //find the location of the exe file
+    arg0 := path.Clean(os.Args[0])
+    wd, _ := os.Getwd()
+    if strings.HasPrefix(arg0, "/") {
+        exeFile = arg0
+    } else {
+        //TODO for robustness, search each directory in $PATH
+        exeFile = path.Join(wd, arg0)
+    }
 }
 
 type route struct {
-	r       string
-	cr      *regexp.Regexp
-	method  string
-	handler reflect.Value
+    r       string
+    cr      *regexp.Regexp
+    method  string
+    handler reflect.Value
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
@@ -210,73 +210,73 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
 }
 
 type httpConn struct {
-	conn http.ResponseWriter
+    conn http.ResponseWriter
 }
 
 func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
 
 func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
-	//right now unique can't be implemented through the http package.
-	//see issue 488
-	c.conn.Header().Set(hdr, val)
+    //right now unique can't be implemented through the http package.
+    //see issue 488
+    c.conn.Header().Set(hdr, val)
 }
 
 func (c *httpConn) WriteString(content string) {
-	buf := bytes.NewBufferString(content)
-	c.conn.Write(buf.Bytes())
+    buf := bytes.NewBufferString(content)
+    c.conn.Write(buf.Bytes())
 }
 
 func (c *httpConn) Write(content []byte) (n int, err error) {
-	return c.conn.Write(content)
+    return c.conn.Write(content)
 }
 
 func (c *httpConn) Close() {
-	rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
-	if buf != nil {
-		buf.Flush()
-	}
+    rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
+    if buf != nil {
+        buf.Flush()
+    }
 
-	if rwc != nil {
-		rwc.Close()
-	}
+    if rwc != nil {
+        rwc.Close()
+    }
 }
 
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-	conn := httpConn{c}
-	wreq := newRequest(req, c)
-	s.routeHandler(wreq, &conn)
+    conn := httpConn{c}
+    wreq := newRequest(req, c)
+    s.routeHandler(wreq, &conn)
 }
 
 //Calls a function with recover block
 func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
-	defer func() {
-		if err := recover(); err != nil {
-			if !s.Config.RecoverPanic {
-				// go back to panic
-				panic(err)
-			} else {
-				e = err
-				resp = nil
-				s.Logger.Println("Handler crashed with error", err)
-				for i := 1; ; i += 1 {
-					_, file, line, ok := runtime.Caller(i)
-					if !ok {
-						break
-					}
-					s.Logger.Println(file, line)
-				}
-			}
-		}
-	}()
-	return function.Call(args), nil
+    defer func() {
+        if err := recover(); err != nil {
+            if !s.Config.RecoverPanic {
+                // go back to panic
+                panic(err)
+            } else {
+                e = err
+                resp = nil
+                s.Logger.Println("Handler crashed with error", err)
+                for i := 1; ; i += 1 {
+                    _, file, line, ok := runtime.Caller(i)
+                    if !ok {
+                        break
+                    }
+                    s.Logger.Println(file, line)
+                }
+            }
+        }
+    }()
+    return function.Call(args), nil
 }
 
 //should the context be passed to the handler?
 func requiresContext(handlerType reflect.Type) bool {
-	//if the method doesn't take arguments, no
-	if handlerType.NumIn() == 0 {
-		return false
-	}
+    //if the method doesn't take arguments, no
+    if handlerType.NumIn() == 0 {
+        return false
+    }
 
     //if the first argument is not a pointer, no
     a0 := handlerType.In(0)
@@ -305,40 +305,40 @@ func requiresContext(handlerType reflect.Type) bool {
 }
 
 func (s *Server) routeHandler(req *Request, c conn) {
-	requestPath := req.URL.Path
+    requestPath := req.URL.Path
 
-	//log the request
-	if len(req.URL.RawQuery) == 0 {
-		s.Logger.Println(req.Method + " " + requestPath)
-	} else {
-		s.Logger.Println(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
-	}
+    //log the request
+    if len(req.URL.RawQuery) == 0 {
+        s.Logger.Println(req.Method + " " + requestPath)
+    } else {
+        s.Logger.Println(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
+    }
 
-	//parse the form data (if it exists)
-	perr := req.parseParams()
-	if perr != nil {
-		s.Logger.Printf("Failed to parse form data %q\n", perr.Error())
-	}
+    //parse the form data (if it exists)
+    perr := req.parseParams()
+    if perr != nil {
+        s.Logger.Printf("Failed to parse form data %q\n", perr.Error())
+    }
 
-	ctx := Context{req, s, c, false}
+    ctx := Context{req, s, c, false}
 
-	//set some default headers
-	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-	ctx.SetHeader("Server", "web.go", true)
+    //set some default headers
+    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    ctx.SetHeader("Server", "web.go", true)
 
-	tm := time.Now().UTC()
-	ctx.SetHeader("Date", webTime(tm), true)
+    tm := time.Now().UTC()
+    ctx.SetHeader("Date", webTime(tm), true)
 
-	//try to serve a static file
-	staticDir := s.Config.StaticDir
-	if staticDir == "" {
-		staticDir = defaultStaticDir()
-	}
-	staticFile := path.Join(staticDir, requestPath)
-	if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-		serveFile(&ctx, staticFile)
-		return
-	}
+    //try to serve a static file
+    staticDir := s.Config.StaticDir
+    if staticDir == "" {
+        staticDir = defaultStaticDir()
+    }
+    staticFile := path.Join(staticDir, requestPath)
+    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+        serveFile(&ctx, staticFile)
+        return
+    }
 
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
@@ -348,14 +348,14 @@ func (s *Server) routeHandler(req *Request, c conn) {
             continue
         }
 
-		if !cr.MatchString(requestPath) {
-			continue
-		}
-		match := cr.FindStringSubmatch(requestPath)
+        if !cr.MatchString(requestPath) {
+            continue
+        }
+        match := cr.FindStringSubmatch(requestPath)
 
-		if len(match[0]) != len(requestPath) {
-			continue
-		}
+        if len(match[0]) != len(requestPath) {
+            continue
+        }
 
         var args []reflect.Value
         handlerType := route.handler.Type()
@@ -376,40 +376,40 @@ func (s *Server) routeHandler(req *Request, c conn) {
             return
         }
 
-		sval := ret[0]
+        sval := ret[0]
 
-		if sval.Kind() == reflect.String &&
-			!ctx.responseStarted {
-			content := []byte(sval.String())
-			ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-			ctx.StartResponse(200)
-			ctx.Write(content)
-		}
+        if sval.Kind() == reflect.String &&
+            !ctx.responseStarted {
+            content := []byte(sval.String())
+            ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+            ctx.StartResponse(200)
+            ctx.Write(content)
+        }
 
-		return
-	}
+        return
+    }
 
-	//try to serve index.html || index.htm
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-		serveFile(&ctx, indexPath)
-		return
-	}
+    //try to serve index.html || index.htm
+    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
+        serveFile(&ctx, indexPath)
+        return
+    }
 
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-		serveFile(&ctx, indexPath)
-		return
-	}
+    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
+        serveFile(&ctx, indexPath)
+        return
+    }
 
-	ctx.Abort(404, "Page not found")
+    ctx.Abort(404, "Page not found")
 }
 
 var Config = &ServerConfig{
-	RecoverPanic: true,
+    RecoverPanic: true,
 }
 
 var mainServer = Server{
-	Config: Config,
-	Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+    Config: Config,
+    Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 }
 
 type Server struct {
@@ -422,18 +422,18 @@ type Server struct {
 }
 
 func (s *Server) initServer() {
-	if s.Config == nil {
-		s.Config = &ServerConfig{}
-	}
+    if s.Config == nil {
+        s.Config = &ServerConfig{}
+    }
 
-	if s.Logger == nil {
-		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
-	}
+    if s.Logger == nil {
+        s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+    }
 }
 
 //Runs the web application and serves http requests
 func (s *Server) Run(addr string) {
-	s.initServer()
+    s.initServer()
 
     mux := http.NewServeMux()
 
@@ -445,139 +445,139 @@ func (s *Server) Run(addr string) {
 
     s.Logger.Printf("web.go serving %s\n", addr)
 
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.Fatal("ListenAndServe:", err)
-	}
-	s.l = l
-	err = http.Serve(s.l, mux)
-	s.l.Close()
+    l, err := net.Listen("tcp", addr)
+    if err != nil {
+        log.Fatal("ListenAndServe:", err)
+    }
+    s.l = l
+    err = http.Serve(s.l, mux)
+    s.l.Close()
 }
 
 //Runs the web application and serves http requests
 func Run(addr string) {
-	mainServer.Run(addr)
+    mainServer.Run(addr)
 }
 
 //Stops the web server
 func (s *Server) Close() {
-	s.l.Close()
-	s.closed = true
+    s.l.Close()
+    s.closed = true
 }
 
 //Stops the web server
 func Close() {
-	mainServer.Close()
+    mainServer.Close()
 }
 
 func (s *Server) RunScgi(addr string) {
-	s.initServer()
-	s.Logger.Printf("web.go serving scgi %s\n", addr)
-	s.listenAndServeScgi(addr)
+    s.initServer()
+    s.Logger.Printf("web.go serving scgi %s\n", addr)
+    s.listenAndServeScgi(addr)
 }
 
 //Runs the web application and serves scgi requests
 func RunScgi(addr string) {
-	mainServer.RunScgi(addr)
+    mainServer.RunScgi(addr)
 }
 
 //Runs the web application and serves scgi requests for this Server object.
 func (s *Server) RunFcgi(addr string) {
-	s.initServer()
-	s.Logger.Printf("web.go serving fcgi %s\n", addr)
-	s.listenAndServeFcgi(addr)
+    s.initServer()
+    s.Logger.Printf("web.go serving fcgi %s\n", addr)
+    s.listenAndServeFcgi(addr)
 }
 
 //Runs the web application by serving fastcgi requests
 func RunFcgi(addr string) {
-	mainServer.RunFcgi(addr)
+    mainServer.RunFcgi(addr)
 }
 
 //Adds a handler for the 'GET' http method.
 func (s *Server) Get(route string, handler interface{}) {
-	s.addRoute(route, "GET", handler)
+    s.addRoute(route, "GET", handler)
 }
 
 //Adds a handler for the 'POST' http method.
 func (s *Server) Post(route string, handler interface{}) {
-	s.addRoute(route, "POST", handler)
+    s.addRoute(route, "POST", handler)
 }
 
 //Adds a handler for the 'PUT' http method.
 func (s *Server) Put(route string, handler interface{}) {
-	s.addRoute(route, "PUT", handler)
+    s.addRoute(route, "PUT", handler)
 }
 
 //Adds a handler for the 'DELETE' http method.
 func (s *Server) Delete(route string, handler interface{}) {
-	s.addRoute(route, "DELETE", handler)
+    s.addRoute(route, "DELETE", handler)
 }
 
 //Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) {
-	mainServer.Get(route, handler)
+    mainServer.Get(route, handler)
 }
 
 //Adds a handler for the 'POST' http method.
 func Post(route string, handler interface{}) {
-	mainServer.addRoute(route, "POST", handler)
+    mainServer.addRoute(route, "POST", handler)
 }
 
 //Adds a handler for the 'PUT' http method.
 func Put(route string, handler interface{}) {
-	mainServer.addRoute(route, "PUT", handler)
+    mainServer.addRoute(route, "PUT", handler)
 }
 
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
-	mainServer.addRoute(route, "DELETE", handler)
+    mainServer.addRoute(route, "DELETE", handler)
 }
 
 func (s *Server) SetLogger(logger *log.Logger) {
-	s.Logger = logger
+    s.Logger = logger
 }
 
 func SetLogger(logger *log.Logger) {
-	mainServer.Logger = logger
+    mainServer.Logger = logger
 }
 
 type ServerConfig struct {
-	StaticDir    string
-	Addr         string
-	Port         int
-	CookieSecret string
-	RecoverPanic bool
+    StaticDir    string
+    Addr         string
+    Port         int
+    CookieSecret string
+    RecoverPanic bool
 }
 
 func webTime(t time.Time) string {
-	ftime := t.Format(time.RFC1123)
-	if strings.HasSuffix(ftime, "UTC") {
-		ftime = ftime[0:len(ftime)-3] + "GMT"
-	}
-	return ftime
+    ftime := t.Format(time.RFC1123)
+    if strings.HasSuffix(ftime, "UTC") {
+        ftime = ftime[0:len(ftime)-3] + "GMT"
+    }
+    return ftime
 }
 
 func dirExists(dir string) bool {
-	d, e := os.Stat(dir)
-	switch {
-	case e != nil:
-		return false
-	case !d.IsDir():
-		return false
-	}
+    d, e := os.Stat(dir)
+    switch {
+    case e != nil:
+        return false
+    case !d.IsDir():
+        return false
+    }
 
-	return true
+    return true
 }
 
 func fileExists(dir string) bool {
-	info, err := os.Stat(dir)
-	if err != nil {
-		return false
-	} else if !!info.IsDir() {
-		return false
-	}
+    info, err := os.Stat(dir)
+    if err != nil {
+        return false
+    } else if !!info.IsDir() {
+        return false
+    }
 
-	return true
+    return true
 }
 
 func Urlencode(data map[string]string) string {

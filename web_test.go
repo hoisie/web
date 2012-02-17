@@ -4,20 +4,21 @@ import (
     "bytes"
     "encoding/binary"
     "fmt"
-    "net/http"
     "json"
     "log"
+    "net/http"
+    "net/url"
     "os"
     "runtime"
     "strconv"
     "strings"
     "testing"
-    "net/url"
 )
 
 func init() {
     runtime.GOMAXPROCS(4)
 }
+
 //this implements io.ReadWriteCloser, which means it can be passed around as a tcp connection
 type tcpBuffer struct {
     input  *bytes.Buffer
@@ -172,7 +173,10 @@ func init() {
     })
 
     Post("/parsejson", func(ctx *Context) string {
-        var tmp = struct{ A string; B string }{}
+        var tmp = struct {
+            A   string
+            B   string
+        }{}
         json.NewDecoder(ctx.Request.Body).Decode(&tmp)
         return tmp.A + " " + tmp.B
     })
@@ -230,7 +234,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
         headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = []string{"text/plain"}
-        } 
+        }
     }
 
     req := Request{Method: method,
@@ -671,7 +675,6 @@ func TestSecureCookieFcgi(t *testing.T) {
         t.Fatalf("SecureCookie test failed body")
     }
 }
-
 
 //Disabled until issue 1375 is fixed
 /*

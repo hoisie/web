@@ -46,7 +46,6 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
 
     response := testResponse{headers: make(map[string][]string), cookies: make(map[string]string)}
     s := buf.String()
-
     contents := strings.SplitN(s, "\r\n\r\n", 2)
 
     header := contents[0]
@@ -171,6 +170,12 @@ func init() {
         return string(data)
     })
 
+    Get("/jsonbytes", func(ctx *Context) []byte {
+        ctx.ContentType("json")
+        data, _ := json.Marshal(ctx.Params)
+        return data
+    })
+
     Post("/parsejson", func(ctx *Context) string {
         var tmp = struct{ A string; B string }{}
         json.NewDecoder(ctx.Request.Body).Decode(&tmp)
@@ -207,6 +212,7 @@ var tests = []Test{
     {"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
     {"GET", "/panic", "", 500, "Server Error"},
     {"GET", "/json?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
+    {"GET", "/jsonbytes?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
     //{"GET", "/methodhandler", "", 200, `a`},
     //{"GET", "/methodhandler2?b=b", "", 200, `ab`},
     //{"GET", "/methodhandler3/b", "", 200, `ab`},

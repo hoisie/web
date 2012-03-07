@@ -353,25 +353,28 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
         ret, err := s.safelyCall(route.handler, args)
         if err != nil {
-            //fmt.Printf("%v\n", err)
             //there was an error or panic while calling the handler
             ctx.Abort(500, "Server Error")
         }
-
+        if ctx.responseStarted {
+            return
+        }
         if len(ret) == 0 {
             return
         }
 
         sval := ret[0]
 
-        if sval.Kind() == reflect.String &&
-            !ctx.responseStarted {
-            content := []byte(sval.String())
-            ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-            ctx.StartResponse(200)
-            ctx.Write(content)
-        }
+        var content []byte
 
+        if sval.Kind() == reflect.String {
+            content = []byte(sval.String())
+        } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+            content = sval.Interface().([]byte)
+        }
+        ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+        ctx.StartResponse(200)
+        ctx.Write(content)
         return
     }
 

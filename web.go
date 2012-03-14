@@ -290,27 +290,25 @@ func requiresContext(handlerType reflect.Type) bool {
 }
 
 func (s *Server) routeHandler(req *Request, c conn) {
+    ctx := Context{req, s, c, false}
     requestPath := req.URL.Path
 
     //log the request
-    if len(req.URL.RawQuery) == 0 {
-        s.Logger.Println(req.Method + " " + requestPath)
-    } else {
-        s.Logger.Println(req.Method + " " + requestPath + "?" + req.URL.RawQuery)
-    }
+    var logEntry bytes.Buffer
+    logEntry.WriteString(fmt.Sprintf("\033[32;1m%s %s\033[0m", req.Method, requestPath))
 
     //parse the form data (if it exists)
     perr := req.parseParams()
     if perr != nil {
-        s.Logger.Printf("Failed to parse form data %q\n", perr.String())
+        logEntry.WriteString(fmt.Sprintf("\nFailed to parse parms%q\n", perr.String()))
+    } else if len(ctx.Params) > 0 {
+        logEntry.WriteString(fmt.Sprintf("\n\033[37;1mParams: %v\033[0m\n", ctx.Params))
     }
 
-    ctx := Context{req, s, c, false}
+    ctx.Logger.Print(logEntry.String())
 
     //set some default headers
-    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
     ctx.SetHeader("Server", "web.go", true)
-
     tm := time.UTC()
     ctx.SetHeader("Date", webTime(tm), true)
 
@@ -325,6 +323,8 @@ func (s *Server) routeHandler(req *Request, c conn) {
         return
     }
 
+    //Set the default content-type
+    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
         cr := route.cr

@@ -177,7 +177,10 @@ func init() {
     })
 
     Post("/parsejson", func(ctx *Context) string {
-        var tmp = struct{ A string; B string }{}
+        var tmp = struct {
+            A   string
+            B   string
+        }{}
         json.NewDecoder(ctx.Request.Body).Decode(&tmp)
         return tmp.A + " " + tmp.B
     })
@@ -236,7 +239,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
         headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
         if headers["Content-Type"] == nil {
             headers["Content-Type"] = []string{"text/plain"}
-        } 
+        }
     }
 
     req := Request{Method: method,
@@ -677,7 +680,6 @@ func TestSecureCookieFcgi(t *testing.T) {
         t.Fatalf("SecureCookie test failed body")
     }
 }
-
 
 //Disabled until issue 1375 is fixed
 /*

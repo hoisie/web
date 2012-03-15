@@ -247,7 +247,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
         content := make([]byte, h.ContentLength)
         _, err = io.ReadFull(br, content)
         if err != nil {
-          s.Logger.Println("FCGI Error", err.String())
+          s.Logger.Println("FCGI Error", err.Error())
           break
         }
 
@@ -256,7 +256,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
             padding := make([]byte, h.PaddingLength)
             _, err = io.ReadFull(br, padding)
             if err != nil {
-                s.Logger.Println("FCGI Error", err.String())
+                s.Logger.Println("FCGI Error", err.Error())
                 break
             }
         }

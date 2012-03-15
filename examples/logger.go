@@ -1,9 +1,9 @@
 package main
 
 import (
+    "github.com/hoisie/web.go"
     "log"
     "os"
-    "github.com/hoisie/web.go"
 )
 
 func hello(val string) string { return "hello " + val }

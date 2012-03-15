@@ -2,18 +2,17 @@ package web
 
 import (
     "bytes"
-    "fmt"
-    "http"
+    "errors"
     "io"
     "io/ioutil"
     "mime"
     "mime/multipart"
     "net"
-    "os"
+    "net/http"
+    "net/url"
     "reflect"
     "strconv"
     "strings"
-    "url"
 )
 
 type filedata struct {
@@ -43,13 +42,6 @@ type Request struct {
     RemoteAddr string
     RemotePort int
 }
-
-type badStringError struct {
-    what string
-    str  string
-}
-
-func (e *badStringError) String() string { return fmt.Sprintf("%s %q", e.what, e.str) }
 
 func flattenParams(fullParams map[string][]string) map[string]string {
     params := map[string]string{}
@@ -137,12 +129,12 @@ func newRequestCgi(headers http.Header, body io.Reader) *Request {
     return &req
 }
 
-func parseForm(m map[string][]string, query string) (err os.Error) {
+func parseForm(m map[string][]string, query string) (err error) {
     for _, kv := range strings.Split(query, "&") {
         kvPair := strings.SplitN(kv, "=", 2)
 
         var key, value string
-        var e os.Error
+        var e error
         key, e = url.QueryUnescape(kvPair[0])
         if e == nil && len(kvPair) > 1 {
             value, e = url.QueryUnescape(kvPair[1])
@@ -163,8 +155,7 @@ func parseForm(m map[string][]string, query string) (err os.Error) {
 
 // ParseForm parses the request body as a form for POST requests, or the raw query for GET requests.
 // It is idempotent.
-func (r *Request) parseParams() (err os.Error) {
-
+func (r *Request) parseParams() (err error) {
     if r.Params != nil {
         return
     }
@@ -173,7 +164,7 @@ func (r *Request) parseParams() (err os.Error) {
     switch r.Method {
     case "POST":
         if r.Body == nil {
-            return os.NewError("missing form body")
+            return errors.New("missing form body")
         }
 
         ct := r.Headers.Get("Content-Type")
@@ -191,14 +182,14 @@ func (r *Request) parseParams() (err os.Error) {
             }
             boundary, ok := params["boundary"]
             if !ok {
-                return os.NewError("Missing Boundary")
+                return errors.New("Missing Boundary")
             }
 
             reader := multipart.NewReader(r.Body, boundary)
             r.Files = make(map[string]filedata)
             for {
                 part, err := reader.NextPart()
-                if part == nil && err == os.EOF {
+                if part == nil && err == io.EOF {
                     break
                 }
 
@@ -231,7 +222,7 @@ func (r *Request) parseParams() (err os.Error) {
 
             }
         default:
-            return &badStringError{"unknown Content-Type", ct}
+            return errors.New("unknown Content-Type: " + ct)
         }
     }
 
@@ -262,7 +253,7 @@ func (r *Request) HasFile(name string) bool {
     return ok
 }
 
-func writeTo(s string, val reflect.Value) os.Error {
+func writeTo(s string, val reflect.Value) error {
     switch v := val; v.Kind() {
     // if we're writing to an interace value, just set the byte data
     // TODO: should we support writing to a pointer?
@@ -275,19 +266,19 @@ func writeTo(s string, val reflect.Value) os.Error {
             v.SetBool(true)
         }
     case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-        i, err := strconv.Atoi64(s)
+        i, err := strconv.ParseInt(s, 0, 64)
         if err != nil {
             return err
         }
         v.SetInt(i)
     case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-        ui, err := strconv.Atoui64(s)
+        ui, err := strconv.ParseUint(s, 0, 64)
         if err != nil {
             return err
         }
         v.SetUint(ui)
     case reflect.Float32, reflect.Float64:
-        f, err := strconv.Atof64(s)
+        f, err := strconv.ParseFloat(s, 64)
         if err != nil {
             return err
         }
@@ -309,7 +300,7 @@ func matchName(key, name string) bool {
     return strings.ToLower(key) == strings.ToLower(name)
 }
 
-func (r *Request) writeToContainer(val reflect.Value) os.Error {
+func (r *Request) writeToContainer(val reflect.Value) error {
     switch v := val; v.Kind() {
     case reflect.Ptr:
         return r.writeToContainer(reflect.Indirect(v))
@@ -317,7 +308,7 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
         return r.writeToContainer(v.Elem())
     case reflect.Map:
         if v.Type().Key().Kind() != reflect.String {
-            return os.NewError("Invalid map type")
+            return errors.New("Invalid map type")
         }
         elemtype := v.Type().Elem()
         for pk, pv := range r.Params {
@@ -342,7 +333,7 @@ func (r *Request) writeToContainer(val reflect.Value) os.Error {
 
         }
     default:
-        return os.NewError("Invalid container type")
+        return errors.New("Invalid container type")
     }
     return nil
 }

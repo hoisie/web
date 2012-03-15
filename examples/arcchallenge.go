@@ -1,10 +1,10 @@
 package main
 
 import (
+    "github.com/hoisie/web.go"
     "rand"
     "strconv"
     "time"
-    "github.com/hoisie/web.go"
 )
 
 var form = `<form action="say" method="POST"><input name="said"><input type="submit"></form>`

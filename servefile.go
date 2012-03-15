@@ -10,7 +10,7 @@ import (
     "strconv"
     "strings"
     "time"
-    "utf8"
+    "unicode/utf8"
 )
 
 func isText(b []byte) bool {
@@ -40,7 +40,7 @@ func isText(b []byte) bool {
 func getmd5(data string) string {
     hash := md5.New()
     hash.Write([]byte(data))
-    return fmt.Sprintf("%x", hash.Sum())
+    return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func serveFile(ctx *Context, name string) {
@@ -54,22 +54,20 @@ func serveFile(ctx *Context, name string) {
     defer f.Close()
 
     info, _ := f.Stat()
-    size := strconv.Itoa64(info.Size)
-    mtime := strconv.Itoa64(info.Mtime_ns)
-    //set the last-modified header
-    lm := time.SecondsToUTC(info.Mtime_ns / 1e9)
+    size := strconv.FormatInt(info.Size(), 10)
+    modTime := info.ModTime()
 
     if ctx.Request.Headers.Get("If-Modified-Since") != "" {
         ims := ctx.Request.Headers.Get("If-Modified-Since")
         imstime, err := time.Parse(time.RFC1123, ims)
-        if err == nil && imstime.Seconds() >= lm.Seconds() {
+        if err == nil && imstime.After(modTime) {
             ctx.NotModified()
             return
         }
     }
 
     //generate a simple etag with heuristic MD5(filename, size, lastmod)
-    etagparts := []string{name, size, mtime}
+    etagparts := []string{name, size, strconv.FormatInt(modTime.Unix(), 10)}
     etag := fmt.Sprintf(`"%s"`, getmd5(strings.Join(etagparts, "|")))
     if ctx.Request.Headers.Get("If-None-Match") != "" {
         inm := ctx.Request.Headers.Get("If-None-Match")
@@ -80,7 +78,7 @@ func serveFile(ctx *Context, name string) {
     }
 
     ctx.SetHeader("ETag", etag, true)
-    ctx.SetHeader("Last-Modified", webTime(lm), true)
+    ctx.SetHeader("Last-Modified", webTime(modTime), true)
     //the first 1024 bytes of the file, used to detect content-type
     var firstChunk []byte
     ext := path.Ext(name)

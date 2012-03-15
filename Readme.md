@@ -18,12 +18,12 @@ Make sure you have the a working Go environment. See the [install instructions](
 
 To install web.go, simply run:
 
-    goinstall github.com/hoisie/web.go
+    go get github.com/hoisie/web.go
 
 To compile it from source:
 
     git clone git://github.com/hoisie/web.go.git
-    cd web.go && make install
+    cd web.go && go build
 
 ## Example
     
@@ -40,14 +40,9 @@ To compile it from source:
         web.Run("0.0.0.0:9999")
     }
 
-
 To run the application, put the code in a file called hello.go and run:
 
-    6g hello.go && 6l -o hello hello.6 && ./hello
-
-If you're running on a 32-bit OS, the commend is:
-
-    8g hello.go && 8l -o hello hello.8 && ./hello
+    go build hello.go
     
 You can point your browser to http://localhost:9999/world . 
 

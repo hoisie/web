@@ -1,7 +1,4 @@
-include $(GOROOT)/src/Make.inc
-
-TARG=github.com/hoisie/web.go
-GOFMT=gofmt -s -spaces=true -tabindent=false -tabwidth=4
+GOFMT=gofmt -s -tabs=false -tabwidth=4
 
 GOFILES=\
 	cookie.go\
@@ -11,8 +8,6 @@ GOFILES=\
 	servefile.go\
 	status.go\
 	web.go\
-
-include $(GOROOT)/src/Make.pkg
 
 format:
 	${GOFMT} -w ${GOFILES}

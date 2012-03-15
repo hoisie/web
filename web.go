@@ -3,14 +3,16 @@ package web
 import (
     "bytes"
     "crypto/hmac"
+    "crypto/sha1"
     "encoding/base64"
     "fmt"
-    "http"
-    "http/pprof"
+    "net/http"
+    "net/http/pprof"
     "io/ioutil"
     "log"
     "mime"
     "net"
+    "net/url"
     "os"
     "path"
     "reflect"
@@ -19,13 +21,12 @@ import (
     "strconv"
     "strings"
     "time"
-    "url"
 )
 
 type conn interface {
     StartResponse(status int)
     SetHeader(hdr string, val string, unique bool)
-    Write(data []byte) (n int, err os.Error)
+    Write(data []byte) (n int, err error)
     Close()
 }
 
@@ -41,7 +42,7 @@ func (ctx *Context) StartResponse(status int) {
     ctx.responseStarted = true
 }
 
-func (ctx *Context) Write(data []byte) (n int, err os.Error) {
+func (ctx *Context) Write(data []byte) (n int, err error) {
     if !ctx.responseStarted {
         ctx.StartResponse(200)
     }
@@ -91,24 +92,24 @@ func (ctx *Context) ContentType(ext string) {
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
 func (ctx *Context) SetCookie(name string, value string, age int64) {
-    var utctime *time.Time
+    var utctime time.Time
     if age == 0 {
         // 2^31 - 1 seconds (roughly 2038)
-        utctime = time.SecondsToUTC(2147483647)
+        utctime = time.Unix(2147483647, 0)
     } else {
-        utctime = time.SecondsToUTC(time.UTC().Seconds() + age)
+        utctime = time.Unix(time.Now().Unix()+age, 0)
     }
     cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
     ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
-    hm := hmac.NewSHA1([]byte(key))
+    hm := hmac.New(sha1.New, []byte(key))
 
     hm.Write(val)
     hm.Write([]byte(timestamp))
 
-    hex := fmt.Sprintf("%02x", hm.Sum())
+    hex := fmt.Sprintf("%02x", hm.Sum(nil))
     return hex
 }
 
@@ -124,7 +125,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     encoder.Close()
     vs := buf.String()
     vb := buf.Bytes()
-    timestamp := strconv.Itoa64(time.Seconds())
+    timestamp := strconv.FormatInt(time.Now().Unix(), 10)
     sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
     ctx.SetCookie(name, cookie, age)
@@ -146,9 +147,9 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
             return "", false
         }
 
-        ts, _ := strconv.Atoi64(timestamp)
+        ts, _ := strconv.ParseInt(timestamp, 0, 64)
 
-        if time.Seconds()-31*86400 > ts {
+        if time.Now().Unix()-31*86400 > ts {
             return "", false
         }
 
@@ -224,7 +225,7 @@ func (c *httpConn) WriteString(content string) {
     c.conn.Write(buf.Bytes())
 }
 
-func (c *httpConn) Write(content []byte) (n int, err os.Error) {
+func (c *httpConn) Write(content []byte) (n int, err error) {
     return c.conn.Write(content)
 }
 
@@ -300,7 +301,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
     //parse the form data (if it exists)
     perr := req.parseParams()
     if perr != nil {
-        logEntry.WriteString(fmt.Sprintf("\nFailed to parse parms%q\n", perr.String()))
+        logEntry.WriteString(fmt.Sprintf("\nFailed to parse parms%q\n", perr.Error()))
     } else if len(ctx.Params) > 0 {
         logEntry.WriteString(fmt.Sprintf("\n\033[37;1mParams: %v\033[0m\n", ctx.Params))
     }
@@ -309,7 +310,7 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
-    tm := time.UTC()
+    tm := time.Now().UTC()
     ctx.SetHeader("Date", webTime(tm), true)
 
     //try to serve a static file
@@ -425,10 +426,9 @@ func (s *Server) Run(addr string) {
     s.initServer()
 
     mux := http.NewServeMux()
-
     mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
     mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-    mux.Handle("/debug/pprof/heap", http.HandlerFunc(pprof.Heap))
+    mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
     mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
     mux.Handle("/", s)
 
@@ -538,7 +538,7 @@ type ServerConfig struct {
     RecoverPanic bool
 }
 
-func webTime(t *time.Time) string {
+func webTime(t time.Time) string {
     ftime := t.Format(time.RFC1123)
     if strings.HasSuffix(ftime, "UTC") {
         ftime = ftime[0:len(ftime)-3] + "GMT"
@@ -551,7 +551,7 @@ func dirExists(dir string) bool {
     switch {
     case e != nil:
         return false
-    case !d.IsDirectory():
+    case !d.IsDir():
         return false
     }
 
@@ -562,11 +562,9 @@ func fileExists(dir string) bool {
     info, err := os.Stat(dir)
     if err != nil {
         return false
-    } else if !info.IsRegular() {
-        return false
     }
 
-    return true
+    return !info.IsDir()
 }
 
 func Urlencode(data map[string]string) string {

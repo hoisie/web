@@ -3,36 +3,38 @@ package web
 import (
     "bytes"
     "encoding/binary"
+    "encoding/json"
     "fmt"
-    "http"
-    "json"
+    "io"
     "log"
+    "net/http"
+    "net/url"
     "os"
     "runtime"
     "strconv"
     "strings"
     "testing"
-    "url"
 )
 
 func init() {
     runtime.GOMAXPROCS(4)
 }
+
 //this implements io.ReadWriteCloser, which means it can be passed around as a tcp connection
 type tcpBuffer struct {
     input  *bytes.Buffer
     output *bytes.Buffer
 }
 
-func (buf *tcpBuffer) Write(p []uint8) (n int, err os.Error) {
+func (buf *tcpBuffer) Write(p []uint8) (n int, err error) {
     return buf.output.Write(p)
 }
 
-func (buf *tcpBuffer) Read(p []byte) (n int, err os.Error) {
+func (buf *tcpBuffer) Read(p []byte) (n int, err error) {
     return buf.input.Read(p)
 }
 
-func (buf *tcpBuffer) Close() os.Error { return nil }
+func (buf *tcpBuffer) Close() error { return nil }
 
 type testResponse struct {
     statusCode int
@@ -517,7 +519,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
     for {
         var h fcgiHeader
         err := binary.Read(br, binary.BigEndian, &h)
-        if err == os.EOF {
+        if err == io.EOF {
             break
         }
 

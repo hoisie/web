@@ -10,7 +10,7 @@ web.go should be familiar to people who've developed websites with higher-level 
 * Secure cookies
 * Support for fastcgi and scgi
 * Web applications are compiled to native code. This means very fast execution and page render speed
-* Serving static files
+* Efficiently serving static files
 
 ## Installation
 
@@ -43,8 +43,12 @@ To compile it from source:
 
 To run the application, put the code in a file called hello.go and run:
 
-    8g hello.go && 8l -o hello hello.8 && ./hello
+    6g hello.go && 6l -o hello hello.6 && ./hello
 
+If you're running on a 32-bit OS, the commend is:
+
+    8g hello.go && 8l -o hello hello.8 && ./hello
+    
 You can point your browser to http://localhost:9999/world . 
 
 ### Getting parameters

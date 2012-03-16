@@ -396,15 +396,21 @@ var Config = &ServerConfig{
     RecoverPanic: true,
 }
 
-var mainServer = Server{
-    Config: Config,
-    Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+func NewServer() *Server {
+    return &Server{
+        Config: Config,
+        Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+        Env:    map[string]interface{}{},
+    }
 }
+
+var mainServer = NewServer()
 
 type Server struct {
     Config *ServerConfig
     routes []route
     Logger *log.Logger
+    Env    map[string]interface{}
     //save the listener so it can be closed
     l      net.Listener
     closed bool

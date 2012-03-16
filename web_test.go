@@ -123,6 +123,10 @@ func (s *StructHandler) method3(ctx *Context, b string) string {
 func init() {
     f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0644)
     mainServer.SetLogger(log.New(f, "", 0))
+
+    //Test the environment
+    mainServer.Env["test"] = "hello world"
+
     Get("/", func() string { return "index" })
     Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })
@@ -185,6 +189,10 @@ func init() {
         return tmp.A + " " + tmp.B
     })
 
+    Get("/testenv", func(ctx *Context) string {
+        return ctx.Env["test"].(string)
+    })
+
     //s := &StructHandler{"a"}
     //Get("/methodhandler", MethodHandler(s, "method"))
     //Get("/methodhandler2", MethodHandler(s, "method2"))
@@ -220,6 +228,7 @@ var tests = []Test{
     //{"GET", "/methodhandler2?b=b", "", 200, `ab`},
     //{"GET", "/methodhandler3/b", "", 200, `ab`},
     {"POST", "/parsejson", `{"a":"hello", "b":"world"}`, 200, "hello world"},
+    {"GET", "/testenv", "", 200, "hello world"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *Request {
@@ -257,6 +266,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 }
 
 func TestRouting(t *testing.T) {
+
     for _, test := range tests {
         resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string), nil)
 

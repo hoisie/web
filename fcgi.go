@@ -248,8 +248,8 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
         content := make([]byte, h.ContentLength)
         _, err = io.ReadFull(br, content)
         if err != nil {
-          s.Logger.Println("FCGI Error", err.String())
-          break
+            s.Logger.Println("FCGI Error", err.String())
+            break
         }
 
         //read padding

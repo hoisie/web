@@ -255,14 +255,16 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
             } else {
                 e = err
                 resp = nil
-                s.Logger.Println("Handler crashed with error", err)
+                var stackTrace bytes.Buffer
                 for i := 1; ; i += 1 {
                     _, file, line, ok := runtime.Caller(i)
                     if !ok {
                         break
                     }
-                    s.Logger.Println(file, line)
+
+                    fmt.Fprintf(&stackTrace, "%s %d\n", file, line)
                 }
+                s.Logger.Printf("\033[31;1mHandler crashed with error: %v\n%s\033[0m", err, stackTrace.String())
             }
         }
     }()
@@ -295,14 +297,13 @@ func (s *Server) routeHandler(req *Request, c conn) {
 
     //log the request
     var logEntry bytes.Buffer
-    logEntry.WriteString(fmt.Sprintf("\033[32;1m%s %s\033[0m", req.Method, requestPath))
-
+    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
     //parse the form data (if it exists)
     perr := req.parseParams()
     if perr != nil {
-        logEntry.WriteString(fmt.Sprintf("\nFailed to parse parms%q\n", perr.String()))
+        fmt.Fprintf(&logEntry, "\nFailed to parse parms%q\n", perr.String())
     } else if len(ctx.Params) > 0 {
-        logEntry.WriteString(fmt.Sprintf("\n\033[37;1mParams: %v\033[0m\n", ctx.Params))
+        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
 
     ctx.Logger.Print(logEntry.String())

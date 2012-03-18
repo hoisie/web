@@ -121,6 +121,7 @@ func (s *StructHandler) method3(ctx *Context, b string) string {
 
 //initialize the routes
 func init() {
+    //Uncomment the following two lines to see the output of the test
     f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0644)
     mainServer.SetLogger(log.New(f, "", 0))
 
@@ -691,20 +692,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     }
 }
 
-//Disabled until issue 1375 is fixed
-/*
-func TestCloseServer(t *testing.T) {
+func TestEarlyClose(t *testing.T) {
     var server1 Server
-    server1.Get("/(.*)", func(s string) string { return s })
-    go server1.Run("0.0.0.0:22231")
-    //sleep 100ms
-    time.Sleep(1e9)
     server1.Close()
-    time.Sleep(1e9)
-    //try to connect, should error
-    _,_,err := http.Get("http://127.0.0.1:22231")
-    if err == nil {
-        t.Fatalf("CloseServer test failed")
-    }
 }
-*/

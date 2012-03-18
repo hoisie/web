@@ -414,7 +414,6 @@ type Server struct {
     Env    map[string]interface{}
     //save the listener so it can be closed
     l      net.Listener
-    closed bool
 }
 
 func (s *Server) initServer() {
@@ -457,8 +456,9 @@ func Run(addr string) {
 
 //Stops the web server
 func (s *Server) Close() {
-    s.l.Close()
-    s.closed = true
+    if s.l != nil {
+        s.l.Close()
+    }
 }
 
 //Stops the web server

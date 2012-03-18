@@ -10,3 +10,4 @@ _obj
 _test
 _testmain.go
 *.swp
+pkg/

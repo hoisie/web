@@ -4,7 +4,9 @@ import (
     "bytes"
     "fmt"
     "http"
+    "http/cgi"
     "io"
+    "io/ioutil"
     "net"
     "os"
     "strconv"
@@ -13,39 +15,19 @@ import (
 
 type scgiConn struct {
     fd           io.ReadWriteCloser
-    headers      map[string][]string
+    req          *http.Request
+    headers      http.Header
     wroteHeaders bool
 }
 
-func (conn *scgiConn) StartResponse(status int) {
-    var buf bytes.Buffer
-    text := statusText[status]
-
-    fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
-    conn.fd.Write(buf.Bytes())
-}
-
-func (conn *scgiConn) SetHeader(hdr string, val string, unique bool) {
-    if _, contains := conn.headers[hdr]; !contains {
-        conn.headers[hdr] = []string{val}
-        return
-    }
-
-    if unique {
-        //just overwrite the first value
-        conn.headers[hdr][0] = val
-    } else {
-        newHeaders := make([]string, len(conn.headers)+1)
-        copy(newHeaders, conn.headers[hdr])
-        newHeaders[len(newHeaders)-1] = val
-        conn.headers[hdr] = newHeaders
-    }
-}
-
-func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
-    var buf bytes.Buffer
+func (conn *scgiConn) WriteHeader(status int) {
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
+
+        var buf bytes.Buffer
+        text := statusText[status]
+
+        fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
 
         for k, v := range conn.headers {
             for _, i := range v {
@@ -56,6 +38,21 @@ func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
         buf.WriteString("\r\n")
         conn.fd.Write(buf.Bytes())
     }
+}
+
+func (conn *scgiConn) Header() http.Header {
+    return conn.headers
+}
+
+func (conn *scgiConn) Write(data []byte) (n int, err os.Error) {
+    if !conn.wroteHeaders {
+        conn.WriteHeader(200)
+    }
+
+    if conn.req.Method == "HEAD" {
+        return 0, os.NewError("Body Not Allowed")
+    }
+
     return conn.fd.Write(data)
 }
 
@@ -65,7 +62,6 @@ func (conn *scgiConn) finishRequest() os.Error {
     var buf bytes.Buffer
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
-
         for k, v := range conn.headers {
             for _, i := range v {
                 buf.WriteString(k + ": " + i + "\r\n")
@@ -78,8 +74,8 @@ func (conn *scgiConn) finishRequest() os.Error {
     return nil
 }
 
-func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
-    headers := make(http.Header)
+func readScgiRequest(buf *bytes.Buffer) (*http.Request, os.Error) {
+    headers := map[string]string{}
 
     data := buf.Bytes()
     var clen int
@@ -96,7 +92,7 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
 
     clfields = clfields[0:2]
     if string(clfields[0]) != "CONTENT_LENGTH" {
-        return nil, os.NewError("Invalid SCGI Request -- expecing CONTENT_LENGTH")
+        return nil, os.NewError("Invalid SCGI Request -- expecting CONTENT_LENGTH")
     }
 
     if clen, err = strconv.Atoi(string(clfields[1])); err != nil {
@@ -110,11 +106,13 @@ func readScgiRequest(buf *bytes.Buffer) (*Request, os.Error) {
     for i := 0; i < len(fields)-1; i += 2 {
         key := string(fields[i])
         value := string(fields[i+1])
-        headers.Set(key, value)
+        headers[key] = value
     }
 
     body := bytes.NewBuffer(content)
-    req := newRequestCgi(headers, body)
+
+    req, _ := cgi.RequestFromMap(headers)
+    req.Body = ioutil.NopCloser(body)
 
     return req, nil
 }
@@ -144,16 +142,14 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     }
 
     req, err := readScgiRequest(&buf)
-
     if err != nil {
         s.Logger.Println("SCGI read error", err.String())
         return
     }
 
-    sc := scgiConn{fd, make(map[string][]string), false}
+    sc := scgiConn{fd, req, make(map[string][]string), false}
     s.routeHandler(req, &sc)
     sc.finishRequest()
-
     fd.Close()
 }
 

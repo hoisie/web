@@ -6,7 +6,9 @@ import (
     "encoding/binary"
     "fmt"
     "http"
+    "http/cgi"
     "io"
+    "io/ioutil"
     "net"
     "os"
     "strings"
@@ -91,6 +93,7 @@ func (er fcgiEndReq) bytes() []byte {
 
 type fcgiConn struct {
     requestId    uint16
+    req          *http.Request
     fd           io.ReadWriteCloser
     headers      http.Header
     wroteHeaders bool
@@ -130,9 +133,29 @@ func (conn *fcgiConn) fcgiWrite(data []byte) (err os.Error) {
 }
 
 func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
-    var buf bytes.Buffer
+    if !conn.wroteHeaders {
+        conn.WriteHeader(200)
+    }
+
+    if conn.req.Method == "HEAD" {
+        return 0, os.NewError("Body Not Allowed")
+    }
+    err = conn.fcgiWrite(data)
+    if err != nil {
+        return 0, err
+    }
+
+    return len(data), nil
+}
+
+func (conn *fcgiConn) WriteHeader(status int) {
     if !conn.wroteHeaders {
         conn.wroteHeaders = true
+
+        var buf bytes.Buffer
+        text := statusText[status]
+        fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
+
         for k, v := range conn.headers {
             for _, i := range v {
                 buf.WriteString(k + ": " + i + "\r\n")
@@ -141,38 +164,10 @@ func (conn *fcgiConn) Write(data []byte) (n int, err os.Error) {
         buf.WriteString("\r\n")
         conn.fcgiWrite(buf.Bytes())
     }
-
-    err = conn.fcgiWrite(data)
-
-    if err != nil {
-        return 0, err
-    }
-
-    return len(data), nil
 }
 
-func (conn *fcgiConn) StartResponse(status int) {
-    var buf bytes.Buffer
-    text := statusText[status]
-    fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
-    conn.fcgiWrite(buf.Bytes())
-}
-
-func (conn *fcgiConn) SetHeader(hdr string, val string, unique bool) {
-    if _, contains := conn.headers[hdr]; !contains {
-        conn.headers[hdr] = []string{val}
-        return
-    }
-
-    if unique {
-        //just overwrite the first value
-        conn.headers[hdr][0] = val
-    } else {
-        newHeaders := make([]string, len(conn.headers)+1)
-        copy(newHeaders, conn.headers[hdr])
-        newHeaders[len(newHeaders)-1] = val
-        conn.headers[hdr] = newHeaders
-    }
+func (conn *fcgiConn) Header() http.Header {
+    return conn.headers
 }
 
 func (conn *fcgiConn) complete() {
@@ -214,7 +209,7 @@ func readFcgiParamSize(data []byte, index int) (int, int) {
 }
 
 //read the fcgi parameters contained in data, and store them in storage
-func readFcgiParams(data []byte, storage http.Header) {
+func readFcgiParams(data []byte, storage map[string]string) {
     for idx := 0; len(data) > idx; {
         keySize, shift := readFcgiParamSize(data, idx)
         idx += shift
@@ -224,16 +219,16 @@ func readFcgiParams(data []byte, storage http.Header) {
         idx += keySize
         val := data[idx : idx+valSize]
         idx += valSize
-        storage.Set(string(key), string(val))
+        storage[string(key)] = string(val)
     }
 }
 
 func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
     br := bufio.NewReader(fd)
-    var req *Request
+    var req *http.Request
     var fc *fcgiConn
     var body bytes.Buffer
-    headers := make(http.Header)
+    headers := map[string]string{}
 
     for {
         var h fcgiHeader
@@ -264,7 +259,7 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
 
         switch h.Type {
         case fcgiBeginRequest:
-            fc = &fcgiConn{h.RequestId, fd, make(map[string][]string), false}
+            fc = &fcgiConn{h.RequestId, req, fd, make(map[string][]string), false}
 
         case fcgiParams:
             if h.ContentLength > 0 {
@@ -274,7 +269,9 @@ func (s *Server) handleFcgiConnection(fd io.ReadWriteCloser) {
             if h.ContentLength > 0 {
                 body.Write(content)
             } else if h.ContentLength == 0 {
-                req = newRequestCgi(headers, &body)
+                req, _ = cgi.RequestFromMap(headers)
+                req.Body = ioutil.NopCloser(&body)
+                fc.req = req
                 s.routeHandler(req, fc)
                 //we close the connection after processing
                 //TODO: is there a way to keep it open for future requests?

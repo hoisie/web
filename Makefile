@@ -4,7 +4,6 @@ TARG=github.com/hoisie/web.go
 GOFMT=gofmt -s -spaces=true -tabindent=false -tabwidth=4
 
 GOFILES=\
-	cookie.go\
 	fcgi.go\
 	scgi.go\
 	status.go\

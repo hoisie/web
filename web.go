@@ -6,12 +6,12 @@ import (
     "crypto/sha1"
     "encoding/base64"
     "fmt"
-    "net/http"
-    "net/http/pprof"
     "io/ioutil"
     "log"
     "mime"
     "net"
+    "net/http"
+    "net/http/pprof"
     "net/url"
     "os"
     "path"
@@ -23,59 +23,42 @@ import (
     "time"
 )
 
-type conn interface {
-    StartResponse(status int)
-    SetHeader(hdr string, val string, unique bool)
+type ResponseWriter interface {
+    Header() http.Header
+    WriteHeader(status int)
     Write(data []byte) (n int, err error)
     Close()
 }
 
 type Context struct {
-    *Request
-    *Server
-    conn
-    responseStarted bool
+    Request *http.Request
+    Params  map[string]string
+    Server  *Server
+    ResponseWriter
 }
 
-func (ctx *Context) StartResponse(status int) {
-    ctx.conn.StartResponse(status)
-    ctx.responseStarted = true
-}
-
-func (ctx *Context) Write(data []byte) (n int, err error) {
-    if !ctx.responseStarted {
-        ctx.StartResponse(200)
-    }
-
-    //if it's a HEAD request, we just write blank data
-    if ctx.Request.Method == "HEAD" {
-        data = []byte{}
-    }
-
-    return ctx.conn.Write(data)
-}
 func (ctx *Context) WriteString(content string) {
-    ctx.Write([]byte(content))
+    ctx.ResponseWriter.Write([]byte(content))
 }
 
 func (ctx *Context) Abort(status int, body string) {
-    ctx.StartResponse(status)
-    ctx.WriteString(body)
+    ctx.ResponseWriter.WriteHeader(status)
+    ctx.ResponseWriter.Write([]byte(body))
 }
 
 func (ctx *Context) Redirect(status int, url_ string) {
-    ctx.SetHeader("Location", url_, true)
-    ctx.StartResponse(status)
-    ctx.WriteString("Redirecting to: " + url_)
+    ctx.ResponseWriter.Header().Set("Location", url_)
+    ctx.ResponseWriter.WriteHeader(status)
+    ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
 }
 
 func (ctx *Context) NotModified() {
-    ctx.StartResponse(304)
+    ctx.ResponseWriter.WriteHeader(304)
 }
 
 func (ctx *Context) NotFound(message string) {
-    ctx.StartResponse(404)
-    ctx.WriteString(message)
+    ctx.ResponseWriter.WriteHeader(404)
+    ctx.ResponseWriter.Write([]byte(message))
 }
 
 //Sets the content type by extension, as defined in the mime package. 
@@ -86,7 +69,15 @@ func (ctx *Context) ContentType(ext string) {
     }
     ctype := mime.TypeByExtension(ext)
     if ctype != "" {
-        ctx.SetHeader("Content-Type", ctype, true)
+        ctx.Header().Set("Content-Type", ctype)
+    }
+}
+
+func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
+    if unique {
+        ctx.Header().Set(hdr, val)
+    } else {
+        ctx.Header().Add(hdr, val)
     }
 }
 
@@ -116,7 +107,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     //base64 encode the val
     if len(ctx.Server.Config.CookieSecret) == 0 {
-        ctx.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
+        ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
         return
     }
     var buf bytes.Buffer
@@ -132,7 +123,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-    for _, cookie := range ctx.Request.Cookie {
+    for _, cookie := range ctx.Request.Cookies() {
         if cookie.Name != name {
             continue
         }
@@ -208,29 +199,12 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 }
 
-type httpConn struct {
-    conn http.ResponseWriter
+type responseWriter struct {
+    http.ResponseWriter
 }
 
-func (c *httpConn) StartResponse(status int) { c.conn.WriteHeader(status) }
-
-func (c *httpConn) SetHeader(hdr string, val string, unique bool) {
-    //right now unique can't be implemented through the http package.
-    //see issue 488
-    c.conn.Header().Set(hdr, val)
-}
-
-func (c *httpConn) WriteString(content string) {
-    buf := bytes.NewBufferString(content)
-    c.conn.Write(buf.Bytes())
-}
-
-func (c *httpConn) Write(content []byte) (n int, err error) {
-    return c.conn.Write(content)
-}
-
-func (c *httpConn) Close() {
-    rwc, buf, _ := c.conn.(http.Hijacker).Hijack()
+func (c *responseWriter) Close() {
+    rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
     if buf != nil {
         buf.Flush()
     }
@@ -241,9 +215,8 @@ func (c *httpConn) Close() {
 }
 
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-    conn := httpConn{c}
-    wreq := newRequest(req, c)
-    s.routeHandler(wreq, &conn)
+    w := responseWriter{c}
+    s.routeHandler(req, &w)
 }
 
 //Calls a function with recover block
@@ -290,23 +263,24 @@ func requiresContext(handlerType reflect.Type) bool {
     return false
 }
 
-func (s *Server) routeHandler(req *Request, c conn) {
-    ctx := Context{req, s, c, false}
+func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestPath := req.URL.Path
+    ctx := Context{req, map[string]string{}, s, w}
 
     //log the request
     var logEntry bytes.Buffer
-    logEntry.WriteString(fmt.Sprintf("\033[32;1m%s %s\033[0m", req.Method, requestPath))
+    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
 
-    //parse the form data (if it exists)
-    perr := req.parseParams()
-    if perr != nil {
-        logEntry.WriteString(fmt.Sprintf("\nFailed to parse parms%q\n", perr.Error()))
-    } else if len(ctx.Params) > 0 {
-        logEntry.WriteString(fmt.Sprintf("\n\033[37;1mParams: %v\033[0m\n", ctx.Params))
+    //ignore errors from ParseForm because it's usually harmless.
+    req.ParseForm()
+    if len(req.Form) > 0 {
+        for k, v := range req.Form {
+            ctx.Params[k] = v[0]
+        }
+        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
 
-    ctx.Logger.Print(logEntry.String())
+    ctx.Server.Logger.Print(logEntry.String())
 
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
@@ -320,12 +294,13 @@ func (s *Server) routeHandler(req *Request, c conn) {
     }
     staticFile := path.Join(staticDir, requestPath)
     if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-        serveFile(&ctx, staticFile)
+        http.ServeFile(&ctx, req, staticFile)
         return
     }
 
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
         cr := route.cr
@@ -357,9 +332,6 @@ func (s *Server) routeHandler(req *Request, c conn) {
             //there was an error or panic while calling the handler
             ctx.Abort(500, "Server Error")
         }
-        if ctx.responseStarted {
-            return
-        }
         if len(ret) == 0 {
             return
         }
@@ -374,19 +346,18 @@ func (s *Server) routeHandler(req *Request, c conn) {
             content = sval.Interface().([]byte)
         }
         ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-        ctx.StartResponse(200)
         ctx.Write(content)
         return
     }
 
     //try to serve index.html || index.htm
     if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-        serveFile(&ctx, indexPath)
+        http.ServeFile(&ctx, ctx.Request, indexPath)
         return
     }
 
     if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-        serveFile(&ctx, indexPath)
+        http.ServeFile(&ctx, ctx.Request, indexPath)
         return
     }
 
@@ -397,18 +368,23 @@ var Config = &ServerConfig{
     RecoverPanic: true,
 }
 
-var mainServer = Server{
-    Config: Config,
-    Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
-}
+var mainServer = NewServer()
 
 type Server struct {
     Config *ServerConfig
     routes []route
     Logger *log.Logger
+    Env    map[string]interface{}
     //save the listener so it can be closed
-    l      net.Listener
-    closed bool
+    l   net.Listener
+}
+
+func NewServer() *Server {
+    return &Server{
+        Config: Config,
+        Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
+        Env:    map[string]interface{}{},
+    }
 }
 
 func (s *Server) initServer() {
@@ -450,8 +426,9 @@ func Run(addr string) {
 
 //Stops the web server
 func (s *Server) Close() {
-    s.l.Close()
-    s.closed = true
+    if s.l != nil {
+        s.l.Close()
+    }
 }
 
 //Stops the web server

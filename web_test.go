@@ -6,6 +6,7 @@ import (
     "encoding/json"
     "fmt"
     "io"
+    "io/ioutil"
     "log"
     "net/http"
     "net/url"
@@ -91,7 +92,7 @@ func getTestResponse(method string, path string, body string, headers map[string
     var buf bytes.Buffer
 
     tcpb := tcpBuffer{nil, &buf}
-    c := scgiConn{wroteHeaders: false, headers: make(map[string][]string), fd: &tcpb}
+    c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &tcpb}
     mainServer.routeHandler(req, &c)
     return buildTestResponse(&buf)
 
@@ -100,6 +101,7 @@ func getTestResponse(method string, path string, body string, headers map[string
 type Test struct {
     method         string
     path           string
+    headers        map[string][]string
     body           string
     expectedStatus int
     expectedBody   string
@@ -130,7 +132,7 @@ func init() {
     Get("/echo/(.*)", func(s string) string { return s })
     Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
     Post("/post/echo/(.*)", func(s string) string { return s })
-    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Request.Params[name] })
+    Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Params[name] })
 
     Get("/error/code/(.*)", func(ctx *Context, code string) string {
         n, _ := strconv.Atoi(code)
@@ -163,7 +165,7 @@ func init() {
     })
     Get("/getparam", func(ctx *Context) string { return ctx.Params["a"] })
     Get("/fullparams", func(ctx *Context) string {
-        return strings.Join(ctx.FullParams["a"], ",")
+        return strings.Join(ctx.Request.Form["a"], ",")
     })
 
     Get("/json", func(ctx *Context) string {
@@ -194,49 +196,45 @@ func init() {
 }
 
 var tests = []Test{
-    {"GET", "/", "", 200, "index"},
-    {"GET", "/echo/hello", "", 200, "hello"},
-    {"GET", "/echo/hello", "", 200, "hello"},
-    {"GET", "/multiecho/a/b/c/d", "", 200, "abcd"},
-    {"POST", "/post/echo/hello", "", 200, "hello"},
-    {"POST", "/post/echo/hello", "", 200, "hello"},
-    {"POST", "/post/echoparam/a", "a=hello", 200, "hello"},
-    {"POST", "/post/echoparam/c?c=hello", "", 200, "hello"},
-    {"POST", "/post/echoparam/a", "a=hello\x00", 200, "hello\x00"},
+    {"GET", "/", nil, "", 200, "index"},
+    {"GET", "/echo/hello", nil, "", 200, "hello"},
+    {"GET", "/echo/hello", nil, "", 200, "hello"},
+    {"GET", "/multiecho/a/b/c/d", nil, "", 200, "abcd"},
+    {"POST", "/post/echo/hello", nil, "", 200, "hello"},
+    {"POST", "/post/echo/hello", nil, "", 200, "hello"},
+    {"POST", "/post/echoparam/a", map[string][]string{"Content-Type": {"application/x-www-form-urlencoded"}}, "a=hello", 200, "hello"},
+    {"POST", "/post/echoparam/c?c=hello", nil, "", 200, "hello"},
+    {"POST", "/post/echoparam/a", map[string][]string{"Content-Type": {"application/x-www-form-urlencoded"}}, "a=hello\x00", 200, "hello\x00"},
     //long url
-    {"GET", "/echo/" + strings.Repeat("0123456789", 100), "", 200, strings.Repeat("0123456789", 100)},
-
-    {"GET", "/writetest", "", 200, "hello"},
-    {"GET", "/error/notfound/notfound", "", 404, "notfound"},
-    {"GET", "/doesnotexist", "", 404, "Page not found"},
-    {"POST", "/doesnotexist", "", 404, "Page not found"},
-    {"GET", "/error/code/500", "", 500, statusText[500]},
-    {"POST", "/posterror/code/410/failedrequest", "", 410, "failedrequest"},
-    {"GET", "/getparam?a=abcd", "", 200, "abcd"},
-    {"GET", "/getparam?b=abcd", "", 200, ""},
-    {"GET", "/fullparams?a=1&a=2&a=3", "", 200, "1,2,3"},
-    {"GET", "/panic", "", 500, "Server Error"},
-    {"GET", "/json?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
-    {"GET", "/jsonbytes?a=1&b=2", "", 200, `{"a":"1","b":"2"}`},
-    //{"GET", "/methodhandler", "", 200, `a`},
-    //{"GET", "/methodhandler2?b=b", "", 200, `ab`},
-    //{"GET", "/methodhandler3/b", "", 200, `ab`},
-    {"POST", "/parsejson", `{"a":"hello", "b":"world"}`, 200, "hello world"},
+    {"GET", "/echo/" + strings.Repeat("0123456789", 100), nil, "", 200, strings.Repeat("0123456789", 100)},
+    {"GET", "/writetest", nil, "", 200, "hello"},
+    {"GET", "/error/notfound/notfound", nil, "", 404, "notfound"},
+    {"GET", "/doesnotexist", nil, "", 404, "Page not found"},
+    {"POST", "/doesnotexist", nil, "", 404, "Page not found"},
+    {"GET", "/error/code/500", nil, "", 500, statusText[500]},
+    {"POST", "/posterror/code/410/failedrequest", nil, "", 410, "failedrequest"},
+    {"GET", "/getparam?a=abcd", nil, "", 200, "abcd"},
+    {"GET", "/getparam?b=abcd", nil, "", 200, ""},
+    {"GET", "/fullparams?a=1&a=2&a=3", nil, "", 200, "1,2,3"},
+    {"GET", "/panic", nil, "", 500, "Server Error"},
+    {"GET", "/json?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
+    {"GET", "/jsonbytes?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
+    {"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, "hello world"},
+    //{"GET", "/testenv", "", 200, "hello world"},
 }
 
-func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *Request {
+func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *http.Request {
     host := "127.0.0.1"
     port := "80"
     rawurl := "http://" + host + ":" + port + path
     url_, _ := url.Parse(rawurl)
-
     proto := "HTTP/1.1"
-    useragent := "web.go test"
 
     if headers == nil {
         headers = map[string][]string{}
     }
 
+    headers["User-Agent"] = []string{"web.go test"}
     if method == "POST" {
         headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
         if headers["Content-Type"] == nil {
@@ -244,23 +242,23 @@ func buildTestRequest(method string, path string, body string, headers map[strin
         }
     }
 
-    req := Request{Method: method,
-        RawURL:    rawurl,
-        Cookie:    cookies,
-        URL:       url_,
-        Proto:     proto,
-        Host:      host,
-        UserAgent: useragent,
-        Headers:   headers,
-        Body:      bytes.NewBufferString(body),
+    req := http.Request{Method: method,
+        URL:    url_,
+        Proto:  proto,
+        Host:   host,
+        Header: http.Header(headers),
+        Body:   ioutil.NopCloser(bytes.NewBufferString(body)),
     }
 
+    for _, cookie := range cookies {
+        req.AddCookie(cookie)
+    }
     return &req
 }
 
 func TestRouting(t *testing.T) {
     for _, test := range tests {
-        resp := getTestResponse(test.method, test.path, test.body, make(map[string][]string), nil)
+        resp := getTestResponse(test.method, test.path, test.body, test.headers, nil)
 
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
@@ -284,8 +282,8 @@ func TestHead(t *testing.T) {
         if test.method != "GET" {
             continue
         }
-        getresp := getTestResponse("GET", test.path, test.body, make(map[string][]string), nil)
-        headresp := getTestResponse("HEAD", test.path, test.body, make(map[string][]string), nil)
+        getresp := getTestResponse("GET", test.path, test.body, test.headers, nil)
+        headresp := getTestResponse("HEAD", test.path, test.body, test.headers, nil)
 
         if getresp.statusCode != headresp.statusCode {
             t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
@@ -328,8 +326,7 @@ func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
     return buf.Bytes()
 }
 
-func buildTestScgiRequest(method string, path string, body string, headers map[string]string) *bytes.Buffer {
-
+func buildTestScgiRequest(method string, path string, body string, headers map[string][]string) *bytes.Buffer {
     var hbuf bytes.Buffer
     scgiHeaders := make(map[string]string)
 
@@ -345,16 +342,16 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
     scgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     scgiHeaders["USER_AGENT"] = "web.go test framework"
 
+    for k, v := range headers {
+        //Skip content-length
+        if k == "Content-Length" {
+            continue
+        }
+        key := "HTTP_" + strings.ToUpper(strings.Replace(k, "-", "_", -1))
+        scgiHeaders[key] = v[0]
+    }
+
     buildScgiFields(scgiHeaders, &hbuf)
-
-    if method == "POST" {
-        headers["Content-Length"] = fmt.Sprintf("%d", len(body))
-        headers["Content-Type"] = "text/plain"
-    }
-
-    if len(headers) > 0 {
-        buildScgiFields(headers, &hbuf)
-    }
 
     fielddata := hbuf.Bytes()
     var buf bytes.Buffer
@@ -371,7 +368,7 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
 
 func TestScgi(t *testing.T) {
     for _, test := range tests {
-        req := buildTestScgiRequest(test.method, test.path, test.body, make(map[string]string))
+        req := buildTestScgiRequest(test.method, test.path, test.body, test.headers)
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
         mainServer.handleScgiRequest(&nb)
@@ -394,13 +391,13 @@ func TestScgiHead(t *testing.T) {
             continue
         }
 
-        req := buildTestScgiRequest("GET", test.path, test.body, make(map[string]string))
+        req := buildTestScgiRequest("GET", test.path, test.body, make(map[string][]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
         mainServer.handleScgiRequest(&nb)
         getresp := buildTestResponse(&output)
 
-        req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string]string))
+        req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string][]string))
         var output2 bytes.Buffer
         nb = tcpBuffer{input: req, output: &output2}
         mainServer.handleScgiRequest(&nb)
@@ -459,7 +456,7 @@ func buildFcgiKeyValue(key string, val string) []byte {
     return buf.Bytes()
 }
 
-func buildTestFcgiRequest(method string, path string, bodychunks []string, headers map[string]string) *bytes.Buffer {
+func buildTestFcgiRequest(method string, path string, bodychunks []string, headers map[string][]string) *bytes.Buffer {
 
     var req bytes.Buffer
     fcgiHeaders := make(map[string]string)
@@ -477,15 +474,14 @@ func buildTestFcgiRequest(method string, path string, bodychunks []string, heade
     fcgiHeaders["SERVER_PROTOCOL"] = "HTTP/1.1"
     fcgiHeaders["USER_AGENT"] = "web.go test framework"
 
-    if method == "POST" {
-        fcgiHeaders["Content-Length"] = fmt.Sprintf("%d", bodylength)
-        fcgiHeaders["Content-Type"] = "text/plain"
-    }
-
     for k, v := range headers {
-        fcgiHeaders[k] = v
+        //Skip content-length
+        if k == "Content-Length" {
+            continue
+        }
+        key := "HTTP_" + strings.ToUpper(strings.Replace(k, "-", "_", -1))
+        fcgiHeaders[key] = v[0]
     }
-
     // add the begin request
     req.Write(newFcgiRecord(fcgiBeginRequest, 0, make([]byte, 8)))
 
@@ -542,7 +538,7 @@ func getFcgiOutput(br *bytes.Buffer) *bytes.Buffer {
 
 func TestFcgi(t *testing.T) {
     for _, test := range tests {
-        req := buildTestFcgiRequest(test.method, test.path, []string{test.body}, make(map[string]string))
+        req := buildTestFcgiRequest(test.method, test.path, []string{test.body}, test.headers)
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
         mainServer.handleFcgiConnection(&nb)
@@ -565,14 +561,14 @@ func TestFcgiHead(t *testing.T) {
         if test.method != "GET" {
             continue
         }
-        req := buildTestFcgiRequest("GET", test.path, []string{test.body}, make(map[string]string))
+        req := buildTestFcgiRequest("GET", test.path, []string{test.body}, make(map[string][]string))
         var output bytes.Buffer
         nb := tcpBuffer{input: req, output: &output}
         mainServer.handleFcgiConnection(&nb)
         contents := getFcgiOutput(&output)
         getresp := buildTestResponse(contents)
 
-        req = buildTestFcgiRequest("HEAD", test.path, []string{test.body}, make(map[string]string))
+        req = buildTestFcgiRequest("HEAD", test.path, []string{test.body}, make(map[string][]string))
         var output2 bytes.Buffer
         nb = tcpBuffer{input: req, output: &output2}
         mainServer.handleFcgiConnection(&nb)
@@ -612,7 +608,7 @@ func TestFcgiChunks(t *testing.T) {
     //split up an fcgi request
     bodychunks := []string{`a=12&b=`, strings.Repeat("1234567890", 200)}
 
-    req := buildTestFcgiRequest("POST", "/post/echoparam/b", bodychunks, make(map[string]string))
+    req := buildTestFcgiRequest("POST", "/post/echoparam/b", bodychunks, map[string][]string{"Content-Type": {"application/x-www-form-urlencoded"}})
     var output bytes.Buffer
     nb := tcpBuffer{input: req, output: &output}
     mainServer.handleFcgiConnection(&nb)
@@ -625,7 +621,6 @@ func TestFcgiChunks(t *testing.T) {
 }
 
 func makeCookie(vals map[string]string) []*http.Cookie {
-
     var cookies []*http.Cookie
     for k, v := range vals {
         c := &http.Cookie{
@@ -657,7 +652,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 
     //set the cookie
-    req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string]string))
+    req := buildTestFcgiRequest("POST", "/securecookie/set/a/1", []string{}, make(map[string][]string))
 
     var output bytes.Buffer
     nb := tcpBuffer{input: req, output: &output}
@@ -671,7 +666,7 @@ func TestSecureCookieFcgi(t *testing.T) {
 
     //send the cookie
     cookie := fmt.Sprintf("a=%s", sval)
-    req = buildTestFcgiRequest("GET", "/securecookie/get/a", []string{}, map[string]string{"HTTP_COOKIE": cookie})
+    req = buildTestFcgiRequest("GET", "/securecookie/get/a", []string{}, map[string][]string{"Cookie": {cookie}})
     var output2 bytes.Buffer
     nb = tcpBuffer{input: req, output: &output2}
     mainServer.handleFcgiConnection(&nb)
@@ -683,20 +678,7 @@ func TestSecureCookieFcgi(t *testing.T) {
     }
 }
 
-//Disabled until issue 1375 is fixed
-/*
-func TestCloseServer(t *testing.T) {
+func TestEarlyClose(t *testing.T) {
     var server1 Server
-    server1.Get("/(.*)", func(s string) string { return s })
-    go server1.Run("0.0.0.0:22231")
-    //sleep 100ms
-    time.Sleep(1e9)
     server1.Close()
-    time.Sleep(1e9)
-    //try to connect, should error
-    _,_,err := http.Get("http://127.0.0.1:22231")
-    if err == nil {
-        t.Fatalf("CloseServer test failed")
-    }
 }
-*/

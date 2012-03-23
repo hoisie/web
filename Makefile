@@ -1,11 +1,8 @@
 GOFMT=gofmt -s -tabs=false -tabwidth=4
 
 GOFILES=\
-	cookie.go\
 	fcgi.go\
-	request.go\
 	scgi.go\
-	servefile.go\
 	status.go\
 	web.go\
 

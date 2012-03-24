@@ -288,14 +288,16 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     ctx.SetHeader("Date", webTime(tm), true)
 
     //try to serve a static file
-    staticDir := s.Config.StaticDir
-    if staticDir == "" {
-        staticDir = defaultStaticDir()
+    staticDirs := s.Config.StaticDirs //Erik: multiple static dirs
+    if staticDirs == nil {
+        staticDirs = []string{defaultStaticDir()}
     }
-    staticFile := path.Join(staticDir, requestPath)
-    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-        http.ServeFile(&ctx, req, staticFile)
-        return
+    for _, staticDir := range staticDirs {
+        staticFile := path.Join(staticDir, requestPath)
+        if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+            http.ServeFile(&ctx, req, staticFile)
+            return
+        }
     }
 
     //Set the default content-type
@@ -351,14 +353,16 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     }
 
     //try to serve index.html || index.htm
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
-    }
+    for _, staticDir := range staticDirs { //Erik: multiple static dirs
+        if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
+            http.ServeFile(&ctx, ctx.Request, indexPath)
+            return
+        }
 
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
+        if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
+            http.ServeFile(&ctx, ctx.Request, indexPath)
+            return
+        }
     }
 
     ctx.Abort(404, "Page not found")
@@ -508,7 +512,7 @@ func SetLogger(logger *log.Logger) {
 }
 
 type ServerConfig struct {
-    StaticDir    string
+    StaticDirs   []string //Erik: multiple static dirs
     Addr         string
     Port         int
     CookieSecret string

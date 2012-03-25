@@ -289,7 +289,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
     //try to serve a static file
     staticDirs := s.Config.StaticDirs //Erik: multiple static dirs
-    if staticDirs == nil {
+    if len(staticDirs) == 0 {
         staticDirs = []string{defaultStaticDir()}
     }
     for _, staticDir := range staticDirs {
@@ -380,7 +380,7 @@ type Server struct {
     Logger *log.Logger
     Env    map[string]interface{}
     //save the listener so it can be closed
-    l   net.Listener
+    l net.Listener
 }
 
 func NewServer() *Server {

@@ -82,7 +82,7 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 }
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, age int64) {
+func (ctx *Context) SetCookie(name string, value string, age int64, path string) {
     var utctime time.Time
     if age == 0 {
         // 2^31 - 1 seconds (roughly 2038)
@@ -91,6 +91,9 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
         utctime = time.Unix(time.Now().Unix()+age, 0)
     }
     cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
+    if path != "" {
+        cookie += "; path=" + path
+    }
     ctx.SetHeader("Set-Cookie", cookie, false)
 }
 
@@ -104,7 +107,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
     return hex
 }
 
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+func (ctx *Context) SetSecureCookie(name string, val string, age int64, path string) {
     //base64 encode the val
     if len(ctx.Server.Config.CookieSecret) == 0 {
         ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
@@ -119,7 +122,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     timestamp := strconv.FormatInt(time.Now().Unix(), 10)
     sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-    ctx.SetCookie(name, cookie, age)
+    ctx.SetCookie(name, cookie, age, path)
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {

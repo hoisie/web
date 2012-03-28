@@ -1,27 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #include $(GOROOT)/src/Make.inc
 #
 #TARG=github.com/hoisie/web.go
@@ -47,4 +24,5 @@
 #	${GOFMT} -w examples/logger.go
 
 all:
+	go fmt
 	go build

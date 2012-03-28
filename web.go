@@ -82,13 +82,13 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 }
 
 //Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, age int64) {
+func (ctx *Context) SetCookie(name string, value string, age time.Duration) {
 	var utctime time.Time
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
 		utctime = time.Unix(2147483647, 0).UTC()
 	} else {
-		utctime = time.Unix(time.Now().UTC().Seconds()+age, 0).UTC()
+		utctime = time.Now().Add(age)
 	}
 	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
 	ctx.Header().Add("Set-Cookie", cookie)
@@ -104,7 +104,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 	return hex
 }
 
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+func (ctx *Context) SetSecureCookie(name string, val string, age time.Duration) {
 	//base64 encode the val
 	if len(ctx.Server.Config.CookieSecret) == 0 {
 		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
@@ -116,7 +116,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
-	timestamp := strconv.FormatInt(time.Now(), 10)
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	ctx.SetCookie(name, cookie, age)
@@ -138,9 +138,17 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 			return "", false
 		}
 
-		ts, _ := strconv.ParseInt(timestamp, 10, 64)
+		tsi, _ := strconv.ParseInt(timestamp, 10, 64)
+		ts := time.Unix(tsi, 0)
 
-		if time.Now().Sub(31*86400) > ts {
+		minusMonth, _ := time.ParseDuration(
+			fmt.Sprintf(
+				"%ds",
+				-31*86400))
+
+		monthAgo := time.Now().Add(minusMonth)
+
+		if ts.Before(monthAgo) {
 			return "", false
 		}
 
@@ -412,7 +420,8 @@ func (s *Server) Run(addr string) {
 
 	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-	mux.Handle("/debug/pprof/heap", http.HandlerFunc(pprof.Heap))
+	// Note this seems to be missing from the package
+	//mux.Handle("/debug/pprof/heap", http.HandlerFunc(pprof.Heap))
 	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 	mux.Handle("/", s)
 

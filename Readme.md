@@ -18,19 +18,19 @@ Make sure you have the a working Go environment. See the [install instructions](
 
 To install web.go, simply run:
 
-    go get github.com/hoisie/web.go
+    go get github.com/hoisie/web
 
 To compile it from source:
 
-    git clone git://github.com/hoisie/web.go.git
-    cd web.go && go build
+    git clone git://github.com/hoisie/web.git
+    cd web && go build
 
 ## Example
     
     package main
     
     import (
-        "github.com/hoisie/web.go"
+        "github.com/hoisie/web"
     )
     
     func hello(val string) string { return "hello " + val } 
@@ -53,7 +53,7 @@ Route handlers may contain a pointer to web.Context as their first parameter. Th
     package main
     
     import (
-        "github.com/hoisie/web.go"
+        "github.com/hoisie/web"
     )
     
     func hello(ctx *web.Context, val string) { 

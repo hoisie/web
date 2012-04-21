@@ -23,15 +23,6 @@ import (
     "time"
 )
 
-/*
-type ResponseWriter interface {
-    Header() http.Header
-    WriteHeader(status int)
-    Write(data []byte) (n int, err error)
-    Close()
-}
-*/
-
 type Context struct {
     Request *http.Request
     Params  map[string]string
@@ -201,27 +192,7 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 }
 
-/*
-type responseWriter struct {
-	http.ResponseWriter
-}
-*/
-
-/*
-func (c *http.ResponseWriter) Close() {
-	rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
-	if buf != nil {
-		buf.Flush()
-	}
-
-	if rwc != nil {
-		rwc.Close()
-	}
-}
-*/
-
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-    //w := responseWriter{c}
     s.routeHandler(req, c)
 }
 

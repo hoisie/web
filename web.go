@@ -26,13 +26,6 @@ import (
     "time"
 )
 
-type ResponseWriter interface {
-    Header() http.Header
-    WriteHeader(status int)
-    Write(data []byte) (n int, err error)
-    Close()
-}
-
 // A Context object is created for every incoming HTTP request, and is
 // passed to handlers as an optional first argument. It provides information
 // about the request, including the http.Request object, the GET and POST params,
@@ -41,7 +34,7 @@ type Context struct {
     Request *http.Request
     Params  map[string]string
     Server  *Server
-    ResponseWriter
+    http.ResponseWriter
 }
 
 // WriteString writes string data into the response object.
@@ -208,23 +201,6 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 }
 
-type responseWriter struct {
-    http.ResponseWriter
-}
-
-// Close terminates the HTTP connection, and flushes all pending
-// response data.
-func (c *responseWriter) Close() {
-    rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
-    if buf != nil {
-        buf.Flush()
-    }
-
-    if rwc != nil {
-        rwc.Close()
-    }
-}
-
 // ServeHTTP is the interface method for Go's http server package
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     s.Process(c, req)
@@ -281,7 +257,7 @@ func requiresContext(handlerType reflect.Type) bool {
 }
 
 // the main route handler in web.go
-func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
+func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
 
@@ -391,7 +367,7 @@ type ServerConfig struct {
     RecoverPanic bool
 }
 
-// Server represents a web.go server. 
+// Server represents a web.go server.
 type Server struct {
     Config *ServerConfig
     routes []route
@@ -421,8 +397,7 @@ func (s *Server) initServer() {
 
 // Process invokes the routing system for server s
 func (s *Server) Process(c http.ResponseWriter, req *http.Request) {
-    w := responseWriter{c}
-    s.routeHandler(req, &w)
+    s.routeHandler(req, c)
 }
 
 // Run starts the web application and serves HTTP requests for s

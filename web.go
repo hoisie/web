@@ -479,6 +479,11 @@ func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
 
+//Adds a handler for the 'OPTIONS' http method.
+func (s *Server) Options(route string, handler interface{}) {
+    s.addRoute(route, "OPTIONS", handler)
+}
+
 //Adds a handler for the 'GET' http method.
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
@@ -497,6 +502,11 @@ func Put(route string, handler interface{}) {
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
+}
+
+//Adds a handler for the 'OPTIONS' http method.
+func Options(route string, handler interface{}) {
+    mainServer.addRoute(route, "OPTIONS", handler)
 }
 
 func (s *Server) SetLogger(logger *log.Logger) {

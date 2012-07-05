@@ -1,12 +1,12 @@
 package main
 
 import (
-    "web"
+	"github.com/fiber/web.go"
 )
 
 func hello(val string) string { return "hello " + val }
 
 func main() {
-    web.Get("/(.*)", hello)
-    web.Run("0.0.0.0:9999")
+	web.Get("/(.*)", hello)
+	web.Run("0.0.0.0:9999")
 }

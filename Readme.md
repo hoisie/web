@@ -18,6 +18,7 @@ I've added the following tweaks so far
 
 * new AdHoc function in the root. This lets the user run tests written like this...
 
+```golang
     func init() {
         // RegisterRoutes is defined in your main package and sets
         // up all the handles to each route
@@ -32,6 +33,7 @@ I've added the following tweaks so far
 
         fmt.Println("Result", recorder.Body)
     }
+```
 
 ## Installation
 

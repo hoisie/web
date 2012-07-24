@@ -12,6 +12,27 @@ web.go should be familiar to people who've developed websites with higher-level 
 * Web applications are compiled to native code. This means very fast execution and page render speed
 * Efficiently serving static files
 
+## Specific to this fork
+
+I've added the following tweaks so far
+
+* new AdHoc function in the root. This lets the user run tests written like this...
+
+	func init() {
+		// RegisterRoutes is defined in your main package and sets
+		// up all the handles to each route
+		RegisterRoutes();
+	}
+
+	func TestHelloWorld(t * testing.T) {
+		recorder := httptest.NewRecorder()
+		request, _ := http.NewRequest("POST", "/your/defined/route", nil)
+
+		web.AdHoc(recorder, request)
+
+		fmt.Println("Result", recorder.Body)
+	}
+
 ## Installation
 
 Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `release` branch. If you use the `weekly` branch you may have difficulty compiling web.go. There's an alternative web.go branch, `weekly`, that attempts to keep up with the weekly branch.

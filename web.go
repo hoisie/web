@@ -436,6 +436,11 @@ func Close() {
     mainServer.Close()
 }
 
+// Runs a single request, used for testing
+func AdHoc(c http.ResponseWriter, req *http.Request) {
+	mainServer.ServeHTTP(c, req)
+}
+
 func (s *Server) RunScgi(addr string) {
     s.initServer()
     s.Logger.Printf("web.go serving scgi %s\n", addr)

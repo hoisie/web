@@ -18,20 +18,20 @@ I've added the following tweaks so far
 
 * new AdHoc function in the root. This lets the user run tests written like this...
 
-	func init() {
-		// RegisterRoutes is defined in your main package and sets
-		// up all the handles to each route
-		RegisterRoutes();
-	}
+    func init() {
+        // RegisterRoutes is defined in your main package and sets
+        // up all the handles to each route
+        RegisterRoutes();
+    }
 
-	func TestHelloWorld(t * testing.T) {
-		recorder := httptest.NewRecorder()
-		request, _ := http.NewRequest("POST", "/your/defined/route", nil)
+    func TestHelloWorld(t * testing.T) {
+        recorder := httptest.NewRecorder()
+        request, _ := http.NewRequest("POST", "/your/defined/route", nil)
 
-		web.AdHoc(recorder, request)
+        web.AdHoc(recorder, request)
 
-		fmt.Println("Result", recorder.Body)
-	}
+        fmt.Println("Result", recorder.Body)
+    }
 
 ## Installation
 
@@ -78,10 +78,10 @@ Route handlers may contain a pointer to web.Context as their first parameter. Th
     )
     
     func hello(ctx *web.Context, val string) { 
-	    for k,v := range ctx.Params {
-			println(k, v)
-		}
-	}
+        for k,v := range ctx.Params {
+            println(k, v)
+        }
+    }
     
     func main() {
         web.Get("/(.*)", hello)

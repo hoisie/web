@@ -18,7 +18,7 @@ I've added the following tweaks so far
 
 * new AdHoc function in the root. This lets the user run tests written like this...
 
-```golang
+```go
     func init() {
         // RegisterRoutes is defined in your main package and sets
         // up all the routes for the application

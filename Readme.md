@@ -12,6 +12,60 @@ web.go should be familiar to people who've developed websites with higher-level 
 * Web applications are compiled to native code. This means very fast execution and page render speed
 * Efficiently serving static files
 
+## Specific to this fork
+
+I've added the following tweaks so far
+
+* new AdHoc function in the root. This lets the user run tests written like this...
+
+```go
+    func init() {
+        // RegisterRoutes is defined in your main package and sets
+        // up all the routes for the application
+        RegisterRoutes();
+    }
+
+    func TestHelloWorld(t * testing.T) {
+        recorder := httptest.NewRecorder()
+        request, _ := http.NewRequest("POST", "/your/defined/route", nil)
+
+        web.AdHoc(recorder, request)
+
+        fmt.Println("Result", recorder.Body)
+    }
+```
+
+* Added the generic interface "User" to a context. You can set this to whatever you want. 
+* Added the ability to push "Modules" into the call stack. These are functions that will run before your main handler is. 
+
+```go
+	
+	func helloModule(ctx * web.Context) {
+		ctx.User = "Hello human"
+	}
+
+	func handler(ctx * web.Context) {
+		message := ctx.User.(string)
+		ctx.WriteString(message)
+	}
+
+	func main() {
+
+		// this is optional, cool for testing when you want to clear
+		// any modules already set up
+		web.ResetModules()
+
+		// will get called on all routes
+		web.AddModule(helloModule)
+
+		// the module should get run just before this does
+		web.Get("/", handler)
+
+		// starts up the server and away we go!
+		web.Run("0.0.0.0:9999")
+	}
+```
+
 ## Installation
 
 Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `release` branch. If you use the `weekly` branch you may have difficulty compiling web.go. There's an alternative web.go branch, `weekly`, that attempts to keep up with the weekly branch.
@@ -57,10 +111,10 @@ Route handlers may contain a pointer to web.Context as their first parameter. Th
     )
     
     func hello(ctx *web.Context, val string) { 
-	    for k,v := range ctx.Params {
-			println(k, v)
-		}
-	}
+        for k,v := range ctx.Params {
+            println(k, v)
+        }
+    }
     
     func main() {
         web.Get("/(.*)", hello)

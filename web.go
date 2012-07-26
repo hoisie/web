@@ -35,6 +35,7 @@ type Context struct {
     Params  map[string]string
     Server  *Server
     ResponseWriter
+	User interface{}
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -265,7 +266,7 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestPath := req.URL.Path
-    ctx := Context{req, map[string]string{}, s, w}
+    ctx := Context{req, map[string]string{}, s, w, nil}
 
     //log the request
     var logEntry bytes.Buffer
@@ -317,6 +318,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
         if len(match[0]) != len(requestPath) {
             continue
         }
+
+		// lets call our modules now we have found a route
+		for _, module := range modules {
+			module(&ctx)
+		}
 
         var args []reflect.Value
         handlerType := route.handler.Type()
@@ -434,6 +440,21 @@ func (s *Server) Close() {
 //Stops the web server
 func Close() {
     mainServer.Close()
+}
+
+var modules = []func(* Context){}
+
+func AddModule(module func(* Context)) {
+	modules = append(modules, module)
+}
+
+func ResetModules() {
+	modules = []func(* Context){}
+}
+
+// Runs a single request, used for testing
+func AdHoc(c http.ResponseWriter, req *http.Request) {
+	mainServer.ServeHTTP(c, req)
 }
 
 func (s *Server) RunScgi(addr string) {

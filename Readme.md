@@ -51,6 +51,10 @@ I've added the following tweaks so far
 
 	func main() {
 
+		// this is optional, cool for testing when you want to clear
+		// any modules already set up
+		web.ResetModules()
+
 		// will get called on all routes
 		web.AddModule(helloModule)
 

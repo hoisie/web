@@ -448,6 +448,10 @@ func AddModule(module func(* Context)) {
 	modules = append(modules, module)
 }
 
+func ResetModules() {
+	modules = []func(* Context){}
+}
+
 // Runs a single request, used for testing
 func AdHoc(c http.ResponseWriter, req *http.Request) {
 	mainServer.ServeHTTP(c, req)

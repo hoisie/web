@@ -35,6 +35,7 @@ type Context struct {
     Params  map[string]string
     Server  *Server
     ResponseWriter
+	User interface{}
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -265,7 +266,7 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestPath := req.URL.Path
-    ctx := Context{req, map[string]string{}, s, w}
+    ctx := Context{req, map[string]string{}, s, w, nil}
 
     //log the request
     var logEntry bytes.Buffer

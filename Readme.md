@@ -21,7 +21,7 @@ I've added the following tweaks so far
 ```golang
     func init() {
         // RegisterRoutes is defined in your main package and sets
-        // up all the handles to each route
+        // up all the routes for the application
         RegisterRoutes();
     }
 
@@ -33,6 +33,33 @@ I've added the following tweaks so far
 
         fmt.Println("Result", recorder.Body)
     }
+```
+
+* Added the generic interface "User" to a context. You can set this to whatever you want. 
+* Added the ability to push "Modules" into the call stack. These are functions that will run before your main handler is. 
+
+```go
+	
+	func helloModule(ctx * web.Context) {
+		ctx.User = "Hello human"
+	}
+
+	func handler(ctx * web.Context) {
+		message := ctx.User.(string)
+		ctx.WriteString(message)
+	}
+
+	func main() {
+
+		// will get called on all routes
+		web.AddModule(helloModule)
+
+		// the module should get run just before this does
+		web.Get("/", handler)
+
+		// starts up the server and away we go!
+		web.Run("0.0.0.0:9999")
+	}
 ```
 
 ## Installation

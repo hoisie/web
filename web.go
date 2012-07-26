@@ -319,6 +319,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
             continue
         }
 
+		// lets call our modules now we have found a route
+		for _, module := range modules {
+			module(&ctx)
+		}
+
         var args []reflect.Value
         handlerType := route.handler.Type()
         if requiresContext(handlerType) {
@@ -435,6 +440,12 @@ func (s *Server) Close() {
 //Stops the web server
 func Close() {
     mainServer.Close()
+}
+
+var modules = []func(* Context){}
+
+func AddModule(module func(* Context)) {
+	modules = append(modules, module)
 }
 
 // Runs a single request, used for testing

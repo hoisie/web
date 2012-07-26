@@ -459,6 +459,11 @@ func RunFcgi(addr string) {
     mainServer.RunFcgi(addr)
 }
 
+//Adds a handler for the 'OPTIONS' http method.
+func (s *Server) Options(route string, handler interface{}) {
+    s.addRoute(route, "OPTIONS", handler)
+}
+
 //Adds a handler for the 'GET' http method.
 func (s *Server) Get(route string, handler interface{}) {
     s.addRoute(route, "GET", handler)
@@ -477,6 +482,11 @@ func (s *Server) Put(route string, handler interface{}) {
 //Adds a handler for the 'DELETE' http method.
 func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
+}
+
+//Adds a handler for the 'OPTIONS' http method.
+func Options(route string, handler interface{}) {
+    mainServer.addRoute(route, "OPTIONS", handler)
 }
 
 //Adds a handler for the 'GET' http method.

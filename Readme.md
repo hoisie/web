@@ -15,10 +15,12 @@ web.go should be familiar to people who've developed websites with higher-level 
 ## Specific to this fork
 
 Updates
-
+* Add module structure for Pre- and Post- request handling
+* Add encoding module to handle gzip and deflate
 * Unauthorized respose added
 * WebError struct added to allow for detailed errors from the modules
 * Modules MUST return an error or nil when finished. If an error is returned, then processing stops and the request is finished. This allows for immediate authentication checks that will kill the request on failure
+
 
 
 I've added the following tweaks so far

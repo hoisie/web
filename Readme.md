@@ -14,6 +14,13 @@ web.go should be familiar to people who've developed websites with higher-level 
 
 ## Specific to this fork
 
+Updates
+
+* Unauthorized respose added
+* WebError struct added to allow for detailed errors from the modules
+* Modules MUST return an error or nil when finished. If an error is returned, then processing stops and the request is finished. This allows for immediate authentication checks that will kill the request on failure
+
+
 I've added the following tweaks so far
 
 * new AdHoc function in the root. This lets the user run tests written like this...
@@ -40,8 +47,15 @@ I've added the following tweaks so far
 
 ```go
 	
-	func helloModule(ctx * web.Context) {
-		ctx.User = "Hello human"
+	func helloModule(ctx * web.Context) error {
+        ctx.User = doAuthentication(ctx)
+		if ctx.User == nil {
+            web.Unauthorized("Invalid Credentials")
+            return web.WebError("Invalid Credentials")
+        }
+
+        // All is well
+        return nil
 	}
 
 	func handler(ctx * web.Context) {

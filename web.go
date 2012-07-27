@@ -30,6 +30,14 @@ type ResponseWriter interface {
     Close()
 }
 
+type WebError struct {
+    Err string
+}
+
+func (err WebError) Error() string {
+    return err.Err
+}
+
 type Context struct {
     Request *http.Request
     Params  map[string]string
@@ -59,6 +67,11 @@ func (ctx *Context) NotModified() {
 
 func (ctx *Context) NotFound(message string) {
     ctx.ResponseWriter.WriteHeader(404)
+    ctx.ResponseWriter.Write([]byte(message))
+}
+
+func (ctx *Context) Unauthorized(message string) {
+    ctx.ResponseWriter.WriteHeader(401)
     ctx.ResponseWriter.Write([]byte(message))
 }
 
@@ -321,7 +334,10 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
 		// lets call our modules now we have found a route
 		for _, module := range modules {
-			module(&ctx)
+            // If a module returns an error, we stop process the request
+            if module(&ctx) != nil {
+                return
+            }
 		}
 
         var args []reflect.Value
@@ -442,14 +458,15 @@ func Close() {
     mainServer.Close()
 }
 
-var modules = []func(* Context){}
+var modules = []func(* Context) error {}
 
-func AddModule(module func(* Context)) {
+
+func AddModule(module func(* Context) error) {
 	modules = append(modules, module)
 }
 
 func ResetModules() {
-	modules = []func(* Context){}
+	modules = []func(* Context) error {}
 }
 
 // Runs a single request, used for testing

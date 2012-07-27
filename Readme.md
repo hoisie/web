@@ -72,7 +72,10 @@ I've added the following tweaks so far
 		web.ResetModules()
 
 		// will get called on all routes
-		web.AddModule(helloModule)
+		web.AddPreModule(helloModule)
+
+        // preform any encoding that the client requests
+        web.AddPostModule(web.EncodeResponse)
 
 		// the module should get run just before this does
 		web.Get("/", handler)

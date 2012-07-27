@@ -332,9 +332,9 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			continue
 		}
 
-		// lets call our setup modules to do any processing
+		// lets call our pre modules to do any processing
 		// before we start the request
-		for _, module := range modulesBefore {
+		for _, module := range preModules {
 			// If a module returns an error, we stop process the request
 			if module(&ctx) != nil {
 				return
@@ -371,7 +371,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
 		// Now we have the content from our response. We should run
 		// our post processing modules now
-		for _, module := range modulesAfter {
+		for _, module := range postModules {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
@@ -470,20 +470,20 @@ func Close() {
 	mainServer.Close()
 }
 
-var modulesBefore = []func(*Context) error{}
-var modulesAfter = []func(*Context, []byte) ([]byte, error){}
+var preModules = []func(*Context) error{}
+var postModules = []func(*Context, []byte) ([]byte, error){}
 
-func AddModuleBefore(module func(*Context) error) {
-	modulesBefore = append(modulesBefore, module)
+func AddPreModule(module func(*Context) error) {
+	preModules = append(preModules, module)
 }
 
-func AddModuleAfter(module func(*Context, []byte) ([]byte, error)) {
-	modulesAfter = append(modulesAfter, module)
+func AddPostModule(module func(*Context, []byte) ([]byte, error)) {
+	postModules = append(postModules, module)
 }
 
 func ResetModules() {
-	modulesBefore = []func(*Context) error{}
-	modulesAfter = []func(*Context, []byte) ([]byte, error){}
+	preModules= []func(*Context) error{}
+	postModules= []func(*Context, []byte) ([]byte, error){}
 }
 
 // Runs a single request, used for testing

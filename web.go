@@ -358,7 +358,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if len(ret) == 0 {
 			return
 		}
-
+/*
 		sval := ret[0]
 
 		var content []byte
@@ -368,12 +368,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
 			content = sval.Interface().([]byte)
 		}
-
+*/
 		// Now we have the content from our response. We should run
 		// our post processing modules now
 		for _, module := range postModules {
 			// If a module returns an error, we stop process the request
-			content, err = module(&ctx, content)
+			content, err := module(&ctx, ret)
 			if err != nil {
 				return
 			}
@@ -471,13 +471,13 @@ func Close() {
 }
 
 var preModules = []func(*Context) error{}
-var postModules = []func(*Context, []byte) ([]byte, error){}
+var postModules = []func(*Context, interface{}) (interface{}, error){}
 
 func AddPreModule(module func(*Context) error) {
 	preModules = append(preModules, module)
 }
 
-func AddPostModule(module func(*Context, []byte) ([]byte, error)) {
+func AddPostModule(module func(*Context, interface{}) (interface{}, error)) {
 	postModules = append(postModules, module)
 }
 

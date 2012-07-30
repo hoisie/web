@@ -6,7 +6,38 @@ import (
 	"compress/zlib"
 	"io"
 	"strings"
+    "encoding/json"
+    "encoding/xml"
 )
+
+func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
+	ctx.SetHeader("Content-Type", "text/plain", true)
+    
+    if len(ctx.Request.Header["Accept"]) > 0 {
+		for _, accepts := range ctx.Request.Header["Accept"] {
+        if strings.Index(accepts, "application/json") > 0 {
+            response, err := json.Marshal(content)
+            if err != nil {
+                return content, err
+            }
+	        ctx.SetHeader("Content-Type", "application/json", true)
+            return response, nil
+        }
+
+        if strings.Index(accepts, "text/xml") > 0 ||
+            strings.Index(accepts, "application/xml") > 0 {
+            response, err := xml.Marshal(content)
+            if err != nil {
+                return content, err
+            }
+	        ctx.SetHeader("Content-Type", "text/xml", true)
+            return response, nil
+        }
+        }
+    }
+
+    return content, nil
+}
 
 /**
  Attempts to encode the response according to the client's Accept-Encoding

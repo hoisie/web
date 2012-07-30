@@ -358,11 +358,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if len(ret) == 0 {
 			return
 		}
-        sval := ret[0]
+		sval := ret[0]
 
 		// Now we have the content from our response. We should run
 		// our post processing modules now
-        content := sval.Interface()
+		content := sval.Interface()
 		for _, module := range postModules {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
@@ -473,8 +473,8 @@ func AddPostModule(module func(*Context, interface{}) (interface{}, error)) {
 }
 
 func ResetModules() {
-	preModules= []func(*Context) error{}
-	postModules= []func(*Context, interface{}) (interface{}, error){}
+	preModules = []func(*Context) error{}
+	postModules = []func(*Context, interface{}) (interface{}, error){}
 }
 
 // Runs a single request, used for testing

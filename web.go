@@ -40,6 +40,7 @@ func (err WebError) Error() string {
 
 type Context struct {
 	Request *http.Request
+	RawBody []byte
 	Params  map[string]string
 	Server  *Server
 	ResponseWriter
@@ -279,7 +280,7 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
-	ctx := Context{req, map[string]string{}, s, w, nil}
+	ctx := Context{req, nil, map[string]string{}, s, w, nil}
 
 	//log the request
 	var logEntry bytes.Buffer
@@ -292,6 +293,13 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			ctx.Params[k] = v[0]
 		}
 		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+	} else {
+		// If ParseForm was successful, than the Body will be empty
+		var err error
+		ctx.RawBody, err = ioutil.ReadAll(req.Body)
+		if err != nil {
+			ctx.RawBody = make([]byte, 0)
+		}
 	}
 
 	ctx.Server.Logger.Print(logEntry.String())

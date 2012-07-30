@@ -358,29 +358,20 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if len(ret) == 0 {
 			return
 		}
-/*
-		sval := ret[0]
+        sval := ret[0]
 
-		var content []byte
-
-		if sval.Kind() == reflect.String {
-			content = []byte(sval.String())
-		} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
-			content = sval.Interface().([]byte)
-		}
-*/
 		// Now we have the content from our response. We should run
 		// our post processing modules now
+        content := sval.Interface()
 		for _, module := range postModules {
 			// If a module returns an error, we stop process the request
-			content, err := module(&ctx, ret)
+			content, err = module(&ctx, content)
 			if err != nil {
 				return
 			}
 		}
 
-		ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-		ctx.Write(content)
+		ctx.Write(content.([]byte))
 		return
 	}
 
@@ -483,7 +474,7 @@ func AddPostModule(module func(*Context, interface{}) (interface{}, error)) {
 
 func ResetModules() {
 	preModules= []func(*Context) error{}
-	postModules= []func(*Context, []byte) ([]byte, error){}
+	postModules= []func(*Context, interface{}) (interface{}, error){}
 }
 
 // Runs a single request, used for testing

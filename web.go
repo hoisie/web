@@ -461,7 +461,6 @@ func (s *Server) RunSecure(addr string, config tls.Config) error {
 
 	l, err := tls.Listen("tcp", addr, &config)
 	if err != nil {
-		fmt.Println("Listen error : ", err)
 		return err
 	}
 

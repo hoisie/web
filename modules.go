@@ -6,7 +6,9 @@ import (
 	"compress/zlib"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"io"
+	"reflect"
 	"strings"
 )
 
@@ -40,6 +42,11 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 			// Look for an XML request
 			if strings.Index(accepts, "text/xml") >= 0 ||
 				strings.Index(accepts, "application/xml") >= 0 {
+				if reflect.TypeOf(content).Kind() == reflect.Map {
+					ctx.NotAcceptable("Can not encode datatype")
+					err := WebError{"Can not encode datatype"}
+					return content, err
+				}
 				enc = xml.NewEncoder(&encoded)
 				ctx.SetHeader("Content-Type", "text/xml", true)
 			}
@@ -56,7 +63,7 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 
 	// If we don't have a MIME type handler, just return the
 	// original content
-	return content, nil
+	return []byte(content.(string)), nil
 
 }
 

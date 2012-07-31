@@ -72,6 +72,11 @@ func (ctx *Context) NotFound(message string) {
 	ctx.ResponseWriter.Write([]byte(message))
 }
 
+func (ctx *Context) NotAcceptable(message string) {
+	ctx.ResponseWriter.WriteHeader(406)
+	ctx.ResponseWriter.Write([]byte(message))
+}
+
 func (ctx *Context) Unauthorized(message string) {
 	ctx.ResponseWriter.WriteHeader(401)
 	ctx.ResponseWriter.Write([]byte(message))

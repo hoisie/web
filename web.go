@@ -4,6 +4,7 @@ import (
     "bytes"
     "crypto/hmac"
     "crypto/sha1"
+    "crypto/tls"
     "encoding/base64"
     "fmt"
     "io/ioutil"
@@ -419,9 +420,30 @@ func (s *Server) Run(addr string) {
     s.l.Close()
 }
 
+//Runs the web application and serves https requests
+func (s *Server) RunTLS(addr string, config tls.Config) error {
+    s.initServer()
+    mux := http.NewServeMux()
+    mux.Handle("/", s)
+
+    l, err := tls.Listen("tcp", addr, &config)
+    if err != nil {
+        log.Fatal("Listen:", err)
+        return err
+    }
+
+    s.l = l
+    return http.Serve(s.l, mux)
+}
+
 //Runs the web application and serves http requests
 func Run(addr string) {
     mainServer.Run(addr)
+}
+
+//Runs the secure web application and serves https requests
+func RunSecure(addr string, config tls.Config) {
+    mainServer.RunTLS(addr, config)
 }
 
 //Stops the web server

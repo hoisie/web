@@ -12,7 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	"net/http/pprof"
+	//"net/http/pprof"
 	"net/url"
 	"os"
 	"path"
@@ -369,9 +369,15 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			//there was an error or panic while calling the handler
 			ctx.Abort(500, "Server Error")
 		}
+
 		if len(ret) == 0 {
+            fmt.Println(ret)
 			return
 		}
+        if !ret[1].IsNil() {
+            // And error happened in the handler
+            return
+        }
 		sval := ret[0]
 
 		// Now we have the content from our response. We should run
@@ -381,11 +387,14 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
+                fmt.Println("error! " , err)
 				return
 			}
 		}
 
-		ctx.Write(content.([]byte))
+        if content != nil {
+    		ctx.Write(content.([]byte))
+        }
 		return
 	}
 
@@ -441,10 +450,12 @@ func (s *Server) Run(addr string) {
 	s.initServer()
 
 	mux := http.NewServeMux()
+/*
 	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
 	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+*/
 	mux.Handle("/", s)
 
 	s.Logger.Printf("web.go serving %s\n", addr)

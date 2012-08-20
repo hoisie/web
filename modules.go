@@ -8,6 +8,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -50,6 +51,28 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 				enc = xml.NewEncoder(&encoded)
 				ctx.SetHeader("Content-Type", "text/xml", true)
 			}
+			if strings.Index(accepts, "video/mp4") >= 0 {
+				// Setup the connection to receive a vdeo stream
+				ctx.SetHeader("Content-Type", "video/mp4", true)
+				ctx.SetHeader("Content-Disposition", "inline; filename=motion.mpeg4", true)
+
+				// We should be passed a File pointer to stream from
+				var c *os.File
+				t := reflect.TypeOf(content)
+				if t.Kind() != reflect.Ptr || t.Elem().String() != "os.File" {
+                    ctx.Abort(500, "Can not stream data source")
+					return nil, WebError{"Can not stream data source"}
+				}
+
+                // Hand out the correct size
+				c = content.(*os.File)
+				stat, _ := c.Stat()
+				ctx.SetHeader("Content-Length", fmt.Sprintf("%d", stat.Size()), true)
+
+                // Do a buffer copy, which will stream the data to the client
+				io.Copy(ctx.ResponseWriter, c)
+				return nil, nil
+			}
 		}
 	}
 
@@ -63,6 +86,7 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 
 	// If we don't have a MIME type handler, just return the
 	// original content
+	return content, nil
 	return []byte(content.(string)), nil
 
 }

@@ -15,6 +15,8 @@ web.go should be familiar to people who've developed websites with higher-level 
 ## Specific to this fork
 
 Updates
+* Add TLS server support
+* Add basic marshaling of return types (json, xml)
 * Add module structure for Pre- and Post- request handling
 * Add encoding module to handle gzip and deflate
 * Unauthorized respose added
@@ -22,6 +24,8 @@ Updates
 * Modules MUST return an error or nil when finished. If an error is returned, then processing stops and the request is finished. This allows for immediate authentication checks that will kill the request on failure
 
 
+Initial TLS support is addded to this branch. A security expert should
+probably sign off on this before it becomes a standard.
 
 I've added the following tweaks so far
 

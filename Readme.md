@@ -2,6 +2,11 @@
 
 web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 
 
+## WAIT
+
+Due to a work deadline on 8/24/2012 I had to merge some pretty horrible stuff into master. I will be fixing it this weekend, just an FYI.
+
+
 ## Overview
 
 web.go should be familiar to people who've developed websites with higher-level web frameworks like sinatra or web.py. It is designed to be a lightweight web framework that doesn't impose any scaffolding on the user. Some features include:

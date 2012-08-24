@@ -6,6 +6,7 @@ import (
 	"compress/zlib"
 	"encoding/json"
 	"encoding/xml"
+    //"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -50,11 +51,22 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 				}
 				enc = xml.NewEncoder(&encoded)
 				ctx.SetHeader("Content-Type", "text/xml", true)
-			}
-			if strings.Index(accepts, "video/mp4") >= 0 {
+			} else if strings.Index(accepts, "image/jpeg") >= 0 {
+                ctx.SetHeader("Content-Type", "image/jpeg", true)
+                ctx.SetHeader("Content-Length", fmt.Sprintf("%d", len(content.([]byte))), true)
+                return content, nil
+            } else if strings.Index(accepts, "video/") >= 0 {
 				// Setup the connection to receive a vdeo stream
-				ctx.SetHeader("Content-Type", "video/mp4", true)
-				ctx.SetHeader("Content-Disposition", "inline; filename=motion.mpeg4", true)
+                fmt.Println("Starting stream...")
+                if strings.Index(accepts, "video/mp4") >= 0 {
+    				ctx.SetHeader("Content-Type", "video/mp4", true)
+				    ctx.SetHeader("Content-Disposition", "inline; filename=\"motion.mp4\"", true)
+                } else {
+    				ctx.SetHeader("Content-Type", "video/mp4", true)
+				    ctx.SetHeader("Content-Disposition", "inline; filename=\"motion.mp4\"", true)
+                }
+				ctx.SetHeader("Connection", "close", true)
+				ctx.SetHeader("Accept-Ranges", "bytes", true)
 
 				// We should be passed a File pointer to stream from
 				var c *os.File
@@ -68,9 +80,19 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 				c = content.(*os.File)
 				stat, _ := c.Stat()
 				ctx.SetHeader("Content-Length", fmt.Sprintf("%d", stat.Size()), true)
+                contentrange := fmt.Sprintf("bytes 0-%d", stat.Size())
+				ctx.SetHeader("Content-Range", contentrange, true)
 
                 // Do a buffer copy, which will stream the data to the client
-				io.Copy(ctx.ResponseWriter, c)
+                fmt.Println("Starting copy")
+//                enc := base64.NewEncoder(base64.StdEncoding, ctx.ResponseWriter)
+//				n, err := io.Copy(enc, c)
+				n, err := io.Copy(ctx.ResponseWriter, c)
+                if err != nil {
+                    fmt.Println(err)
+                    return nil, WebError{err.Error()}
+                }
+                fmt.Println("Done copying ", n)
 				return nil, nil
 			}
 		}
@@ -87,8 +109,6 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 	// If we don't have a MIME type handler, just return the
 	// original content
 	return content, nil
-	return []byte(content.(string)), nil
-
 }
 
 /**

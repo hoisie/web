@@ -62,8 +62,8 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
     				ctx.SetHeader("Content-Type", "video/mp4", true)
 				    ctx.SetHeader("Content-Disposition", "inline; filename=\"motion.mp4\"", true)
                 } else {
-    				ctx.SetHeader("Content-Type", "video/mp4", true)
-				    ctx.SetHeader("Content-Disposition", "inline; filename=\"motion.mp4\"", true)
+    				ctx.SetHeader("Content-Type", "video/ogg", true)
+				    ctx.SetHeader("Content-Disposition", "inline; filename=\"motion.ogg\"", true)
                 }
 				ctx.SetHeader("Connection", "close", true)
 				ctx.SetHeader("Accept-Ranges", "bytes", true)

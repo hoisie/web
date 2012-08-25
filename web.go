@@ -196,6 +196,15 @@ func init() {
 		//TODO for robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
+
+	/* Handle different Accept: types */
+	AddPostModule(MarshalResponse)
+	RegisterMimeParser("application/json", JSONparser)
+	RegisterMimeParser("application/xml", XMLparser)
+	RegisterMimeParser("text/xml", XMLparser)
+
+	/* Handle different Accept-Encoding: types */
+	AddPostModule(EncodeResponse)
 }
 
 type route struct {
@@ -371,13 +380,13 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		}
 
 		if len(ret) == 0 {
-            fmt.Println(ret)
+			fmt.Println(ret)
 			return
 		}
-        if !ret[1].IsNil() {
-            // And error happened in the handler
-            return
-        }
+		if !ret[1].IsNil() {
+			// And error happened in the handler
+			return
+		}
 		sval := ret[0]
 
 		// Now we have the content from our response. We should run
@@ -387,14 +396,19 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
-                fmt.Println("error! " , err)
+				fmt.Println("error! ", err)
 				return
 			}
 		}
 
-        if content != nil {
-    		ctx.Write(content.([]byte))
-        }
+		if content != nil {
+			typed_content, ok := content.([]byte)
+			if ok {
+				ctx.Write(typed_content)
+			} else {
+				ctx.Abort(406, "Could not marshal response")
+			}
+		}
 		return
 	}
 
@@ -450,12 +464,12 @@ func (s *Server) Run(addr string) {
 	s.initServer()
 
 	mux := http.NewServeMux()
-/*
-	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-*/
+	/*
+		mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+		mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+		mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+		mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	*/
 	mux.Handle("/", s)
 
 	s.Logger.Printf("web.go serving %s\n", addr)

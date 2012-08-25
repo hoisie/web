@@ -383,7 +383,10 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			fmt.Println(ret)
 			return
 		}
-		if !ret[1].IsNil() {
+
+		// Backwards compatability, if there is only one return,
+		// assume there was no error
+		if len(ret) > 1 && !ret[1].IsNil() {
 			// And error happened in the handler
 			return
 		}

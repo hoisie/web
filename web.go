@@ -202,6 +202,7 @@ func init() {
 	RegisterMimeParser("application/json", JSONparser)
 	RegisterMimeParser("application/xml", XMLparser)
 	RegisterMimeParser("text/xml", XMLparser)
+	RegisterMimeParser("image/jpeg", Binaryparser)
 
 	/* Handle different Accept-Encoding: types */
 	AddPostModule(EncodeResponse)

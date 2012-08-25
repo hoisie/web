@@ -7,10 +7,12 @@ import (
 	//	"encoding/json"
 	//	"encoding/xml"
 	//"encoding/base64"
-	//	"fmt"
+	"fmt"
 	"io"
 	//	"os"
 	//	"reflect"
+	"mime"
+	"path"
 	"strings"
 )
 
@@ -25,10 +27,19 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 
 	if len(ctx.Request.Header["Accept"]) > 0 {
 		for _, accepts := range ctx.Request.Header["Accept"] {
+
+			/**
+			If no specific type is specified, we will try to guess based
+			on the extension of the resource. */
+			if accepts == "*/*" {
+				mimetype := mime.TypeByExtension(path.Ext(ctx.Request.URL.Path))
+				accepts = mimetype
+			}
 			encoder, ok := Encoders[accepts]
 			if ok {
 				ctx.SetHeader("Content-Type", accepts, true)
 				encoded, err := encoder(content)
+				ctx.SetHeader("Content-Length", fmt.Sprintf("%d", len(encoded)), true)
 				if err != nil {
 					return nil, err
 				}
@@ -43,22 +54,6 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 			var encoded bytes.Buffer
 			var enc Encoder
 
-					// Look for a JSON request
-					if strings.Index(accepts, "application/json") >= 0 {
-						enc = json.NewEncoder(&encoded)
-						ctx.SetHeader("Content-Type", "application/json", true)
-					}
-
-					// Look for an XML request
-					if strings.Index(accepts, "text/xml") >= 0 ||
-						strings.Index(accepts, "application/xml") >= 0 {
-						if reflect.TypeOf(content).Kind() == reflect.Map {
-							ctx.NotAcceptable("Can not encode datatype")
-							err := WebError{"Can not encode datatype"}
-							return content, err
-						}
-						enc = xml.NewEncoder(&encoded)
-						ctx.SetHeader("Content-Type", "text/xml", true)
 					} else if strings.Index(accepts, "image/jpeg") >= 0 {
 		                ctx.SetHeader("Content-Type", "image/jpeg", true)
 		                ctx.SetHeader("Content-Length", fmt.Sprintf("%d", len(content.([]byte))), true)

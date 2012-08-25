@@ -44,3 +44,7 @@ func XMLparser(content interface{}) ([]byte, error) {
 
 	return encoded.Bytes(), nil
 }
+
+func Binaryparser(content interface{}) ([]byte, error) {
+	return content.([]byte), nil
+}

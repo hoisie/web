@@ -13,7 +13,7 @@ var Encoders = make(map[string]MimeEncoder, 100)
 /**
 Register a new mimetype and how it should be encoded
 */
-func RegisterMimeEncoder(mimetype string, enc MimeEncoder) error {
+func RegisterMimeParser(mimetype string, enc MimeEncoder) error {
 	Encoders[mimetype] = enc
 	return nil
 }
@@ -21,7 +21,7 @@ func RegisterMimeEncoder(mimetype string, enc MimeEncoder) error {
 /**
 Default encoders
 */
-func JSONencoder(content interface{}) ([]byte, error) {
+func JSONparser(content interface{}) ([]byte, error) {
 	var encoded bytes.Buffer
 
 	enc := json.NewEncoder(&encoded)
@@ -33,7 +33,7 @@ func JSONencoder(content interface{}) ([]byte, error) {
 	return encoded.Bytes(), nil
 }
 
-func XMLencoder(content interface{}) ([]byte, error) {
+func XMLparser(content interface{}) ([]byte, error) {
 	var encoded bytes.Buffer
 
 	enc := xml.NewEncoder(&encoded)

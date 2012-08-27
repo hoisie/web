@@ -2,6 +2,7 @@ package main
 
 import (
     "github.com/rday/web"
+    "fmt"
 )
 
 /**
@@ -9,6 +10,7 @@ import (
 */
 func AuthHandler(ctx *web.Context) error {
     ctx.User = "Passed from AuthHandler"
+    fmt.Println(ctx.Request.Header)
     return nil
 }
 

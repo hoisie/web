@@ -32,7 +32,8 @@ type ResponseWriter interface {
 }
 
 type WebError struct {
-	Err string
+	Code int
+	Err  string
 }
 
 func (err WebError) Error() string {
@@ -360,7 +361,9 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		// before we start the request
 		for _, module := range preModules {
 			// If a module returns an error, we stop process the request
-			if module(&ctx) != nil {
+			err := module(&ctx)
+			if err != nil {
+				ctx.Abort(err.(*WebError).Code, err.Error())
 				return
 			}
 		}
@@ -377,11 +380,14 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		ret, err := s.safelyCall(route.handler, args)
 		if err != nil {
 			//there was an error or panic while calling the handler
+			s.Logger.Printf("Handler returned error: %v", err)
 			ctx.Abort(500, "Server Error")
+			return
 		}
 
 		if len(ret) == 0 {
-			fmt.Println(ret)
+			s.Logger.Printf("Handler gave 0 return values")
+			ctx.Abort(500, "Server Error")
 			return
 		}
 
@@ -400,7 +406,8 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
-				fmt.Println("error! ", err)
+				s.Logger.Printf("PostModule Error: %v", err, err)
+				ctx.Abort(err.(*WebError).Code, err.(*WebError).Error())
 				return
 			}
 		}
@@ -408,7 +415,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if content != nil {
 			typed_content, ok := content.([]byte)
 			if ok {
-				ctx.Write(typed_content)
+				_, err := ctx.Write(typed_content)
+				if err != nil {
+					s.Logger.Printf("Content write error: %v", err)
+					ctx.Abort(500, err.Error())
+				}
 			} else {
 				ctx.Abort(406, "Could not marshal response")
 			}

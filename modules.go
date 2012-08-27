@@ -17,8 +17,6 @@ determine what the best Content-Type is for the particular data?
 Right now we would just send the original content
 */
 func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
-	ctx.SetHeader("Content-Type", "text/plain", true)
-
 	if len(ctx.Request.Header["Accept"]) > 0 {
 		for _, accepts := range ctx.Request.Header["Accept"] {
 
@@ -29,6 +27,7 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 				mimetype := mime.TypeByExtension(path.Ext(ctx.Request.URL.Path))
 				accepts = mimetype
 			}
+
 			encoder, ok := Encoders[accepts]
 			if ok {
 				encoded, err := encoder(content)
@@ -43,7 +42,8 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 		}
 	}
 
-	return content, nil
+	// If no mimetype was found, just try to convert to []byte
+	return []byte(content.(string)), nil
 }
 
 /**

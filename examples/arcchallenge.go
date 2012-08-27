@@ -1,10 +1,10 @@
 package main
 
 import (
-    "github.com/hoisie/web.go"
-    "rand"
+    "github.com/rday/web"
     "strconv"
     "time"
+    "math/rand"
 )
 
 var form = `<form action="say" method="POST"><input name="said"><input type="submit"></form>`
@@ -12,13 +12,13 @@ var form = `<form action="say" method="POST"><input name="said"><input type="sub
 var users = map[string]string{}
 
 func main() {
-    rand.Seed(time.Nanoseconds())
+    rand.Seed(time.Now().UnixNano())
     web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
     web.Get("/said", func() string { return form })
     web.Post("/say", func(ctx *web.Context) string {
-        uid := strconv.Itoa64(rand.Int63())
+        uid := strconv.FormatInt(rand.Int63(), 10)
         ctx.SetSecureCookie("user", uid, 3600)
-        users[uid] = ctx.Request.Params["said"]
+        users[uid] = ctx.Params["said"]
         return `<a href="/final">Click Here</a>`
     })
     web.Get("/final", func(ctx *web.Context) string {

@@ -112,8 +112,8 @@ func (ctx *Context) SetCookie(name string, value string, age int64) {
 	} else {
 		utctime = time.Unix(time.Now().Unix()+age, 0)
 	}
-	cookie := fmt.Sprintf("%s=%s; expires=%s", name, value, webTime(utctime))
-	ctx.SetHeader("Set-Cookie", cookie, false)
+	cookie := http.Cookie{Name: name, Value: value, Expires: utctime}
+	ctx.SetHeader("Set-Cookie", cookie.String(), false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {

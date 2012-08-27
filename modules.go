@@ -4,13 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	//	"encoding/json"
-	//	"encoding/xml"
-	//"encoding/base64"
-	"fmt"
 	"io"
-	//	"os"
-	//	"reflect"
 	"mime"
 	"path"
 	"strings"
@@ -39,7 +33,7 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 			if ok {
 				encoded, err := encoder(content)
 				ctx.SetHeader("Content-Type", accepts, true)
-				ctx.SetHeader("Content-Length", fmt.Sprintf("%d", len(encoded)), true)
+				//ctx.SetHeader("Content-Length", fmt.Sprintf("%d", len(encoded)), true)
 				if err != nil {
 					ctx.Server.Logger.Printf("MarshalResponse encoder failed: %s", err)
 					return nil, &WebError{500, err.Error()}

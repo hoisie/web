@@ -257,6 +257,7 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
 		if err := recover(); err != nil {
 			if !s.Config.RecoverPanic {
 				// go back to panic
+				s.Logger.Printf("Panic: %v", err)
 				panic(err)
 			} else {
 				e = err
@@ -363,7 +364,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			err := module(&ctx)
 			if err != nil {
-				ctx.Abort(err.(*WebError).Code, err.Error())
+				ctx.Abort(err.(WebError).Code, err.Error())
 				return
 			}
 		}
@@ -381,7 +382,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if err != nil {
 			//there was an error or panic while calling the handler
 			s.Logger.Printf("Handler returned error: %v", err)
-			ctx.Abort(500, "Server Error")
+			ctx.Abort(err.(WebError).Code, err.(WebError).Error())
 			return
 		}
 
@@ -406,8 +407,8 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
-				s.Logger.Printf("PostModule Error: %v", err, err)
-				ctx.Abort(err.(*WebError).Code, err.(*WebError).Error())
+				s.Logger.Printf("PostModule Error: %v", err)
+				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
 				return
 			}
 		}

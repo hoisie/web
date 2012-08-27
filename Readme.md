@@ -1,7 +1,3 @@
-## WAIT
-
-Due to a work deadline on 8/24/2012 I had to merge some pretty horrible stuff into master. I will be fixing it this weekend, just an FYI. Monitor the "cleanup" branch to see the work in progress
-
 # web.go
 
 web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 
@@ -21,6 +17,9 @@ web.go should be familiar to people who've developed websites with higher-level 
 ## Specific to this fork
 
 Updates
+* Added WebError for cleaner returns in handlers
+* Added content-type and content-encoding to be in module list by default
+* New method of creating content parsers
 * Add TLS server support
 * Add basic marshaling of return types (json, xml)
 * Add module structure for Pre- and Post- request handling

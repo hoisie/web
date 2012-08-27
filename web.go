@@ -32,7 +32,8 @@ type ResponseWriter interface {
 }
 
 type WebError struct {
-	Err string
+	Code int
+	Err  string
 }
 
 func (err WebError) Error() string {
@@ -196,6 +197,16 @@ func init() {
 		//TODO for robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
+
+	/* Handle different Accept: types */
+	AddPostModule(MarshalResponse)
+	RegisterMimeParser("application/json", JSONparser)
+	RegisterMimeParser("application/xml", XMLparser)
+	RegisterMimeParser("text/xml", XMLparser)
+	RegisterMimeParser("image/jpeg", Binaryparser)
+
+	/* Handle different Accept-Encoding: types */
+	AddPostModule(EncodeResponse)
 }
 
 type route struct {
@@ -246,6 +257,7 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
 		if err := recover(); err != nil {
 			if !s.Config.RecoverPanic {
 				// go back to panic
+				s.Logger.Printf("Panic: %v", err)
 				panic(err)
 			} else {
 				e = err
@@ -350,7 +362,9 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		// before we start the request
 		for _, module := range preModules {
 			// If a module returns an error, we stop process the request
-			if module(&ctx) != nil {
+			err := module(&ctx)
+			if err != nil {
+				ctx.Abort(err.(WebError).Code, err.Error())
 				return
 			}
 		}
@@ -367,17 +381,23 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		ret, err := s.safelyCall(route.handler, args)
 		if err != nil {
 			//there was an error or panic while calling the handler
-			ctx.Abort(500, "Server Error")
+			s.Logger.Printf("Handler returned error: %v", err)
+			ctx.Abort(err.(WebError).Code, err.(WebError).Error())
+			return
 		}
 
 		if len(ret) == 0 {
-            fmt.Println(ret)
+			s.Logger.Printf("Handler gave 0 return values")
+			ctx.Abort(500, "Server Error")
 			return
 		}
-        if !ret[1].IsNil() {
-            // And error happened in the handler
-            return
-        }
+
+		// Backwards compatability, if there is only one return,
+		// assume there was no error
+		if len(ret) > 1 && !ret[1].IsNil() {
+			// And error happened in the handler
+			return
+		}
 		sval := ret[0]
 
 		// Now we have the content from our response. We should run
@@ -387,14 +407,24 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			// If a module returns an error, we stop process the request
 			content, err = module(&ctx, content)
 			if err != nil {
-                fmt.Println("error! " , err)
+				s.Logger.Printf("PostModule Error: %v", err)
+				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
 				return
 			}
 		}
 
-        if content != nil {
-    		ctx.Write(content.([]byte))
-        }
+		if content != nil {
+			typed_content, ok := content.([]byte)
+			if ok {
+				_, err := ctx.Write(typed_content)
+				if err != nil {
+					s.Logger.Printf("Content write error: %v", err)
+					ctx.Abort(500, err.Error())
+				}
+			} else {
+				ctx.Abort(406, "Could not marshal response")
+			}
+		}
 		return
 	}
 
@@ -450,12 +480,12 @@ func (s *Server) Run(addr string) {
 	s.initServer()
 
 	mux := http.NewServeMux()
-/*
-	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-*/
+	/*
+		mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+		mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+		mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+		mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	*/
 	mux.Handle("/", s)
 
 	s.Logger.Printf("web.go serving %s\n", addr)

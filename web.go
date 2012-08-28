@@ -262,7 +262,7 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
 			} else {
 				e = err
 				resp = nil
-				s.Logger.Println("Handler crashed with error", err)
+				s.Logger.Println("Handler crashed with error: ", err)
 				for i := 1; ; i += 1 {
 					_, file, line, ok := runtime.Caller(i)
 					if !ok {
@@ -379,12 +379,6 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		}
 
 		ret, err := s.safelyCall(route.handler, args)
-		if err != nil {
-			//there was an error or panic while calling the handler
-			s.Logger.Printf("Handler returned error: %v", err)
-			ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-			return
-		}
 
 		if len(ret) == 0 {
 			s.Logger.Printf("Handler gave 0 return values")
@@ -395,7 +389,10 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		// Backwards compatability, if there is only one return,
 		// assume there was no error
 		if len(ret) > 1 && !ret[1].IsNil() {
-			// And error happened in the handler
+			err = ret[1].Interface()
+			//there was an error or panic while calling the handler
+			s.Logger.Printf("Handler returned error: %v", err)
+			ctx.Abort(err.(WebError).Code, err.(WebError).Error())
 			return
 		}
 		sval := ret[0]

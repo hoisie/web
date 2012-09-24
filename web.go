@@ -323,9 +323,14 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
 	} else {
 		// If ParseForm was successful, than the Body will be empty
-		var err error
-		ctx.RawBody, err = ioutil.ReadAll(req.Body)
-		if err != nil {
+		if req.Body != nil {
+			var err error
+			ctx.RawBody, err = ioutil.ReadAll(req.Body)
+			if err != nil {
+				req.Body = nil
+			}
+		}
+		if req.Body == nil {
 			ctx.RawBody = make([]byte, 0)
 		}
 	}

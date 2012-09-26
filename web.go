@@ -366,6 +366,8 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
 var Config = &ServerConfig{
     RecoverPanic: true,
+    Cert: "",
+    Key: "",
 }
 
 var mainServer = NewServer()
@@ -377,6 +379,7 @@ type Server struct {
     Env    map[string]interface{}
     //save the listener so it can be closed
     l   net.Listener
+
 }
 
 func NewServer() *Server {
@@ -418,12 +421,43 @@ func (s *Server) Run(addr string) {
     err = http.Serve(s.l, mux)
     s.l.Close()
 }
+func (s *Server) RunTLS(addr string,cert string,key string) {
+    s.initServer()
+
+    mux := http.NewServeMux()
+    mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+    mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+    mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+    mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+    mux.Handle("/", s)
+
+    s.Logger.Printf("web.go serving %s\n", addr)
+/*
+    l, err := net.Listen("tcp", addr)
+    if err != nil {
+        log.Fatal("ListenAndServe:", err)
+    }
+    s.l = l
+    err = http.Serve(s.l, mux)
+    s.l.Close()
+*/
+    err := http.ListenAndServeTLS(addr,cert,key,mux)
+    if err != nil {
+        log.Fatal("ListenAndServe:", err)
+    }
+  
+}
 
 //Runs the web application and serves http requests
 func Run(addr string) {
     mainServer.Run(addr)
 }
 
+func RunTLS(addr string,cert string,key string) {
+
+    mainServer.RunTLS(addr,cert,key)
+
+}
 //Stops the web server
 func (s *Server) Close() {
     if s.l != nil {
@@ -513,6 +547,8 @@ type ServerConfig struct {
     Port         int
     CookieSecret string
     RecoverPanic bool
+    Cert	 string
+    Key	         string
 }
 
 func webTime(t time.Time) string {

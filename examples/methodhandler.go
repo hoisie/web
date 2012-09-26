@@ -1,7 +1,7 @@
 package main
 
 import (
-    "github.com/hoisie/web.go"
+    "github.com/jmrobles/web.go"
 )
 
 type Greeter struct {

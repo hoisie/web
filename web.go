@@ -47,6 +47,8 @@ type Context struct {
 	Server  *Server
 	ResponseWriter
 	User interface{}
+	// False iff 0 bytes of body data have been written so far
+	wroteData bool
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -256,6 +258,11 @@ func (c *responseWriter) Close() {
 	}
 }
 
+func (ctx *Context) Write(data []byte) (int, error) {
+	ctx.wroteData = true
+	return ctx.ResponseWriter.Write(data)
+}
+
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 	w := responseWriter{c}
 	s.routeHandler(req, &w)
@@ -308,7 +315,7 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
-	ctx := Context{req, nil, map[string]string{}, s, w, nil}
+	ctx := Context{req, nil, map[string]string{}, s, w, nil, false}
 
 	//log the request
 	var logEntry bytes.Buffer
@@ -419,13 +426,18 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		// Now we have the content from our response. We should run
 		// our post processing modules now
 		content := sval.Interface()
-		for _, module := range postModules {
-			// If a module returns an error, we stop process the request
-			content, err = module(&ctx, content)
-			if err != nil {
-				s.Logger.Printf("PostModule Error: %v", err)
-				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-				return
+		if ctx.wroteData {
+			// Data was already sent to the client; do not transform anything
+			content = []byte(content.(string))
+		} else {
+			for _, module := range postModules {
+				// If a module returns an error, we stop process the request
+				content, err = module(&ctx, content)
+				if err != nil {
+					s.Logger.Printf("PostModule Error: %v", err)
+					ctx.Abort(err.(WebError).Code, err.(WebError).Error())
+					return
+				}
 			}
 		}
 

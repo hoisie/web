@@ -596,7 +596,7 @@ func RunScgi(addr string) {
 	mainServer.RunScgi(addr)
 }
 
-//Runs the web application and serves scgi requests for this Server object.
+//Runs the web application and serves fcgi requests for this Server object.
 func (s *Server) RunFcgi(addr string) {
 	s.initServer()
 	s.Logger.Printf("web.go serving fcgi %s\n", addr)

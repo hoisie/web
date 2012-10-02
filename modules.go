@@ -7,8 +7,8 @@ import (
 	"io"
 	"mime"
 	"path"
+	"reflect"
 	"strings"
-    "reflect"
 )
 
 /**
@@ -44,14 +44,14 @@ func MarshalResponse(ctx *Context, content interface{}) (interface{}, error) {
 	}
 
 	// If no mimetype was found, just try to convert to []byte
-    if content != nil {
-        if reflect.TypeOf(content).String() == "string" {
-        	return []byte(content.(string)), nil
-        } else {
-            return content, nil
-        }
-    }
-    return []byte(""), nil
+	if content != nil {
+		if reflect.TypeOf(content).String() == "string" {
+			return []byte(content.(string)), nil
+		} else {
+			return content, nil
+		}
+	}
+	return []byte(""), nil
 }
 
 /**

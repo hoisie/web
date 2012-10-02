@@ -413,8 +413,8 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		if len(ret) > 1 && !ret[1].IsNil() {
 			err = ret[1].Interface()
 			//there was an error or panic while calling the handler
-			s.Logger.Printf("Handler returned error: %v", err)
-			if reflect.TypeOf(err).String() == "WebError" {
+			s.Logger.Printf("Handler returned error: (%s)%v", reflect.TypeOf(err).String(), err)
+			if reflect.TypeOf(err).String() == "web.WebError" {
 				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
 			} else {
 				ctx.Abort(500, fmt.Sprintf("%v", err))

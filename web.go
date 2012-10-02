@@ -414,11 +414,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			err = ret[1].Interface()
 			//there was an error or panic while calling the handler
 			s.Logger.Printf("Handler returned error: %v", err)
-            if reflect.TypeOf(err).String() == "WebError" {
-    			ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-            } else {
-                ctx.Abort(500, fmt.Sprintf("%v", err))
-            }
+			if reflect.TypeOf(err).String() == "WebError" {
+				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
+			} else {
+				ctx.Abort(500, fmt.Sprintf("%v", err))
+			}
 			return
 		}
 		sval := ret[0]

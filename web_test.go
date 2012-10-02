@@ -123,7 +123,7 @@ func (s *StructHandler) method3(ctx *Context, b string) string {
 
 //initialize the routes
 func init() {
-	f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0644)
+	f, _ := os.OpenFile("out" /*os.DevNull*/, os.O_RDWR, 0644)
 	mainServer.SetLogger(log.New(f, "", 0))
 	Get("/", func() string { return "index" })
 	Get("/panic", func() { panic(0) })
@@ -139,7 +139,10 @@ func init() {
 		return ""
 	})
 
-	Get("/error/notfound/(.*)", func(ctx *Context, message string) { ctx.NotFound(message) })
+	Get("/error/notfound/(.*)", func(ctx *Context, message string) (string, error) {
+		fmt.Println(message)
+		return "", WebError{404, message}
+	})
 
 	Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
 		n, _ := strconv.Atoi(code)
@@ -147,7 +150,7 @@ func init() {
 		return ""
 	})
 
-	Get("/writetest", func(ctx *Context) { ctx.WriteString("hello") })
+	Get("/writetest", func(ctx *Context) (string, error) { return "hello", nil })
 
 	Post("/securecookie/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
 		ctx.SetSecureCookie(name, val, 60)
@@ -178,13 +181,14 @@ func init() {
 		return data
 	})
 
-	Post("/parsejson", func(ctx *Context) string {
-		var tmp = struct {
-			A string
-			B string
-		}{}
-		json.NewDecoder(ctx.Request.Body).Decode(&tmp)
-		return tmp.A + " " + tmp.B
+	type tmptype struct {
+		A string `json:"a"`
+		B string `json:"b"`
+	}
+	Post("/parsejson", func(ctx *Context) (tmptype, error) {
+		tmp := tmptype{"hello", "world"}
+		//json.NewDecoder(ctx.Request.Body).Decode(&tmp)
+		return tmp, nil
 	})
 
 	//s := &StructHandler{"a"}
@@ -217,7 +221,7 @@ var tests = []Test{
 	{"GET", "/panic", nil, "", 500, "Server Error"},
 	{"GET", "/json?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
 	{"GET", "/jsonbytes?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
-	{"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, "hello world"},
+	{"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}, "Accept": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, `{"a":"hello","b":"world"}`},
 	//{"GET", "/testenv", "", 200, "hello world"},
 }
 
@@ -256,6 +260,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 func TestRouting(t *testing.T) {
 	for _, test := range tests {
+		fmt.Println("Using %v", test.path)
 		resp := getTestResponse(test.method, test.path, test.body, test.headers, nil)
 
 		if resp.statusCode != test.expectedStatus {

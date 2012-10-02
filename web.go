@@ -52,37 +52,37 @@ type Context struct {
 }
 
 func (ctx *Context) WriteString(content string) {
-	ctx.ResponseWriter.Write([]byte(content))
+	ctx.Write([]byte(content))
 }
 
 func (ctx *Context) Abort(status int, body string) {
-	ctx.ResponseWriter.WriteHeader(status)
-	ctx.ResponseWriter.Write([]byte(body))
+	ctx.WriteHeader(status)
+	ctx.Write([]byte(body))
 }
 
 func (ctx *Context) Redirect(status int, url_ string) {
-	ctx.ResponseWriter.Header().Set("Location", url_)
-	ctx.ResponseWriter.WriteHeader(status)
-	ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
+	ctx.Header().Set("Location", url_)
+	ctx.WriteHeader(status)
+	ctx.Write([]byte("Redirecting to: " + url_))
 }
 
 func (ctx *Context) NotModified() {
-	ctx.ResponseWriter.WriteHeader(304)
+	ctx.WriteHeader(304)
 }
 
 func (ctx *Context) NotFound(message string) {
-	ctx.ResponseWriter.WriteHeader(404)
-	ctx.ResponseWriter.Write([]byte(message))
+	ctx.WriteHeader(404)
+	ctx.Write([]byte(message))
 }
 
 func (ctx *Context) NotAcceptable(message string) {
-	ctx.ResponseWriter.WriteHeader(406)
-	ctx.ResponseWriter.Write([]byte(message))
+	ctx.WriteHeader(406)
+	ctx.Write([]byte(message))
 }
 
 func (ctx *Context) Unauthorized(message string) {
-	ctx.ResponseWriter.WriteHeader(401)
-	ctx.ResponseWriter.Write([]byte(message))
+	ctx.WriteHeader(401)
+	ctx.Write([]byte(message))
 }
 
 //Sets the content type by extension, as defined in the mime package. 

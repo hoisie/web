@@ -315,7 +315,7 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
-	ctx := Context{req, nil, map[string]string{}, s, w, nil, false}
+	ctx := Context{req, nil, map[string]string{}, s, w, s.User, false}
 
 	//log the request
 	var logEntry bytes.Buffer
@@ -483,6 +483,8 @@ type Server struct {
 	Env    map[string]interface{}
 	//save the listener so it can be closed
 	l net.Listener
+	// Passed verbatim to every handler on every request
+	User interface{}
 }
 
 func NewServer() *Server {

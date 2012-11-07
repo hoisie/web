@@ -315,7 +315,15 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
-	ctx := Context{req, nil, map[string]string{}, s, w, s.User, false}
+	ctx := Context{
+		Request:        req,
+		RawBody:        nil,
+		Params:         map[string]string{},
+		Server:         s,
+		ResponseWriter: w,
+		User:           s.User,
+		wroteData:      false,
+	}
 
 	//log the request
 	var logEntry bytes.Buffer

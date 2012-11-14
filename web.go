@@ -298,6 +298,14 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
         return
     }
 
+    if (req.Method == "OPTIONS"){
+	ctx.SetHeader("Access-Control-Allow-Origin","*",true)
+	ctx.SetHeader("Access-Control-Allow-Methods","HEAD,GET,PUT,DELETE,OPTIONS",true)
+        ctx.SetHeader("Content-Length","0", true)
+	ctx.SetHeader("Access-Control-Allow-Headers","content-type",true)
+	return
+    }
+
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 

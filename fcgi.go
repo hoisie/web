@@ -1,6 +1,7 @@
 package web
 
 import (
+<<<<<<< HEAD
 	"bufio"
 	"bytes"
 	"encoding/binary"
@@ -315,4 +316,30 @@ func (s *Server) listenAndServeFcgi(addr string) error {
 		go s.handleFcgiConnection(fd)
 	}
 	return nil
+=======
+    "net"
+    "net/http/fcgi"
+    "strings"
+)
+
+func (s *Server) listenAndServeFcgi(addr string) error {
+    var l net.Listener
+    var err error
+
+    //if the path begins with a "/", assume it's a unix address
+    if strings.HasPrefix(addr, "/") {
+        l, err = net.Listen("unix", addr)
+    } else {
+        l, err = net.Listen("tcp", addr)
+    }
+
+    //save the listener so it can be closed
+    s.l = l
+
+    if err != nil {
+        s.Logger.Println("FCGI listen error", err.Error())
+        return err
+    }
+    return fcgi.Serve(l, s)
+>>>>>>> e5b7935f2c120e1ca11105c8648365017d58b0be
 }

@@ -349,7 +349,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
-	staticDirs := s.Config.StaticDirs //Erik: multiple static dirs
+	staticDirs := s.Config.StaticDirs
 	if len(staticDirs) == 0 {
 		staticDirs = []string{defaultStaticDir()}
 	}
@@ -458,7 +458,7 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	}
 
 	// try to serve index.html || index.htm
-	for _, staticDir := range staticDirs { //Erik: multiple static dirs
+	for _, staticDir := range staticDirs {
 		if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
 			http.ServeFile(&ctx, ctx.Request, indexPath)
 			return
@@ -712,7 +712,7 @@ func SetLogger(logger *log.Logger) {
 }
 
 type ServerConfig struct {
-	StaticDirs   []string //Erik: multiple static dirs
+	StaticDirs   []string
 	Addr         string
 	Port         int
 	CookieSecret string

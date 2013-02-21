@@ -551,6 +551,10 @@ func RunSecure(addr string, config tls.Config) {
 	mainServer.RunSecure(addr, config)
 }
 
+func RunTLS(addr, certFile, keyFile string) {
+	mainServer.RunTLS(addr, certFile, keyFile)
+}
+
 //Stops the web server
 func (s *Server) Close() {
 	if s.l != nil {
@@ -666,11 +670,11 @@ func SetLogger(logger *log.Logger) {
 }
 
 type ServerConfig struct {
-	StaticDir    string
-	Addr         string
-	Port         int
-	CookieSecret string
-	RecoverPanic bool
+    StaticDirs   []string //Erik: multiple static dirs
+    Addr         string
+    Port         int
+    CookieSecret string
+    RecoverPanic bool
 }
 
 func webTime(t time.Time) string {

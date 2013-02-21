@@ -34,7 +34,7 @@ Updates
 Initial TLS support is addded to this branch. A security expert should
 probably sign off on this before it becomes a standard.
 
-I've added the following tweaks so far
+The following tweaks are present:
 
 * new AdHoc function in the root. This lets the user run tests written like this...
 
@@ -165,5 +165,5 @@ If you use web.go, I'd greatly appreciate a quick message about what you're buil
 ## About
 
 web.go was originally written by [Michael Hoisie](http://hoisie.com). 
-Follow hiM on [Twitter](http://www.twitter.com/hoisie)!
+Follow him on [Twitter](http://www.twitter.com/hoisie)!
 

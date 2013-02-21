@@ -36,8 +36,8 @@ type WebError struct {
 	Err  string
 }
 
-func (err WebError) Error() string {
-	return err.Err
+type responseWriter struct {
+	http.ResponseWriter
 }
 
 type Context struct {
@@ -49,6 +49,50 @@ type Context struct {
 	User interface{}
 	// False iff 0 bytes of body data have been written so far
 	wroteData bool
+}
+
+type route struct {
+	r       string
+	cr      *regexp.Regexp
+	method  string
+	handler reflect.Value
+}
+
+type ServerConfig struct {
+	StaticDirs   []string
+	Addr         string
+	Port         int
+	CookieSecret string
+	RecoverPanic bool
+}
+
+type Server struct {
+	Config *ServerConfig
+	routes []route
+	Logger *log.Logger
+	Env    map[string]interface{}
+	//save the listener so it can be closed
+	l net.Listener
+}
+
+var (
+	// Small optimization: cache the context type instead of repeteadly calling reflect.Typeof
+	contextType reflect.Type
+
+	exeFile string
+
+	preModules  = []func(*Context) error{}
+	postModules = []func(*Context, interface{}) (interface{}, error){}
+
+	Config = &ServerConfig{
+		RecoverPanic: true,
+	}
+
+	mainServer = NewServer()
+)
+
+func (err WebError) Error() string {
+	return err.Err
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -85,8 +129,8 @@ func (ctx *Context) Unauthorized(message string) {
 	ctx.ResponseWriter.Write([]byte(message))
 }
 
-//Sets the content type by extension, as defined in the mime package. 
-//For example, ctx.ContentType("json") sets the content-type to "application/json"
+// Sets the content type by extension, as defined in the mime package. 
+// For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
@@ -97,7 +141,7 @@ func (ctx *Context) ContentType(ext string) {
 	}
 }
 
-func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
+func (ctx *Context) SetHeader(hdr, val string, unique bool) {
 	if unique {
 		ctx.Header().Set(hdr, val)
 	} else {
@@ -107,7 +151,7 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 
 // Set a cookie with an explicit path. Duration is the cookie time-to-live in
 // seconds (0 = forever).
-func (ctx *Context) SetCookiePath(name string, value string, age int64, path string) {
+func (ctx *Context) SetCookiePath(name, value string, age int64, path string) {
 	var utctime time.Time
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
@@ -119,8 +163,8 @@ func (ctx *Context) SetCookiePath(name string, value string, age int64, path str
 	ctx.SetHeader("Set-Cookie", cookie.String(), false)
 }
 
-//Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, age int64) {
+// Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+func (ctx *Context) SetCookie(name, value string, age int64) {
 	ctx.SetCookiePath(name, value, age, "")
 }
 
@@ -134,8 +178,8 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 	return hex
 }
 
-func (ctx *Context) SetSecureCookiePath(name string, val string, age int64, path string) {
-	//base64 encode the val
+func (ctx *Context) SetSecureCookiePath(name, val string, age int64, path string) {
+	// base64 encode the value
 	if len(ctx.Server.Config.CookieSecret) == 0 {
 		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
 		return
@@ -152,7 +196,7 @@ func (ctx *Context) SetSecureCookiePath(name string, val string, age int64, path
 	ctx.SetCookiePath(name, cookie, age, path)
 }
 
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+func (ctx *Context) SetSecureCookie(name, val string, age int64) {
 	ctx.SetSecureCookiePath(name, val, age, "")
 }
 
@@ -187,12 +231,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 	return "", false
 }
 
-// small optimization: cache the context type instead of repeteadly calling reflect.Typeof
-var contextType reflect.Type
-
-var exeFile string
-
-// default
+// Default
 func defaultStaticDir() string {
 	root, _ := path.Split(exeFile)
 	return path.Join(root, "static")
@@ -200,32 +239,25 @@ func defaultStaticDir() string {
 
 func init() {
 	contextType = reflect.TypeOf(Context{})
-	//find the location of the exe file
+	// find the location of the executable
 	arg0 := path.Clean(os.Args[0])
 	wd, _ := os.Getwd()
 	if strings.HasPrefix(arg0, "/") {
 		exeFile = arg0
 	} else {
-		//TODO for robustness, search each directory in $PATH
+		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
 
-	/* Handle different Accept: types */
+	// Handle different Accept: types
 	AddPostModule(MarshalResponse)
 	RegisterMimeParser("application/json", JSONparser)
 	RegisterMimeParser("application/xml", XMLparser)
 	RegisterMimeParser("text/xml", XMLparser)
 	RegisterMimeParser("image/jpeg", Binaryparser)
 
-	/* Handle different Accept-Encoding: types */
+	// Handle different Accept-Encoding: types
 	AddPostModule(EncodeResponse)
-}
-
-type route struct {
-	r       string
-	cr      *regexp.Regexp
-	method  string
-	handler reflect.Value
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
@@ -241,10 +273,6 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
 		fv := reflect.ValueOf(handler)
 		s.routes = append(s.routes, route{r, cr, method, fv})
 	}
-}
-
-type responseWriter struct {
-	http.ResponseWriter
 }
 
 func (c *responseWriter) Close() {
@@ -268,7 +296,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 	s.routeHandler(req, &w)
 }
 
-//Calls a function with recover block
+// Calls a function with recover block
 func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -473,21 +501,6 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	ctx.Abort(404, "Page not found")
 }
 
-var Config = &ServerConfig{
-	RecoverPanic: true,
-}
-
-var mainServer = NewServer()
-
-type Server struct {
-	Config *ServerConfig
-	routes []route
-	Logger *log.Logger
-	Env    map[string]interface{}
-	//save the listener so it can be closed
-	l net.Listener
-}
-
 func NewServer() *Server {
 	return &Server{
 		Config: Config,
@@ -528,12 +541,6 @@ func (s *Server) Run(addr string) {
 	s.initServer()
 
 	mux := http.NewServeMux()
-	/*
-		mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-		mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-		mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-		mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-	*/
 	mux.Handle("/", s)
 
 	s.Logger.Printf("web.go serving %s\n", addr)
@@ -608,9 +615,6 @@ func (s *Server) Close() {
 func Close() {
 	mainServer.Close()
 }
-
-var preModules = []func(*Context) error{}
-var postModules = []func(*Context, interface{}) (interface{}, error){}
 
 func AddPreModule(module func(*Context) error) {
 	preModules = append(preModules, module)
@@ -709,14 +713,6 @@ func (s *Server) SetLogger(logger *log.Logger) {
 
 func SetLogger(logger *log.Logger) {
 	mainServer.Logger = logger
-}
-
-type ServerConfig struct {
-	StaticDirs   []string
-	Addr         string
-	Port         int
-	CookieSecret string
-	RecoverPanic bool
 }
 
 func webTime(t time.Time) string {

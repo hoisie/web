@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"net/url"
 	"os"
 	"path"
@@ -348,16 +349,17 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
-	//try to serve a static file
-	staticDir := s.Config.StaticDir
-	if staticDir == "" {
-		staticDir = defaultStaticDir()
-	}
-	staticFile := path.Join(staticDir, requestPath)
-	if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-		http.ServeFile(&ctx, req, staticFile)
-		return
-	}
+    staticDirs := s.Config.StaticDirs //Erik: multiple static dirs
+    if len(staticDirs) == 0 {
+        staticDirs = []string{defaultStaticDir()}
+    }
+    for _, staticDir := range staticDirs {
+        staticFile := path.Join(staticDir, requestPath)
+        if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+            http.ServeFile(&ctx, req, staticFile)
+            return
+        }
+    }
 
 	//Set the default content-type
 	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
@@ -455,16 +457,18 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		return
 	}
 
-	//try to serve index.html || index.htm
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
-	}
+   // try to serve index.html || index.htm
+   for _, staticDir := range staticDirs { //Erik: multiple static dirs
+        if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
+            http.ServeFile(&ctx, ctx.Request, indexPath)
+            return
+        }
 
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
-	}
+        if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
+            http.ServeFile(&ctx, ctx.Request, indexPath)
+            return
+        }
+    }
 
 	ctx.Abort(404, "Page not found")
 }
@@ -500,6 +504,23 @@ func (s *Server) initServer() {
 	if s.Logger == nil {
 		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
+}
+
+func (s *Server) createServeMux(addr string) (*http.ServeMux, error) {
+    mux := http.NewServeMux()
+    mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+    mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+    mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+    mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+    mux.Handle("/", s)
+
+    l, err := net.Listen("tcp", addr)
+    if err != nil {
+        log.Fatal("Listen:", err)
+    }
+    s.l = l
+
+    return mux, err
 }
 
 //Runs the web application and serves http requests
@@ -551,8 +572,29 @@ func RunSecure(addr string, config tls.Config) {
 	mainServer.RunSecure(addr, config)
 }
 
+func (s *Server) runTLS(addr, certFile, keyFile string) {
+    s.initServer()
+
+    mux, err := s.createServeMux(addr)
+    s.Logger.Printf("web.go serving with TLS %s\n", addr)
+
+    srv := &http.Server{Handler: mux}
+
+    config := &tls.Config{}
+    config.Certificates = make([]tls.Certificate, 1)
+    config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+
+    if err != nil {
+	    log.Fatal("TLS error:", err)
+    }
+
+    tlsListener := tls.NewListener(s.l, config)
+    err = srv.Serve(tlsListener)
+    s.l.Close()
+}
+
 func RunTLS(addr, certFile, keyFile string) {
-	mainServer.RunTLS(addr, certFile, keyFile)
+	mainServer.runTLS(addr, certFile, keyFile)
 }
 
 //Stops the web server

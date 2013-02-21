@@ -221,7 +221,8 @@ var tests = []Test{
 	{"GET", "/panic", nil, "", 500, "Server Error"},
 	{"GET", "/json?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
 	{"GET", "/jsonbytes?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
-	{"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}, "Accept": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, `{"a":"hello","b":"world"}`},
+	{"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}, "Accept": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, `{"a":"hello","b":"world"}
+`},
 	//{"GET", "/testenv", "", 200, "hello world"},
 }
 

@@ -1,9 +1,10 @@
 package main
 
 import (
-    "github.com/rday/web"
-    "crypto/tls"
-    "fmt"
+	"crypto/tls"
+	"fmt"
+
+	"github.com/xyproto/web"
 )
 
 // Generate you key and cert
@@ -11,22 +12,22 @@ import (
 var SERVER_CERT = []byte(`----- YOUR CERTIFICATE -----`)
 var SERVER_KEY = []byte(`----- YOUR PRIVATE KEY -----`)
 
-func hello(val string) (string, error) { 
-    return "hello " + val, nil
+func hello(val string) (string, error) {
+	return "hello " + val, nil
 }
+
 func main() {
+	config := tls.Config{
+		Time: nil,
+	}
 
-    config := tls.Config{
-                Time: nil,
-                }
+	config.Certificates = make([]tls.Certificate, 1)
+	var err error
+	config.Certificates[0], err = tls.X509KeyPair(SERVER_CERT, SERVER_KEY)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-    config.Certificates = make([]tls.Certificate, 1)
-    var err error
-    config.Certificates[0], err = tls.X509KeyPair(SERVER_CERT, SERVER_KEY)
-    if err != nil {
-        fmt.Println(err)
-    }
-
-    web.Get("/(.*)", hello)
-    web.RunSecure("0.0.0.0:9998", config)
+	web.Get("/(.*)", hello)
+	web.RunSecure("0.0.0.0:9998", config)
 }

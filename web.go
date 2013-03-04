@@ -342,163 +342,122 @@ func requiresContext(handlerType reflect.Type) bool {
 }
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
-	requestPath := req.URL.Path
-	ctx := Context{req, nil, map[string]string{}, s, w, nil, false}
+    requestPath := req.URL.Path
+    requestURI := req.RequestURI
+    ctx := Context{req, map[string]string{}, s, w}
 
-	//log the request
-	var logEntry bytes.Buffer
-	fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+    fmt.Println(req.RequestURI)
+    //log the request
+    var logEntry bytes.Buffer
+    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
 
-	//ignore errors from ParseForm because it's usually harmless.
-	req.ParseForm()
-	if len(req.Form) > 0 {
-		for k, v := range req.Form {
-			ctx.Params[k] = v[0]
-		}
-		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
-	} else {
-		// If ParseForm was successful, than the Body will be empty
-		if req.Body != nil {
-			var err error
-			ctx.RawBody, err = ioutil.ReadAll(req.Body)
-			if err != nil {
-				req.Body = nil
-			}
-		}
-		if req.Body == nil {
-			ctx.RawBody = make([]byte, 0)
-		}
-	}
+    //ignore errors from ParseForm because it's usually harmless.
+    req.ParseForm()
+    if len(req.Form) > 0 {
+        for k, v := range req.Form {
+            ctx.Params[k] = v[0]
+        }
+        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+    }
 
-	ctx.Server.Logger.Print(logEntry.String())
+    ctx.Server.Logger.Print(logEntry.String())
 
-	//set some default headers
-	ctx.SetHeader("Server", "web.go", true)
-	tm := time.Now().UTC()
-	ctx.SetHeader("Date", webTime(tm), true)
+    //set some default headers
+    ctx.SetHeader("Server", "web.go", true)
+    tm := time.Now().UTC()
+    ctx.SetHeader("Date", webTime(tm), true)
 
-	staticDirs := s.Config.StaticDirs
-	if len(staticDirs) == 0 {
-		staticDirs = []string{defaultStaticDir()}
-	}
-	for _, staticDir := range staticDirs {
-		staticFile := path.Join(staticDir, requestPath)
-		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-			http.ServeFile(&ctx, req, staticFile)
-			return
-		}
-	}
+    //try to serve a static file
+    staticDir := s.Config.StaticDir
+    if staticDir == "" {
+        staticDir = defaultStaticDir()
+    }
+    staticFile := path.Join(staticDir, requestPath)
+    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+        http.ServeFile(&ctx, req, staticFile)
+        return
+    }
 
-	//Set the default content-type
-	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+    //Set the default content-type
+    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 
-	for i := 0; i < len(s.routes); i++ {
-		route := s.routes[i]
-		cr := route.cr
-		//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-		if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
-			continue
-		}
+    for i := 0; i < len(s.routes); i++ {
+        route := s.routes[i]
+        cr := route.cr
+        //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
+        if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
+            continue
+        }
 
-		if !cr.MatchString(requestPath) {
-			continue
-		}
-		match := cr.FindStringSubmatch(requestPath)
+        if !cr.MatchString(requestURI) {
+            continue
+        }
+        match := cr.FindStringSubmatch(requestURI)
 
-		if len(match[0]) != len(requestPath) {
-			continue
-		}
+        if len(match[0]) != len(requestURI) {
+            continue
+        }
 
-		// lets call our pre modules to do any processing
-		// before we start the request
-		for _, module := range preModules {
-			// If a module returns an error, we stop process the request
-			err := module(&ctx)
-			if err != nil {
-				ctx.Abort(err.(WebError).Code, err.Error())
-				return
-			}
-		}
+        var args []reflect.Value
+        handlerType := route.handler.Type()
+        if requiresContext(handlerType) {
+            args = append(args, reflect.ValueOf(&ctx))
+        }
+        for _, arg := range match[1:] {
+            rawarg, _ := url.QueryUnescape(arg)
+            args = append(args, reflect.ValueOf(rawarg))
+        }
 
-		var args []reflect.Value
-		handlerType := route.handler.Type()
-		if requiresContext(handlerType) {
-			args = append(args, reflect.ValueOf(&ctx))
-		}
-		for _, arg := range match[1:] {
-			args = append(args, reflect.ValueOf(arg))
-		}
+        ret, err := s.safelyCall(route.handler, args)
+        if err != nil {
+            //there was an error or panic while calling the handler
+            ctx.Abort(500, "Server Error")
+        }
+        if len(ret) == 0 {
+            return
+        }
 
-		ret, err := s.safelyCall(route.handler, args)
+        sval := ret[0]
 
-		if len(ret) == 0 {
-			s.Logger.Printf("Handler gave 0 return values")
-			ctx.Abort(500, "Server Error")
-			return
-		}
+        var content []byte
 
-		// Backwards compatability, if there is only one return,
-		// assume there was no error
-		if len(ret) > 1 && !ret[1].IsNil() {
-			err = ret[1].Interface()
-			//there was an error or panic while calling the handler
-			s.Logger.Printf("Handler returned error: (%s)%v", reflect.TypeOf(err).String(), err)
-			if reflect.TypeOf(err).String() == "web.WebError" {
-				ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-			} else {
-				ctx.Abort(500, fmt.Sprintf("%v", err))
-			}
-			return
-		}
-		sval := ret[0]
+        if sval.Kind() == reflect.String {
+            content = []byte(sval.String())
+        } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+            content = sval.Interface().([]byte)
+        }
+        ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+        ctx.Write(content)
+        return
+    }
 
-		// Now we have the content from our response. We should run
-		// our post processing modules now
-		content := sval.Interface()
-		if ctx.wroteData {
-			// Data was already sent to the client; do not transform anything
-			content = []byte(content.(string))
-		} else {
-			for _, module := range postModules {
-				// If a module returns an error, we stop process the request
-				content, err = module(&ctx, content)
-				if err != nil {
-					s.Logger.Printf("PostModule Error: %v", err)
-					ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-					return
-				}
-			}
-		}
+    //try to serve index.html || index.htm
+    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
+        http.ServeFile(&ctx, ctx.Request, indexPath)
+        return
+    }
 
-		if content != nil {
-			typed_content, ok := content.([]byte)
-			if ok {
-				_, err := ctx.Write(typed_content)
-				if err != nil {
-					s.Logger.Printf("Content write error: %v", err)
-					ctx.Abort(500, err.Error())
-				}
-			} else {
-				ctx.Abort(406, "Could not marshal response")
-			}
-		}
-		return
-	}
+    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
+        http.ServeFile(&ctx, ctx.Request, indexPath)
+        return
+    }
 
-	// try to serve index.html || index.htm
-	for _, staticDir := range staticDirs {
-		if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-			http.ServeFile(&ctx, ctx.Request, indexPath)
-			return
-		}
+    ctx.Abort(404, "Page not found")
+}
 
-		if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-			http.ServeFile(&ctx, ctx.Request, indexPath)
-			return
-		}
-	}
+var Config = &ServerConfig{
+    RecoverPanic: true,
+}
 
-	ctx.Abort(404, "Page not found")
+var mainServer = NewServer()
+
+type Server struct {
+    Config *ServerConfig
+    routes []route
+    Logger *log.Logger
+    Env    map[string]interface{}
+    //save the listener so it can be closed
+    l   net.Listener
 }
 
 func NewServer() *Server {

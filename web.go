@@ -346,7 +346,6 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestURI := req.RequestURI
     ctx := Context{req, map[string]string{}, s, w}
 
-    fmt.Println(req.RequestURI)
     //log the request
     var logEntry bytes.Buffer
     fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)

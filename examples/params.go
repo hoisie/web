@@ -1,16 +1,16 @@
 package main
 
 import (
-    "fmt"
+	"fmt"
 
-    "github.com/xyproto/web.go"
+	"github.com/xyproto/web.go"
 )
 
 type mytype struct {
-    A   string
-    B   string
-    C   int
-    D   int64
+	A string
+	B string
+	C int
+	D int64
 }
 
 var page = `
@@ -40,13 +40,13 @@ var page = `
 func index() string { return page }
 
 func process(ctx *web.Context) string {
-    var data mytype
-    ctx.UnmarshalParams(&data)
-    return fmt.Sprintf("%v\n", data)
+	var data mytype
+	ctx.UnmarshalParams(&data)
+	return fmt.Sprintf("%v\n", data)
 }
 
 func main() {
-    web.Get("/", index)
-    web.Post("/process", process)
-    web.Run("0.0.0.0:9999")
+	web.Get("/", index)
+	web.Post("/process", process)
+	web.Run("0.0.0.0:9999")
 }

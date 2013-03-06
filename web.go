@@ -350,12 +350,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestURI := req.RequestURI
 
 	ctx := Context{req,
-	               []byte{},
-				   map[string]string{},
-				   s,
-				   w,
-				   nil,
-				   false}
+		[]byte{},
+		map[string]string{},
+		s,
+		w,
+		nil,
+		false}
 
 	//log the request
 	var logEntry bytes.Buffer

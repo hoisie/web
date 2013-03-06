@@ -1,19 +1,19 @@
 package main
 
 import (
-    "github.com/xyproto/web.go"
+	"github.com/xyproto/web.go"
 )
 
 type Greeter struct {
-    greeting string
+	greeting string
 }
 
 func (g *Greeter) Greet(s string) string {
-    return g.greeting + " " + s
+	return g.greeting + " " + s
 }
 
 func main() {
-    g := &Greeter{"hello"}
-    web.Get("/(.*)", web.MethodHandler(g, "Greet"))
-    web.Run("0.0.0.0:9999")
+	g := &Greeter{"hello"}
+	web.Get("/(.*)", web.MethodHandler(g, "Greet"))
+	web.Run("0.0.0.0:9999")
 }

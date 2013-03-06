@@ -59,11 +59,13 @@ type route struct {
 }
 
 type ServerConfig struct {
-	StaticDirs   []string
+	StaticDir    string
 	Addr         string
 	Port         int
 	CookieSecret string
 	RecoverPanic bool
+	Cert         string
+	Key          string
 }
 
 type Server struct {
@@ -86,6 +88,8 @@ var (
 
 	Config = &ServerConfig{
 		RecoverPanic: true,
+		Cert:         "",
+		Key:          "",
 	}
 
 	mainServer = NewServer()
@@ -342,124 +346,113 @@ func requiresContext(handlerType reflect.Type) bool {
 }
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
-    requestPath := req.URL.Path
-    requestURI := req.RequestURI
-    ctx := Context{req, map[string]string{}, s, w}
+	requestPath := req.URL.Path
+	requestURI := req.RequestURI
 
-    //log the request
-    var logEntry bytes.Buffer
-    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
+	ctx := Context{req,
+	               []byte{},
+				   map[string]string{},
+				   s,
+				   w,
+				   nil,
+				   false}
 
-    //ignore errors from ParseForm because it's usually harmless.
-    req.ParseForm()
-    if len(req.Form) > 0 {
-        for k, v := range req.Form {
-            ctx.Params[k] = v[0]
-        }
-        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
-    }
+	//log the request
+	var logEntry bytes.Buffer
+	fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
 
-    ctx.Server.Logger.Print(logEntry.String())
+	//ignore errors from ParseForm because it's usually harmless.
+	req.ParseForm()
+	if len(req.Form) > 0 {
+		for k, v := range req.Form {
+			ctx.Params[k] = v[0]
+		}
+		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+	}
 
-    //set some default headers
-    ctx.SetHeader("Server", "web.go", true)
-    tm := time.Now().UTC()
-    ctx.SetHeader("Date", webTime(tm), true)
+	ctx.Server.Logger.Print(logEntry.String())
 
-    //try to serve a static file
-    staticDir := s.Config.StaticDir
-    if staticDir == "" {
-        staticDir = defaultStaticDir()
-    }
-    staticFile := path.Join(staticDir, requestPath)
-    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-        http.ServeFile(&ctx, req, staticFile)
-        return
-    }
+	//set some default headers
+	ctx.SetHeader("Server", "web.go", true)
+	tm := time.Now().UTC()
+	ctx.SetHeader("Date", webTime(tm), true)
 
-    //Set the default content-type
-    ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+	//try to serve a static file
+	staticDir := s.Config.StaticDir
+	if staticDir == "" {
+		staticDir = defaultStaticDir()
+	}
+	staticFile := path.Join(staticDir, requestPath)
+	if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+		http.ServeFile(&ctx, req, staticFile)
+		return
+	}
 
-    for i := 0; i < len(s.routes); i++ {
-        route := s.routes[i]
-        cr := route.cr
-        //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-        if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
-            continue
-        }
+	//Set the default content-type
+	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 
-        if !cr.MatchString(requestURI) {
-            continue
-        }
-        match := cr.FindStringSubmatch(requestURI)
+	for i := 0; i < len(s.routes); i++ {
+		route := s.routes[i]
+		cr := route.cr
+		//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
+		if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
+			continue
+		}
 
-        if len(match[0]) != len(requestURI) {
-            continue
-        }
+		if !cr.MatchString(requestURI) {
+			continue
+		}
+		match := cr.FindStringSubmatch(requestURI)
 
-        var args []reflect.Value
-        handlerType := route.handler.Type()
-        if requiresContext(handlerType) {
-            args = append(args, reflect.ValueOf(&ctx))
-        }
-        for _, arg := range match[1:] {
-            rawarg, _ := url.QueryUnescape(arg)
-            args = append(args, reflect.ValueOf(rawarg))
-        }
+		if len(match[0]) != len(requestURI) {
+			continue
+		}
 
-        ret, err := s.safelyCall(route.handler, args)
-        if err != nil {
-            //there was an error or panic while calling the handler
-            ctx.Abort(500, "Server Error")
-        }
-        if len(ret) == 0 {
-            return
-        }
+		var args []reflect.Value
+		handlerType := route.handler.Type()
+		if requiresContext(handlerType) {
+			args = append(args, reflect.ValueOf(&ctx))
+		}
+		for _, arg := range match[1:] {
+			rawarg, _ := url.QueryUnescape(arg)
+			args = append(args, reflect.ValueOf(rawarg))
+		}
 
-        sval := ret[0]
+		ret, err := s.safelyCall(route.handler, args)
+		if err != nil {
+			//there was an error or panic while calling the handler
+			ctx.Abort(500, "Server Error")
+		}
+		if len(ret) == 0 {
+			return
+		}
 
-        var content []byte
+		sval := ret[0]
 
-        if sval.Kind() == reflect.String {
-            content = []byte(sval.String())
-        } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
-            content = sval.Interface().([]byte)
-        }
-        ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-        ctx.Write(content)
-        return
-    }
+		var content []byte
 
-    //try to serve index.html || index.htm
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
-    }
+		if sval.Kind() == reflect.String {
+			content = []byte(sval.String())
+		} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+			content = sval.Interface().([]byte)
+		}
+		ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+		ctx.Write(content)
+		return
+	}
 
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
-    }
+	//try to serve index.html || index.htm
+	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
+		http.ServeFile(&ctx, ctx.Request, indexPath)
+		return
+	}
 
-    ctx.Abort(404, "Page not found")
-}
+	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
+		http.ServeFile(&ctx, ctx.Request, indexPath)
+		return
+	}
 
-var Config = &ServerConfig{
-    RecoverPanic: true,
-    Cert: "",
-    Key: "",
-}
-
-var mainServer = NewServer()
-
-type Server struct {
-    Config *ServerConfig
-    routes []route
-    Logger *log.Logger
-    Env    map[string]interface{}
-    //save the listener so it can be closed
-    l   net.Listener
-
+	ctx.Abort(404, "Page not found")
 }
 
 func NewServer() *Server {
@@ -529,31 +522,31 @@ func (s *Server) RunSecure(addr string, config tls.Config) error {
 	s.l = l
 	return http.Serve(s.l, mux)
 }
-func (s *Server) RunTLS(addr string,cert string,key string) {
-    s.initServer()
+func (s *Server) RunTLS(addr string, cert string, key string) {
+	s.initServer()
 
-    mux := http.NewServeMux()
-    mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-    mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-    mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-    mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-    mux.Handle("/", s)
+	mux := http.NewServeMux()
+	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	mux.Handle("/", s)
 
-    s.Logger.Printf("web.go serving %s\n", addr)
-/*
-    l, err := net.Listen("tcp", addr)
-    if err != nil {
-        log.Fatal("ListenAndServe:", err)
-    }
-    s.l = l
-    err = http.Serve(s.l, mux)
-    s.l.Close()
-*/
-    err := http.ListenAndServeTLS(addr,cert,key,mux)
-    if err != nil {
-        log.Fatal("ListenAndServe:", err)
-    }
-  
+	s.Logger.Printf("web.go serving %s\n", addr)
+	/*
+	   l, err := net.Listen("tcp", addr)
+	   if err != nil {
+	       log.Fatal("ListenAndServe:", err)
+	   }
+	   s.l = l
+	   err = http.Serve(s.l, mux)
+	   s.l.Close()
+	*/
+	err := http.ListenAndServeTLS(addr, cert, key, mux)
+	if err != nil {
+		log.Fatal("ListenAndServe:", err)
+	}
+
 }
 
 //Runs the web application and serves http requests
@@ -591,11 +584,6 @@ func RunTLS(addr, certFile, keyFile string) {
 	mainServer.runTLS(addr, certFile, keyFile)
 }
 
-func RunTLS(addr string,cert string,key string) {
-
-    mainServer.RunTLS(addr,cert,key)
-
-}
 //Stops the web server
 func (s *Server) Close() {
 	if s.l != nil {
@@ -704,17 +692,7 @@ func (s *Server) SetLogger(logger *log.Logger) {
 }
 
 func SetLogger(logger *log.Logger) {
-    mainServer.Logger = logger
-}
-
-type ServerConfig struct {
-    StaticDir    string
-    Addr         string
-    Port         int
-    CookieSecret string
-    RecoverPanic bool
-    Cert	 string
-    Key	         string
+	mainServer.Logger = logger
 }
 
 func webTime(t time.Time) string {

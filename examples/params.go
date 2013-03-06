@@ -2,7 +2,8 @@ package main
 
 import (
     "fmt"
-    "github.com/jmrobles/web.go"
+
+    "github.com/xyproto/web.go"
 )
 
 type mytype struct {

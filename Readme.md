@@ -26,19 +26,20 @@ To compile it from source:
     cd web && go build
 
 ## Example
+```go
+package main
     
-    package main
+import (
+    "github.com/hoisie/web"
+)
     
-    import (
-        "github.com/hoisie/web"
-    )
+func hello(val string) string { return "hello " + val } 
     
-    func hello(val string) string { return "hello " + val } 
-    
-    func main() {
-        web.Get("/(.*)", hello)
-        web.Run("0.0.0.0:9999")
-    }
+func main() {
+    web.Get("/(.*)", hello)
+    web.Run("0.0.0.0:9999")
+}
+```
 
 To run the application, put the code in a file called hello.go and run:
 
@@ -50,22 +51,24 @@ You can point your browser to http://localhost:9999/world .
 
 Route handlers may contain a pointer to web.Context as their first parameter. This variable serves many purposes -- it contains information about the request, and it provides methods to control the http connection. For instance, to iterate over the web parameters, either from the URL of a GET request, or the form data of a POST request, you can do the following:
 
-    package main
+```go
+package main
+
+import (
+    "github.com/hoisie/web"
+)
     
-    import (
-        "github.com/hoisie/web"
-    )
-    
-    func hello(ctx *web.Context, val string) { 
-	    for k,v := range ctx.Params {
-			println(k, v)
-		}
+func hello(ctx *web.Context, val string) { 
+    for k,v := range ctx.Params {
+		println(k, v)
 	}
+}   
     
-    func main() {
-        web.Get("/(.*)", hello)
-        web.Run("0.0.0.0:9999")
-    }
+func main() {
+    web.Get("/(.*)", hello)
+    web.Run("0.0.0.0:9999")
+}
+```
 
 In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the following printed out in the terminal:
 

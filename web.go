@@ -66,6 +66,7 @@ type ServerConfig struct {
 	RecoverPanic bool
 	Cert         string
 	Key          string
+	ColorOutput  bool
 }
 
 type Server struct {
@@ -90,6 +91,7 @@ var (
 		RecoverPanic: true,
 		Cert:         "",
 		Key:          "",
+		ColorOutput:  true,
 	}
 
 	mainServer = NewServer()
@@ -359,7 +361,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
 	//log the request
 	var logEntry bytes.Buffer
-	fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
+	if s.Config.ColorOutput {
+		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
+	} else {
+		fmt.Fprintf(&logEntry, "%s %s", req.Method, requestURI)
+	}
 
 	//ignore errors from ParseForm because it's usually harmless.
 	req.ParseForm()
@@ -367,7 +373,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		for k, v := range req.Form {
 			ctx.Params[k] = v[0]
 		}
-		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+		if s.Config.ColorOutput {
+			fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+		} else {
+			fmt.Fprintf(&logEntry, "\nParams: %v\n", ctx.Params)
+		}
+
 	}
 
 	ctx.Server.Logger.Print(logEntry.String())

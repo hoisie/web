@@ -4,6 +4,7 @@ import (
     "bytes"
     "crypto/hmac"
     "crypto/sha1"
+    "crypto/tls"
     "encoding/base64"
     "fmt"
     "io/ioutil"
@@ -404,10 +405,7 @@ func (s *Server) initServer() {
     }
 }
 
-//Runs the web application and serves http requests
-func (s *Server) Run(addr string) {
-    s.initServer()
-
+func (s *Server) createServeMux(addr string) (*http.ServeMux, error) {
     mux := http.NewServeMux()
     mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
     mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
@@ -415,20 +413,57 @@ func (s *Server) Run(addr string) {
     mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
     mux.Handle("/", s)
 
-    s.Logger.Printf("web.go serving %s\n", addr)
-
     l, err := net.Listen("tcp", addr)
     if err != nil {
-        log.Fatal("ListenAndServe:", err)
+        log.Fatal("Listen:", err)
     }
     s.l = l
-    err = http.Serve(s.l, mux)
+
+    return mux, err
+}
+
+//Runs the web application and serves http requests
+func (s *Server) Run(addr string) {
+    s.initServer()
+
+    mux, _ := s.createServeMux(addr)
+    s.Logger.Printf("web.go serving %s\n", addr)
+
+    err := http.Serve(s.l, mux)
+    if err != nil {
+        log.Fatal("Serve:", err)
+    }
+    s.l.Close()
+}
+
+func (s *Server) RunTLS(addr, certFile, keyFile string) {
+    s.initServer()
+
+    mux, err := s.createServeMux(addr)
+    s.Logger.Printf("web.go serving with TLS %s\n", addr)
+
+    srv := &http.Server{Handler: mux}
+
+    config := &tls.Config{}
+    config.Certificates = make([]tls.Certificate, 1)
+    config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+
+    if err != nil {
+	    log.Fatal("TLS error:", err)
+    }
+
+    tlsListener := tls.NewListener(s.l, config)
+    err = srv.Serve(tlsListener)
     s.l.Close()
 }
 
 //Runs the web application and serves http requests
 func Run(addr string) {
     mainServer.Run(addr)
+}
+
+func RunTLS(addr, certFile, keyFile string) {
+	mainServer.RunTLS(addr, certFile, keyFile)
 }
 
 //Stops the web server

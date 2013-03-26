@@ -482,6 +482,10 @@ func (s *Server) initServer() {
 	if s.Logger == nil {
 		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
+	// Set two commonly used mimetypes that are often not set by default
+	// Handy for robots.txt and favicon.ico
+	mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
+	mime.AddExtensionType(".ico", "image/x-icon")
 }
 
 func (s *Server) createServeMux(addr string) (*http.ServeMux, error) {

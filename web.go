@@ -750,3 +750,17 @@ func Urlencode(data map[string]string) string {
 	s := buf.String()
 	return s[0 : len(s)-1]
 }
+
+func MethodHandler(val interface{}, name string) reflect.Value {
+	v := reflect.ValueOf(val)
+	typ := v.Type()
+	n := typ.NumMethod()
+	for i := 0; i < n; i++ {
+		m := typ.Method(i)
+		if m.Name == name {
+			return v.Method(i)
+		}
+	}
+
+	return reflect.ValueOf(nil)
+}

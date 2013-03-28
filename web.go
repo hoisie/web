@@ -59,7 +59,7 @@ type route struct {
 }
 
 type ServerConfig struct {
-	StaticDir    string
+	StaticDirs   []string
 	Addr         string
 	Port         int
 	CookieSecret string
@@ -74,8 +74,10 @@ type Server struct {
 	routes []route
 	Logger *log.Logger
 	Env    map[string]interface{}
-	//save the listener so it can be closed
+	// Save the listener so it can be closed
 	l net.Listener
+	// Passed verbatim to every handler on every request
+	User interface{}
 }
 
 var (
@@ -351,13 +353,15 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
 	requestURI := req.RequestURI
 
-	ctx := Context{req,
-		[]byte{},
-		map[string]string{},
-		s,
-		w,
-		nil,
-		false}
+	ctx := Context{
+		Request:        req,
+		RawBody:        nil,
+		Params:         map[string]string{},
+		Server:         s,
+		ResponseWriter: w,
+		User:           s.User,
+		wroteData:      false,
+	}
 
 	//log the request
 	var logEntry bytes.Buffer
@@ -388,15 +392,17 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
-	//try to serve a static file
-	staticDir := s.Config.StaticDir
-	if staticDir == "" {
-		staticDir = defaultStaticDir()
+	//try to serve static files
+	staticDirs := s.Config.StaticDirs
+	if len(staticDirs) == 0 {
+		staticDirs = []string{defaultStaticDir()}
 	}
-	staticFile := path.Join(staticDir, requestPath)
-	if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-		http.ServeFile(&ctx, req, staticFile)
-		return
+	for _, staticDir := range staticDirs {
+		staticFile := path.Join(staticDir, requestPath)
+		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+			http.ServeFile(&ctx, req, staticFile)
+			return
+		}
 	}
 
 	//Set the default content-type
@@ -452,15 +458,15 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		return
 	}
 
-	//try to serve index.html || index.htm
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
-	}
-
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
+	// Try to serve index.html || index.htm
+	indexFilenames := []string{"index.html", "index.htm"}
+	for _, staticDir := range staticDirs {
+		for _, indexFilename := range indexFilenames {
+			if indexPath := path.Join(path.Join(staticDir, requestPath), indexFilename); fileExists(indexPath) {
+				http.ServeFile(&ctx, ctx.Request, indexPath)
+				return
+			}
+		}
 	}
 
 	ctx.Abort(404, "Page not found")

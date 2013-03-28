@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/xyproto/web.go"
+	"github.com/xyproto/web"
 )
 
 func hello(val string) string { return "hello " + val }

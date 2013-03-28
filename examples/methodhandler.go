@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/xyproto/web.go"
+	"github.com/xyproto/web"
 )
 
 type Greeter struct {

@@ -14,6 +14,6 @@ func (g *Greeter) Greet(s string) string {
 
 func main() {
 	g := &Greeter{"hello"}
-	web.Get("/(.*)", func(ctx *web.Context, path string) string { return g.Greet(path) })
+	web.Get("/(.*)", web.MethodHandler(g, "Greet"))
 	web.Run("0.0.0.0:9999")
 }

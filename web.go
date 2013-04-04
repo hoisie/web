@@ -137,7 +137,7 @@ func (ctx *Context) Unauthorized(message string) {
 	ctx.ResponseWriter.Write([]byte(message))
 }
 
-// Sets the content type by extension, as defined in the mime package. 
+// Sets the content type by extension, as defined in the mime package.
 // For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
 	if !strings.HasPrefix(ext, ".") {

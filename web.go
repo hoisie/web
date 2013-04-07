@@ -41,6 +41,11 @@ func (ctx *Context) WriteString(content string) {
     ctx.ResponseWriter.Write([]byte(content))
 }
 
+func (ctx *Context) WriteImage(path string) {
+	ctx.SetHeader("Content-Type", "image/jpeg", true)
+	http.ServeFile(ctx.ResponseWriter, ctx.Request, path)
+}
+
 func (ctx *Context) Abort(status int, body string) {
     ctx.ResponseWriter.WriteHeader(status)
     ctx.ResponseWriter.Write([]byte(body))

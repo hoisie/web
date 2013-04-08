@@ -2,15 +2,8 @@ package main
 
 import (
     "fmt"
-    "github.com/hoisie/web.go"
+    "github.com/hoisie/web"
 )
-
-type mytype struct {
-    A   string
-    B   string
-    C   int
-    D   int64
-}
 
 var page = `
 <html>
@@ -39,9 +32,7 @@ var page = `
 func index() string { return page }
 
 func process(ctx *web.Context) string {
-    var data mytype
-    ctx.UnmarshalParams(&data)
-    return fmt.Sprintf("%v\n", data)
+    return fmt.Sprintf("%v\n", ctx.Params)
 }
 
 func main() {

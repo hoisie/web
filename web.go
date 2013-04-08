@@ -23,18 +23,11 @@ import (
     "time"
 )
 
-type ResponseWriter interface {
-    Header() http.Header
-    WriteHeader(status int)
-    Write(data []byte) (n int, err error)
-    Close()
-}
-
 type Context struct {
     Request *http.Request
     Params  map[string]string
     Server  *Server
-    ResponseWriter
+    http.ResponseWriter
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -199,24 +192,8 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 }
 
-type responseWriter struct {
-    http.ResponseWriter
-}
-
-func (c *responseWriter) Close() {
-    rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
-    if buf != nil {
-        buf.Flush()
-    }
-
-    if rwc != nil {
-        rwc.Close()
-    }
-}
-
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-    w := responseWriter{c}
-    s.routeHandler(req, &w)
+    s.routeHandler(req, c)
 }
 
 //Calls a function with recover block
@@ -263,7 +240,7 @@ func requiresContext(handlerType reflect.Type) bool {
     return false
 }
 
-func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
+func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
 

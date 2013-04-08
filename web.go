@@ -421,12 +421,11 @@ func (s *Server) Run(addr string) {
 }
 
 //Runs the web application and serves https requests
-func (s *Server) RunTLS(addr string, config tls.Config) error {
+func (s *Server) RunTLS(addr string, config *tls.Config) error {
     s.initServer()
     mux := http.NewServeMux()
     mux.Handle("/", s)
-
-    l, err := tls.Listen("tcp", addr, &config)
+    l, err := tls.Listen("tcp", addr, config)
     if err != nil {
         log.Fatal("Listen:", err)
         return err
@@ -442,7 +441,7 @@ func Run(addr string) {
 }
 
 //Runs the secure web application and serves https requests
-func RunSecure(addr string, config tls.Config) {
+func RunTLS(addr string, config *tls.Config) {
     mainServer.RunTLS(addr, config)
 }
 

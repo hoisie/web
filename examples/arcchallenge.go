@@ -14,6 +14,10 @@ var users = map[string]string{}
 func main() {
     rand.Seed(time.Now().UnixNano())
     web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+    web.Get("/", func(ctx *web.Context) string {
+        ctx.Redirect(302, "/said")
+        return ""
+    })
     web.Get("/said", func() string { return form })
     web.Post("/say", func(ctx *web.Context) string {
         uid := fmt.Sprintf("%d\n", rand.Int63())

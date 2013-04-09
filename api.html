@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<head>
+  <link rel="stylesheet" type="text/css" href="stylesheets/styles.css">
+  <meta charset='utf-8'> 
+</head>
+
+<!--  Style overrrides -->
+<style>
+  dl dd {
+    font-style: normal;
+  }
+  #api {
+    padding-left: 20px;
+  }
+</style>
+
+<body>
+<div id="api">
+<!--
+	Copyright 2009 The Go Authors. All rights reserved.
+	Use of this source code is governed by a BSD-style
+	license that can be found in the LICENSE file.
+-->
+
+	
+		<div id="short-nav">
+			<dl>
+			<dd><code>import "github.com/hoisie/web"</code></dd>
+			</dl>
+			<dl>
+			<dd><a href="#overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="#index">Index</a></dd>
+			
+			
+				<dd><a href="#subdirectories">Subdirectories</a></dd>
+			
+			</dl>
+		</div>
+		<!-- The package's Name is printed as title by the top-level template -->
+		<div id="overview" class="toggleVisible">
+			<div class="collapsed">
+				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
+			</div>
+			<div class="expanded">
+				<h2 class="toggleButton" title="Click to hide Overview section">Overview ▾</h2>
+				
+			</div>
+		</div>
+		
+	
+		<h2 id="index">Index</h2>
+		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
+		<div id="manual-nav">
+			<dl>
+			
+			
+				<dd><a href="#variables">Variables</a></dd>
+			
+			
+				
+				<dd><a href="#Close">func Close()</a></dd>
+			
+				
+				<dd><a href="#Delete">func Delete(route string, handler interface{})</a></dd>
+			
+				
+				<dd><a href="#Get">func Get(route string, handler interface{})</a></dd>
+			
+				
+				<dd><a href="#Post">func Post(route string, handler interface{})</a></dd>
+			
+				
+				<dd><a href="#Put">func Put(route string, handler interface{})</a></dd>
+			
+				
+				<dd><a href="#Run">func Run(addr string)</a></dd>
+			
+				
+				<dd><a href="#RunFcgi">func RunFcgi(addr string)</a></dd>
+			
+				
+				<dd><a href="#RunScgi">func RunScgi(addr string)</a></dd>
+			
+				
+				<dd><a href="#RunTLS">func RunTLS(addr string, config *tls.Config)</a></dd>
+			
+				
+				<dd><a href="#SetLogger">func SetLogger(logger *log.Logger)</a></dd>
+			
+				
+				<dd><a href="#Urlencode">func Urlencode(data map[string]string) string</a></dd>
+			
+			
+				
+				<dd><a href="#Context">type Context</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.Abort">func (ctx *Context) Abort(status int, body string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.ContentType">func (ctx *Context) ContentType(ext string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.GetSecureCookie">func (ctx *Context) GetSecureCookie(name string) (string, bool)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.NotFound">func (ctx *Context) NotFound(message string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.NotModified">func (ctx *Context) NotModified()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.Redirect">func (ctx *Context) Redirect(status int, url_ string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.SetCookie">func (ctx *Context) SetCookie(name string, value string, age int64)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.SetHeader">func (ctx *Context) SetHeader(hdr string, val string, unique bool)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.SetSecureCookie">func (ctx *Context) SetSecureCookie(name string, val string, age int64)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Context.WriteString">func (ctx *Context) WriteString(content string)</a></dd>
+				
+			
+				
+				<dd><a href="#ResponseWriter">type ResponseWriter</a></dd>
+				
+				
+			
+				
+				<dd><a href="#Server">type Server</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#NewServer">func NewServer() *Server</a></dd>
+				
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Close">func (s *Server) Close()</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Delete">func (s *Server) Delete(route string, handler interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Get">func (s *Server) Get(route string, handler interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Post">func (s *Server) Post(route string, handler interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Put">func (s *Server) Put(route string, handler interface{})</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.Run">func (s *Server) Run(addr string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.RunFcgi">func (s *Server) RunFcgi(addr string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.RunScgi">func (s *Server) RunScgi(addr string)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.RunTLS">func (s *Server) RunTLS(addr string, config *tls.Config) error</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.ServeHTTP">func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request)</a></dd>
+				
+					
+					<dd>&nbsp; &nbsp; <a href="#Server.SetLogger">func (s *Server) SetLogger(logger *log.Logger)</a></dd>
+				
+			
+				
+				<dd><a href="#ServerConfig">type ServerConfig</a></dd>
+				
+				
+			
+			
+		</dl>
+
+		
+
+		
+			<h4>Package files</h4>
+			<p>
+			<span style="font-size:90%">
+			
+				<a href="/target/fcgi.go">fcgi.go</a>
+			
+				<a href="/target/scgi.go">scgi.go</a>
+			
+				<a href="/target/status.go">status.go</a>
+			
+				<a href="/target/web.go">web.go</a>
+			
+			</span>
+			</p>
+		
+	
+		
+		
+			<h2 id="variables">Variables</h2>
+			
+				<pre>var Config = &amp;ServerConfig{
+    RecoverPanic: true,
+}</pre>
+				
+			
+		
+		
+			
+			
+			<h2 id="Close">func <a href="/target/web.go?s=11979:11991#L446">Close</a></h2>
+			<pre>func Close()</pre>
+			<p>
+Stops the web server
+</p>
+
+			
+		
+			
+			
+			<h2 id="Delete">func <a href="/target/web.go?s=13659:13705#L509">Delete</a></h2>
+			<pre>func Delete(route string, handler interface{})</pre>
+			<p>
+Adds a handler for the &#39;DELETE&#39; http method.
+</p>
+
+			
+		
+			
+			
+			<h2 id="Get">func <a href="/target/web.go?s=13245:13288#L494">Get</a></h2>
+			<pre>func Get(route string, handler interface{})</pre>
+			<p>
+Adds a handler for the &#39;GET&#39; http method.
+</p>
+
+			
+		
+			
+			
+			<h2 id="Post">func <a href="/target/web.go?s=13374:13418#L499">Post</a></h2>
+			<pre>func Post(route string, handler interface{})</pre>
+			<p>
+Adds a handler for the &#39;POST&#39; http method.
+</p>
+
+			
+		
+			
+			
+			<h2 id="Put">func <a href="/target/web.go?s=13516:13559#L504">Put</a></h2>
+			<pre>func Put(route string, handler interface{})</pre>
+			<p>
+Adds a handler for the &#39;PUT&#39; http method.
+</p>
+
+			
+		
+			
+			
+			<h2 id="Run">func <a href="/target/web.go?s=11659:11680#L429">Run</a></h2>
+			<pre>func Run(addr string)</pre>
+			<p>
+Runs the web application and serves http requests
+</p>
+
+			
+		
+			
+			
+			<h2 id="RunFcgi">func <a href="/target/web.go?s=12557:12582#L469">RunFcgi</a></h2>
+			<pre>func RunFcgi(addr string)</pre>
+			<p>
+Runs the web application by serving fastcgi requests
+</p>
+
+			
+		
+			
+			
+			<h2 id="RunScgi">func <a href="/target/web.go?s=12219:12244#L457">RunScgi</a></h2>
+			<pre>func RunScgi(addr string)</pre>
+			<p>
+Runs the web application and serves scgi requests
+</p>
+
+			
+		
+			
+			
+			<h2 id="RunTLS">func <a href="/target/web.go?s=11771:11815#L434">RunTLS</a></h2>
+			<pre>func RunTLS(addr string, config *tls.Config)</pre>
+			<p>
+Runs the secure web application and serves https requests
+</p>
+
+			
+		
+			
+			
+			<h2 id="SetLogger">func <a href="/target/web.go?s=13835:13869#L517">SetLogger</a></h2>
+			<pre>func SetLogger(logger *log.Logger)</pre>
+			
+			
+		
+			
+			
+			<h2 id="Urlencode">func <a href="/target/web.go?s=14556:14601#L558">Urlencode</a></h2>
+			<pre>func Urlencode(data map[string]string) string</pre>
+			
+			
+		
+		
+			
+			
+			<h2 id="Context">type <a href="/target/web.go?s=461:579#L24">Context</a></h2>
+			<pre>type Context struct {
+    Request *http.Request
+    Params  map[string]string
+    Server  *Server
+    ResponseWriter
+}</pre>
+			
+
+			
+
+			
+
+			
+
+			
+
+			
+				
+				<h3 id="Context.Abort">func (*Context) <a href="/target/web.go?s=680:730#L35">Abort</a></h3>
+				<pre>func (ctx *Context) Abort(status int, body string)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.ContentType">func (*Context) <a href="/target/web.go?s=1411:1454#L57">ContentType</a></h3>
+				<pre>func (ctx *Context) ContentType(ext string)</pre>
+				<p>
+Sets the content type by extension, as defined in the mime package.
+For example, ctx.ContentType(&#34;json&#34;) sets the content-type to &#34;application/json&#34;
+</p>
+
+				
+				
+			
+				
+				<h3 id="Context.GetSecureCookie">func (*Context) <a href="/target/web.go?s=3246:3309#L116">GetSecureCookie</a></h3>
+				<pre>func (ctx *Context) GetSecureCookie(name string) (string, bool)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.NotFound">func (*Context) <a href="/target/web.go?s=1121:1165#L50">NotFound</a></h3>
+				<pre>func (ctx *Context) NotFound(message string)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.NotModified">func (*Context) <a href="/target/web.go?s=1042:1075#L46">NotModified</a></h3>
+				<pre>func (ctx *Context) NotModified()</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.Redirect">func (*Context) <a href="/target/web.go?s=822:875#L40">Redirect</a></h3>
+				<pre>func (ctx *Context) Redirect(status int, url_ string)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.SetCookie">func (*Context) <a href="/target/web.go?s=1893:1960#L76">SetCookie</a></h3>
+				<pre>func (ctx *Context) SetCookie(name string, value string, age int64)</pre>
+				<p>
+Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+</p>
+
+				
+				
+			
+				
+				<h3 id="Context.SetHeader">func (*Context) <a href="/target/web.go?s=1642:1708#L67">SetHeader</a></h3>
+				<pre>func (ctx *Context) SetHeader(hdr string, val string, unique bool)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.SetSecureCookie">func (*Context) <a href="/target/web.go?s=2519:2590#L98">SetSecureCookie</a></h3>
+				<pre>func (ctx *Context) SetSecureCookie(name string, val string, age int64)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Context.WriteString">func (*Context) <a href="/target/web.go?s=581:628#L31">WriteString</a></h3>
+				<pre>func (ctx *Context) WriteString(content string)</pre>
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ResponseWriter">type <a href="/target/web.go?s=319:459#L17">ResponseWriter</a></h2>
+			<pre>type ResponseWriter interface {
+    Header() http.Header
+    WriteHeader(status int)
+    Write(data []byte) (n int, err error)
+    Close()
+}</pre>
+			
+
+			
+
+			
+
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Server">type <a href="/target/web.go?s=10022:10210#L364">Server</a></h2>
+			<pre>type Server struct {
+    Config *ServerConfig
+
+    Logger *log.Logger
+    Env    map[string]interface{}
+    <span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+			
+
+			
+
+			
+
+			
+
+			
+				
+				<h3 id="NewServer">func <a href="/target/web.go?s=10212:10236#L373">NewServer</a></h3>
+				<pre>func NewServer() *Server</pre>
+				
+				
+			
+
+			
+				
+				<h3 id="Server.Close">func (*Server) <a href="/target/web.go?s=11880:11904#L439">Close</a></h3>
+				<pre>func (s *Server) Close()</pre>
+				<p>
+Stops the web server
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.Delete">func (*Server) <a href="/target/web.go?s=13096:13154#L489">Delete</a></h3>
+				<pre>func (s *Server) Delete(route string, handler interface{})</pre>
+				<p>
+Adds a handler for the &#39;DELETE&#39; http method.
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.Get">func (*Server) <a href="/target/web.go?s=12661:12716#L474">Get</a></h3>
+				<pre>func (s *Server) Get(route string, handler interface{})</pre>
+				<p>
+Adds a handler for the &#39;GET&#39; http method.
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.Post">func (*Server) <a href="/target/web.go?s=12805:12861#L479">Post</a></h3>
+				<pre>func (s *Server) Post(route string, handler interface{})</pre>
+				<p>
+Adds a handler for the &#39;POST&#39; http method.
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.Put">func (*Server) <a href="/target/web.go?s=12950:13005#L484">Put</a></h3>
+				<pre>func (s *Server) Put(route string, handler interface{})</pre>
+				<p>
+Adds a handler for the &#39;PUT&#39; http method.
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.Run">func (*Server) <a href="/target/web.go?s=10643:10676#L392">Run</a></h3>
+				<pre>func (s *Server) Run(addr string)</pre>
+				<p>
+Runs the web application and serves http requests
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.RunFcgi">func (*Server) <a href="/target/web.go?s=12355:12392#L462">RunFcgi</a></h3>
+				<pre>func (s *Server) RunFcgi(addr string)</pre>
+				<p>
+Runs the web application and serves scgi requests for this Server object.
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.RunScgi">func (*Server) <a href="/target/web.go?s=12020:12057#L450">RunScgi</a></h3>
+				<pre>func (s *Server) RunScgi(addr string)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Server.RunTLS">func (*Server) <a href="/target/web.go?s=11297:11359#L414">RunTLS</a></h3>
+				<pre>func (s *Server) RunTLS(addr string, config *tls.Config) error</pre>
+				<p>
+Runs the web application and serves https requests
+</p>
+
+				
+				
+			
+				
+				<h3 id="Server.ServeHTTP">func (*Server) <a href="/target/web.go?s=5438:5506#L208">ServeHTTP</a></h3>
+				<pre>func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request)</pre>
+				
+				
+				
+			
+				
+				<h3 id="Server.SetLogger">func (*Server) <a href="/target/web.go?s=13761:13807#L513">SetLogger</a></h3>
+				<pre>func (s *Server) SetLogger(logger *log.Logger)</pre>
+				
+				
+				
+			
+		
+			
+			
+			<h2 id="ServerConfig">type <a href="/target/web.go?s=13906:14049#L521">ServerConfig</a></h2>
+			<pre>type ServerConfig struct {
+    StaticDir    string
+    Addr         string
+    Port         int
+    CookieSecret string
+    RecoverPanic bool
+}</pre>
+			
+
+			
+
+			
+
+			
+
+			
+
+			
+		
+		</div>
+	
+
+	
+
+
+
+
+
+
+
+	
+	
+		<h2 id="subdirectories">Subdirectories</h2>
+	
+	<table class="dir">
+	<tr>
+	<th>Name</th>
+	<th>&nbsp;&nbsp;&nbsp;&nbsp;</th>
+	<th style="text-align: left; width: auto">Synopsis</th>
+	</tr>
+	
+		<tr>
+		<td><a href="..">..</a></td>
+		</tr>
+	
+	
+		
+			<tr>
+			<td class="name"><a href="examples">examples</a></td>
+			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+			<td style="width: auto"></td>
+			</tr>
+		
+	
+	</table>
+	
+
+</div>
+</body>
+</html>

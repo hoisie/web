@@ -325,6 +325,24 @@ footer {
 	padding-left: 50px;
 }
 
+/* API style overrides */
+
+#api {
+  padding-left: 20px;
+}
+
+#api dl dd {
+  font-style: normal;
+}
+
+#api #pkg-subdirectories, #api table.dir {
+  display: none;
+}
+
+#api .expanded h2 {
+  display: none;
+}
+
 @media print, screen and (max-width: 960px) {
 
   div.wrapper {

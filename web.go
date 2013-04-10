@@ -1,3 +1,6 @@
+
+// Package web is a lightweight web framework for Go. It's ideal for
+// writing simple, performant backend web services.
 package web
 
 import (
@@ -31,6 +34,10 @@ type ResponseWriter interface {
     Close()
 }
 
+// A Context object is created for every incoming HTTP request, and is
+// passed to handlers as an optional first argument. It provides information
+// about the request, including the http.Request object, the GET and POST params,
+// and acts as a Writer for the response.
 type Context struct {
     Request *http.Request
     Params  map[string]string
@@ -38,32 +45,40 @@ type Context struct {
     ResponseWriter
 }
 
+// WriteString writes string data into the response object.
 func (ctx *Context) WriteString(content string) {
     ctx.ResponseWriter.Write([]byte(content))
 }
 
+// Abort is a helper method that sends an HTTP header and an optional
+// body. It is useful for returning 4xx or 5xx errors.
+// Once it has been called, any return value from the handler will
+// not be written to the response.
 func (ctx *Context) Abort(status int, body string) {
     ctx.ResponseWriter.WriteHeader(status)
     ctx.ResponseWriter.Write([]byte(body))
 }
 
+// Redirect is a helper method for 3xx redirects.
 func (ctx *Context) Redirect(status int, url_ string) {
     ctx.ResponseWriter.Header().Set("Location", url_)
     ctx.ResponseWriter.WriteHeader(status)
     ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
 }
 
+// Notmodified writes a 304 HTTP response
 func (ctx *Context) NotModified() {
     ctx.ResponseWriter.WriteHeader(304)
 }
 
+// NotFound writes a 404 HTTP response
 func (ctx *Context) NotFound(message string) {
     ctx.ResponseWriter.WriteHeader(404)
     ctx.ResponseWriter.Write([]byte(message))
 }
 
-//Sets the content type by extension, as defined in the mime package. 
-//For example, ctx.ContentType("json") sets the content-type to "application/json"
+// Sets the content type by extension, as defined in the mime package.
+// For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
     if !strings.HasPrefix(ext, ".") {
         ext = "." + ext
@@ -74,6 +89,8 @@ func (ctx *Context) ContentType(ext string) {
     }
 }
 
+// SetHeader sets a response header. If `unique` is true, the current value
+// of that header will be overwritten . If false, it will be appended.
 func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
     if unique {
         ctx.Header().Set(hdr, val)
@@ -82,7 +99,8 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
     }
 }
 
-//Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+// SetCookie sets a cookie header. Duration is specified in seconds. If the duration
+// is zero, the cookie is permanent.
 func (ctx *Context) SetCookie(name string, value string, age int64) {
     var utctime time.Time
     if age == 0 {
@@ -204,6 +222,8 @@ type responseWriter struct {
     http.ResponseWriter
 }
 
+// Close terminates the HTTP connection, and flushes all pending
+// response data.
 func (c *responseWriter) Close() {
     rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
     if buf != nil {
@@ -220,7 +240,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     s.routeHandler(req, &w)
 }
 
-//Calls a function with recover block
+// safelyCall invokes `function` in recover block
 func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
     defer func() {
         if err := recover(); err != nil {
@@ -244,7 +264,8 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
     return function.Call(args), nil
 }
 
-//should the context be passed to the handler?
+// requiresContext determines whether 'handlerType' contains
+// an argument to 'web.Ctx' as its first argument
 func requiresContext(handlerType reflect.Type) bool {
     //if the method doesn't take arguments, no
     if handlerType.NumIn() == 0 {
@@ -264,6 +285,7 @@ func requiresContext(handlerType reflect.Type) bool {
     return false
 }
 
+// the main route handler in web.go
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
@@ -365,12 +387,16 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     ctx.Abort(404, "Page not found")
 }
 
-var Config = &ServerConfig{
-    RecoverPanic: true,
+// ServerConfig is configuration for server objects.
+type ServerConfig struct {
+    StaticDir    string
+    Addr         string
+    Port         int
+    CookieSecret string
+    RecoverPanic bool
 }
 
-var mainServer = NewServer()
-
+// Server represents a web.go server. 
 type Server struct {
     Config *ServerConfig
     routes []route
@@ -398,7 +424,7 @@ func (s *Server) initServer() {
     }
 }
 
-//Runs the web application and serves http requests
+// Run starts the web application and serves HTTP requests for s
 func (s *Server) Run(addr string) {
     s.initServer()
 
@@ -420,7 +446,12 @@ func (s *Server) Run(addr string) {
     s.l.Close()
 }
 
-//Runs the web application and serves https requests
+// Run starts the web application and serves HTTP requests for the main server.
+func Run(addr string) {
+    mainServer.Run(addr)
+}
+
+// RunTLS starts the web application and serves HTTPS requests for s.
 func (s *Server) RunTLS(addr string, config *tls.Config) error {
     s.initServer()
     mux := http.NewServeMux()
@@ -435,107 +466,105 @@ func (s *Server) RunTLS(addr string, config *tls.Config) error {
     return http.Serve(s.l, mux)
 }
 
-//Runs the web application and serves http requests
-func Run(addr string) {
-    mainServer.Run(addr)
-}
-
-//Runs the secure web application and serves https requests
+// RunTLS starts the web application and serves HTTPS requests for the main server.
 func RunTLS(addr string, config *tls.Config) {
     mainServer.RunTLS(addr, config)
 }
 
-//Stops the web server
-func (s *Server) Close() {
-    if s.l != nil {
-        s.l.Close()
-    }
-}
-
-//Stops the web server
-func Close() {
-    mainServer.Close()
-}
-
+// RunScgi starts the web application and serves SCGI requests for s.
 func (s *Server) RunScgi(addr string) {
     s.initServer()
     s.Logger.Printf("web.go serving scgi %s\n", addr)
     s.listenAndServeScgi(addr)
 }
 
-//Runs the web application and serves scgi requests
+// RunScgi starts the web application and serves SCGI requests for the main server.
 func RunScgi(addr string) {
     mainServer.RunScgi(addr)
 }
 
-//Runs the web application and serves scgi requests for this Server object.
+// RunFcgi starts the web application and serves FastCGI requests for s.
 func (s *Server) RunFcgi(addr string) {
     s.initServer()
     s.Logger.Printf("web.go serving fcgi %s\n", addr)
     s.listenAndServeFcgi(addr)
 }
 
-//Runs the web application by serving fastcgi requests
+// RunFcgi starts the web application and serves FastCGI requests for the main server.
 func RunFcgi(addr string) {
     mainServer.RunFcgi(addr)
 }
 
-//Adds a handler for the 'GET' http method.
+// Close stops server s.
+func (s *Server) Close() {
+    if s.l != nil {
+        s.l.Close()
+    }
+}
+
+// Close stops the main server.
+func Close() {
+    mainServer.Close()
+}
+
+// Get adds a handler for the 'GET' http method for server s.
 func (s *Server) Get(route string, handler interface{}) {
     s.addRoute(route, "GET", handler)
 }
 
-//Adds a handler for the 'POST' http method.
+// Post adds a handler for the 'POST' http method for server s.
 func (s *Server) Post(route string, handler interface{}) {
     s.addRoute(route, "POST", handler)
 }
 
-//Adds a handler for the 'PUT' http method.
+// Put adds a handler for the 'PUT' http method for server s.
 func (s *Server) Put(route string, handler interface{}) {
     s.addRoute(route, "PUT", handler)
 }
 
-//Adds a handler for the 'DELETE' http method.
+// Delete adds a handler for the 'DELETE' http method for server s.
 func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
 
-//Adds a handler for the 'GET' http method.
+// Get adds a handler for the 'GET' http method in the main server.
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
 }
 
-//Adds a handler for the 'POST' http method.
+// Post adds a handler for the 'POST' http method in the main server.
 func Post(route string, handler interface{}) {
     mainServer.addRoute(route, "POST", handler)
 }
 
-//Adds a handler for the 'PUT' http method.
+// Put adds a handler for the 'PUT' http method in the main server.
 func Put(route string, handler interface{}) {
     mainServer.addRoute(route, "PUT", handler)
 }
 
-//Adds a handler for the 'DELETE' http method.
+// Delete adds a handler for the 'DELETE' http method in the main server.
 func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
 }
 
+// SetLogger sets the logger for server s
 func (s *Server) SetLogger(logger *log.Logger) {
     s.Logger = logger
 }
 
+// SetLogger sets the logger for the main server.
 func SetLogger(logger *log.Logger) {
     mainServer.Logger = logger
 }
 
-type ServerConfig struct {
-    StaticDir    string
-    Addr         string
-    Port         int
-    CookieSecret string
-    RecoverPanic bool
+// Config is the configuration of the main server.
+var Config = &ServerConfig{
+    RecoverPanic: true,
 }
 
+var mainServer = NewServer()
+
+// internal utility methods
 func webTime(t time.Time) string {
     ftime := t.Format(time.RFC1123)
     if strings.HasSuffix(ftime, "UTC") {
@@ -565,6 +594,8 @@ func fileExists(dir string) bool {
     return !info.IsDir()
 }
 
+// Urlencode is a helper method that converts a map into URL-encoded form data.
+// It is a useful when constructing HTTP POST requests.
 func Urlencode(data map[string]string) string {
     var buf bytes.Buffer
     for k, v := range data {

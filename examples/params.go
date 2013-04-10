@@ -25,6 +25,7 @@ var page = `
 <br>
 <input type="submit" name="Submit" value="Submit"/>
 
+</form>
 </body>
 </html>
 `

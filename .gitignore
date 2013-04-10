@@ -12,3 +12,5 @@ gh-pages/
 site/_site/
 coverage
 .ruby-version
+*.[568]
+_obj

@@ -452,6 +452,11 @@ func (s *Server) Close() {
     }
 }
 
+//Serve the web server
+func ServeHTTP(c http.ResponseWriter, req *http.Request) {
+    mainServer.ServeHTTP(c, req)
+}
+
 //Stops the web server
 func Close() {
     mainServer.Close()

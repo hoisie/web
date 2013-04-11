@@ -10,16 +10,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.1.7/underscore-min.js"></script>
-
-
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
   </head>
   <body>
     <div class="wrapper">
-
+      <header>
+        <a href="/"><h1 class="header">Web</h1></a>
+        <p class="header">The easiest way to create web applications with Go</p>
+        <ul>
+          <li><a href="https://github.com/hoisie/web">View On GitHub</a></li>
+          <li><a href="index.html">Quickstart</a></li>
+          <li><a href="api.html">API Docs</a></li>
+          <li><a href="tutorial.html">Tutorial</a></li>
+        </ul>
+      </header>
+    <section>
       {{content}}
-    </div>
+    </section>
+  </div>
   </body>
 </html>

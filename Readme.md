@@ -77,7 +77,7 @@ In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the f
 
 ## Documentation
 
-API docs are hosted at http://hoisie.github.io/web
+API docs are hosted at http://webgo.io
 
 If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development efforts on features that people will actually use. 
 

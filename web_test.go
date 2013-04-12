@@ -692,3 +692,22 @@ func TestOptions(t *testing.T) {
         t.Fatalf("TestOptions - Access-Control-Max-Age failed")
     }
 }
+
+func TestSlug(t *testing.T) {
+    tests := [][]string{
+        {"", ""},
+        {"a", "a"},
+        {"a/b", "a-b"},
+        {"a b", "a-b"},
+        {"a////b", "a-b"},
+        {" a////b ", "a-b"},
+        {" Manowar / Friends ", "manowar-friends"},
+    }
+
+    for _, test := range tests {
+        v := Slug(test[0], "-")
+        if v != test[1] {
+            t.Fatalf("TestSlug(%v) failed, expected %v, got %v", test[0], test[1], v)
+        }
+    }
+}

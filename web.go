@@ -616,3 +616,24 @@ func Urlencode(data map[string]string) string {
     s := buf.String()
     return s[0 : len(s)-1]
 }
+
+var slugRegex = regexp.MustCompile(`(?i:[^a-z0-9\-_])`)
+
+// Slug is a helper function that returns the URL slug for string s.
+// It's used to return clean, URL-friendly strings that can be
+// used in routing.
+func Slug(s string, sep string) string {
+    if s == "" {
+        return ""
+    }
+    slug := slugRegex.ReplaceAllString(s, sep)
+    if slug == "" {
+        return ""
+    }
+    quoted := regexp.QuoteMeta(sep)
+    sepRegex := regexp.MustCompile("(" + quoted + "){2,}")
+    slug = sepRegex.ReplaceAllString(slug, sep)
+    sepEnds := regexp.MustCompile("^" + quoted + "|" + quoted + "$")
+    slug = sepEnds.ReplaceAllString(slug, "")
+    return strings.ToLower(slug)
+}

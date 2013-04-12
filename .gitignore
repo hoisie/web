@@ -11,3 +11,4 @@ _test
 _testmain.go
 *.swp
 _site
+.DS_Store

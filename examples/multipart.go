@@ -4,14 +4,14 @@ import (
     "bytes"
     "crypto/md5"
     "fmt"
-    "github.com/hoisie/web.go"
+    "github.com/hoisie/web"
+    "io"
 )
 
-func Md5(b []byte) string {
+func Md5(r io.Reader) string {
     hash := md5.New()
-    hash.Write(b)
-    return fmt.Sprintf("%x", hash.Sum())
-
+    io.Copy(hash, r)
+    return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 var page = `
@@ -30,7 +30,7 @@ var page = `
 <input id="input2" type="text" name="input2"/>
 <br>
 <input type="submit" name="Submit" value="Submit"/>
-
+</form>
 </body>
 </html>
 `
@@ -38,10 +38,20 @@ var page = `
 func index() string { return page }
 
 func multipart(ctx *web.Context) string {
+    ctx.Request.ParseMultipartForm(10 * 1024 * 1024)
+    form := ctx.Request.MultipartForm
     var output bytes.Buffer
-    output.WriteString("<p>input1: " + ctx.Params["input1"] + "</p>")
-    output.WriteString("<p>input2: " + ctx.Params["input2"] + "</p>")
-    output.WriteString("<p>file: " + ctx.Files["file"].Filename + " " + Md5(ctx.Files["file"].Data) + "</p>")
+    output.WriteString("<p>input1: " + form.Value["input1"][0] + "</p>")
+    output.WriteString("<p>input2: " + form.Value["input2"][0] + "</p>")
+
+    fileHeader := form.File["file"][0]
+    filename := fileHeader.Filename
+    file, err := fileHeader.Open()
+    if err != nil {
+        return err.Error()
+    }
+
+    output.WriteString("<p>file: " + filename + " " + Md5(file) + "</p>")
     return output.String()
 }
 

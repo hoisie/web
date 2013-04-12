@@ -85,5 +85,4 @@ If you use web.go, I'd greatly appreciate a quick message about what you're buil
 
 web.go was written by [Michael Hoisie](http://hoisie.com). 
 
-Follow me on [Twitter](http://www.twitter.com/hoisie)!
 

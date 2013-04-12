@@ -95,7 +95,6 @@ func getTestResponse(method string, path string, body string, headers map[string
     c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &tcpb}
     mainServer.routeHandler(req, &c)
     return buildTestResponse(&buf)
-
 }
 
 type Test struct {
@@ -189,10 +188,11 @@ func init() {
         return tmp.A + " " + tmp.B
     })
 
-    //s := &StructHandler{"a"}
-    //Get("/methodhandler", MethodHandler(s, "method"))
-    //Get("/methodhandler2", MethodHandler(s, "method2"))
-    //Get("/methodhandler3/(.*)", MethodHandler(s, "method3"))
+    Match("OPTIONS", "/options", func(ctx *Context) {
+        ctx.SetHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS", true)
+        ctx.SetHeader("Access-Control-Max-Age", "1000", true)
+        ctx.WriteHeader(200)
+    })
 }
 
 var tests = []Test{
@@ -681,4 +681,14 @@ func TestSecureCookieFcgi(t *testing.T) {
 func TestEarlyClose(t *testing.T) {
     var server1 Server
     server1.Close()
+}
+
+func TestOptions(t *testing.T) {
+    resp := getTestResponse("OPTIONS", "/options", "", nil, nil)
+    if resp.headers["Access-Control-Allow-Methods"][0] != "POST, GET, OPTIONS" {
+        t.Fatalf("TestOptions - Access-Control-Allow-Methods failed")
+    }
+    if resp.headers["Access-Control-Max-Age"][0] != "1000" {
+        t.Fatalf("TestOptions - Access-Control-Max-Age failed")
+    }
 }

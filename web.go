@@ -1,4 +1,3 @@
-
 // Package web is a lightweight web framework for Go. It's ideal for
 // writing simple, performant backend web services.
 package web
@@ -527,6 +526,11 @@ func (s *Server) Delete(route string, handler interface{}) {
     s.addRoute(route, "DELETE", handler)
 }
 
+// Match adds a handler for an arbitrary http method for server s.
+func (s *Server) Match(method string, route string, handler interface{}) {
+    s.addRoute(route, method, handler)
+}
+
 // Get adds a handler for the 'GET' http method in the main server.
 func Get(route string, handler interface{}) {
     mainServer.Get(route, handler)
@@ -545,6 +549,11 @@ func Put(route string, handler interface{}) {
 // Delete adds a handler for the 'DELETE' http method in the main server.
 func Delete(route string, handler interface{}) {
     mainServer.addRoute(route, "DELETE", handler)
+}
+
+// Match adds a handler for an arbitrary http method in the main server.
+func Match(method string, route string, handler interface{}) {
+    mainServer.addRoute(route, method, handler)
 }
 
 // SetLogger sets the logger for server s

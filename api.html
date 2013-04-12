@@ -9,12 +9,6 @@ title: Web.go API docs
 	Use of this source code is governed by a BSD-style
 	license that can be found in the LICENSE file.
 -->
-<!--
-	Note: Static (i.e., not template-generated) href and id
-	attributes start with "pkg-" to make it impossible for
-	them to conflict with generated attributes (some of which
-	correspond to Go identifiers).
--->
 
 	
 		<div id="short-nav">
@@ -22,17 +16,16 @@ title: Web.go API docs
 			<dd><code>import "github.com/hoisie/web"</code></dd>
 			</dl>
 			<dl>
-			<dd><a href="#pkg-overview" class="overviewLink">Overview</a></dd>
-			<dd><a href="#pkg-index">Index</a></dd>
+			<dd><a href="#overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="#index">Index</a></dd>
 			
 			
-			
-				<dd><a href="#pkg-subdirectories">Subdirectories</a></dd>
+				<dd><a href="#subdirectories">Subdirectories</a></dd>
 			
 			</dl>
 		</div>
 		<!-- The package's Name is printed as title by the top-level template -->
-		<div id="pkg-overview" class="toggleVisible">
+		<div id="overview" class="toggleVisible">
 			<div class="collapsed">
 				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
 			</div>
@@ -47,13 +40,13 @@ writing simple, performant backend web services.
 		</div>
 		
 	
-		<h2 id="pkg-index">Index</h2>
+		<h2 id="index">Index</h2>
 		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
 		<div id="manual-nav">
 			<dl>
 			
 			
-				<dd><a href="#pkg-variables">Variables</a></dd>
+				<dd><a href="#variables">Variables</a></dd>
 			
 			
 				
@@ -88,6 +81,9 @@ writing simple, performant backend web services.
 			
 				
 				<dd><a href="#SetLogger">func SetLogger(logger *log.Logger)</a></dd>
+			
+				
+				<dd><a href="#Slug">func Slug(s string, sep string) string</a></dd>
 			
 				
 				<dd><a href="#Urlencode">func Urlencode(data map[string]string) string</a></dd>
@@ -206,7 +202,7 @@ writing simple, performant backend web services.
 	
 		
 		
-			<h2 id="pkg-variables">Variables</h2>
+			<h2 id="variables">Variables</h2>
 			
 				<pre>var Config = &amp;ServerConfig{
     RecoverPanic: true,
@@ -324,6 +320,18 @@ RunTLS starts the web application and serves HTTPS requests for the main server.
 			<pre>func SetLogger(logger *log.Logger)</pre>
 			<p>
 SetLogger sets the logger for the main server.
+</p>
+
+			
+		
+			
+			
+			<h2 id="Slug">func <a href="/target/web.go?s=17440:17478#L615">Slug</a></h2>
+			<pre>func Slug(s string, sep string) string</pre>
+			<p>
+Slug is a helper function that returns the URL slug for string s.
+It&#39;s used to return clean, URL-friendly strings that can be
+used in routing.
 </p>
 
 			
@@ -674,7 +682,7 @@ ServerConfig is configuration for server objects.
 
 	
 	
-		<h2 id="pkg-subdirectories">Subdirectories</h2>
+		<h2 id="subdirectories">Subdirectories</h2>
 	
 	<table class="dir">
 	<tr>
@@ -690,7 +698,7 @@ ServerConfig is configuration for server objects.
 	
 		
 			<tr>
-			<td class="name"><a href="examples/">examples</a></td>
+			<td class="name"><a href="examples">examples</a></td>
 			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
 			<td style="width: auto"></td>
 			</tr>

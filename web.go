@@ -287,11 +287,12 @@ func requiresContext(handlerType reflect.Type) bool {
 // the main route handler in web.go
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
     requestPath := req.URL.Path
+    requestURI := req.RequestURI
     ctx := Context{req, map[string]string{}, s, w}
 
     //log the request
     var logEntry bytes.Buffer
-    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
 
     //ignore errors from ParseForm because it's usually harmless.
     req.ParseForm()
@@ -331,12 +332,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
             continue
         }
 
-        if !cr.MatchString(requestPath) {
+        if !cr.MatchString(requestURI) {
             continue
         }
-        match := cr.FindStringSubmatch(requestPath)
+        match := cr.FindStringSubmatch(requestURI)
 
-        if len(match[0]) != len(requestPath) {
+        if len(match[0]) != len(requestURI) {
             continue
         }
 
@@ -346,7 +347,8 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
             args = append(args, reflect.ValueOf(&ctx))
         }
         for _, arg := range match[1:] {
-            args = append(args, reflect.ValueOf(arg))
+            rawarg, _ := url.QueryUnescape(arg)
+            args = append(args, reflect.ValueOf(rawarg))
         }
 
         ret, err := s.safelyCall(route.handler, args)

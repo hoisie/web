@@ -220,6 +220,10 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
     s.routeHandler(req, &w)
 }
 
+func (s *Server) Process(c http.ResponseWriter, req *http.Request) {
+    s.ServeHTTP(c, req)
+}
+
 //Calls a function with recover block
 func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
     defer func() {
@@ -453,8 +457,8 @@ func (s *Server) Close() {
 }
 
 //Serve the web server
-func ServeHTTP(c http.ResponseWriter, req *http.Request) {
-    mainServer.ServeHTTP(c, req)
+func Process(c http.ResponseWriter, req *http.Request) {
+    mainServer.Process(c, req)
 }
 
 //Stops the web server

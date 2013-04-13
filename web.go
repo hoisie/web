@@ -98,17 +98,8 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
     }
 }
 
-// SetCookie sets a cookie header. Duration is specified in seconds. If the duration
-// is zero, the cookie is permanent.
-func (ctx *Context) SetCookie(name string, value string, age int64) {
-    var utctime time.Time
-    if age == 0 {
-        // 2^31 - 1 seconds (roughly 2038)
-        utctime = time.Unix(2147483647, 0)
-    } else {
-        utctime = time.Unix(time.Now().Unix()+age, 0)
-    }
-    cookie := http.Cookie{Name: name, Value: value, Expires: utctime}
+// SetCookie adds a cookie header to the response.
+func (ctx *Context) SetCookie(cookie *http.Cookie) {
     ctx.SetHeader("Set-Cookie", cookie.String(), false)
 }
 
@@ -137,7 +128,7 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     timestamp := strconv.FormatInt(time.Now().Unix(), 10)
     sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-    ctx.SetCookie(name, cookie, age)
+    ctx.SetCookie(NewCookie(name, cookie, age))
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
@@ -647,4 +638,18 @@ func Slug(s string, sep string) string {
     sepEnds := regexp.MustCompile("^" + quoted + "|" + quoted + "$")
     slug = sepEnds.ReplaceAllString(slug, "")
     return strings.ToLower(slug)
+}
+
+// NewCookie is a helper method that returns a new http.Cookie object.
+// Duration is specified in seconds. If the duration is zero, the cookie is permanent.
+// This can be used in conjunction with ctx.SetCookie.
+func NewCookie(name string, value string, age int64) *http.Cookie {
+    var utctime time.Time
+    if age == 0 {
+        // 2^31 - 1 seconds (roughly 2038)
+        utctime = time.Unix(2147483647, 0)
+    } else {
+        utctime = time.Unix(time.Now().Unix()+age, 0)
+    }
+    return &http.Cookie{Name: name, Value: value, Expires: utctime}
 }

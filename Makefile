@@ -10,6 +10,7 @@ format:
 	${GOFMT} -w ${GOFILES}
 	${GOFMT} -w web_test.go
 	${GOFMT} -w examples/arcchallenge.go
+	${GOFMT} -w examples/cookie.go
 	${GOFMT} -w examples/hello.go
 	${GOFMT} -w examples/multipart.go
 	${GOFMT} -w examples/multiserver.go

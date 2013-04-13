@@ -234,9 +234,14 @@ func (c *responseWriter) Close() {
     }
 }
 
+// ServeHTTP is the interface method for Go's http server package
 func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-    w := responseWriter{c}
-    s.routeHandler(req, &w)
+    s.Process(c, req)
+}
+
+// Process invokes the main server's routing system.
+func Process(c http.ResponseWriter, req *http.Request) {
+    mainServer.Process(c, req)
 }
 
 // safelyCall invokes `function` in recover block
@@ -421,6 +426,12 @@ func (s *Server) initServer() {
     if s.Logger == nil {
         s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
     }
+}
+
+// Process invokes the routing system for server s
+func (s *Server) Process(c http.ResponseWriter, req *http.Request) {
+    w := responseWriter{c}
+    s.routeHandler(req, &w)
 }
 
 // Run starts the web application and serves HTTP requests for s

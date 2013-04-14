@@ -50,8 +50,12 @@ In that example, everything after the `/` is passed to the argument _val_ in the
 
 Although handlers usually return a string, web.go also accepts route handlers that have no return value. These methods are responsible for writing data to the client:
 
-    func hello(ctx *web.Context, val string) { ctx.WriteString ( "hello " + val) } 
-    
+{% highlight go %}
+func hello(ctx *web.Context, val string) { 
+    ctx.WriteString ( "hello " + val) 
+} 
+{% endhighlight %}
+
 Writing to the context variable is explained in a later section.  
 
 ## The web.Context
@@ -79,6 +83,14 @@ Here is a brief summary of web.Context:
 
 Web.go doesn't include a templating library. However, there are several good ones available, such as [mustache.go](http://github.com/hoisie/mustache). The template package in Go is not recommended for web.go because it doesn't allow templates to be embedded within each other, which causes a lot of duplicated text. 
 
+## Static Files
+
+Web.go has the ability to serve static files in a very efficient way. If you place files in the `static` directory of your web application, web.go will serve them if a request matches the name of the file.
+
+For example, if you have a web app in `$HOME/app` being served from `myapp.com`, and there's a file `$HOME/app/static/image.jpg`, requesting `myapp.com/image.jpg` will serve the static file. A common practice is to have `static/images`, `static/stylesheets`, and `static/javascripts` that contain static files. 
+
+You can also change web.ServerConfig.StaticDir to specify a directory.
+
 ## Shared hosts
 
 Web.go provides methods to run web applications using the SCGI or FastCGI protocols. This
@@ -100,3 +112,15 @@ func main() {
 {% endhighlight %}
 
 Next you need to configure your web server to pass requests along to port 6580. 
+
+## Developing web.go
+
+If you have an issue you'd like to debug in web.go, you'll want to modify the source code of the project.
+
+By default, when you run `go get package`, the installer will fetch the source code and install the package in the directory specified by `$GOPATH`. If `$GOPATH` is not set, the library is installed in the `$GOROOT/pkg` folder, which defaults to where Go is built. As a developer of Go libraries, it is much more convenient to set a `$GOPATH` variable to a location like `$HOME/golibs` or `$HOME/projects/golibs`. See [how to write Go code](http://golang.org/doc/code.html) for more details. The first step to developing web.go is to ensure that you have an appropriate `$GOPATH` with two sub-directories: `src` and `pkg`. 
+
+Next, you should run `cd $GOPATH/src && git clone github.com/hoisie/web`. This creates a clone of the web.go repo in `$GOPATH/src/web`. Next, run `cd GOPATH/src/web && go install`. This will install the `web` package into `$GOPATH/pkg`. 
+
+From now on, if you include web.go, you should use `import web`, and this will link to the files that are in `$GOPATH/pkg`. You can now modify the web.go source code in `$GOPATH/src/web`, rebuild with `go install`, and then rebuild your target appication.
+
+

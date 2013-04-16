@@ -158,25 +158,24 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof
 var contextType reflect.Type
 
-var exeFile string
-
-// default
-func defaultStaticDir() string {
-    root, _ := path.Split(exeFile)
-    return path.Join(root, "static")
-}
+var defaultStaticDirs []string
 
 func init() {
     contextType = reflect.TypeOf(Context{})
     //find the location of the exe file
-    arg0 := path.Clean(os.Args[0])
     wd, _ := os.Getwd()
+    arg0 := path.Clean(os.Args[0])
+    var exeFile string
     if strings.HasPrefix(arg0, "/") {
         exeFile = arg0
     } else {
         //TODO for robustness, search each directory in $PATH
         exeFile = path.Join(wd, arg0)
     }
+    parent, _ := path.Split(exeFile)
+    defaultStaticDirs = append(defaultStaticDirs, path.Join(parent, "static"))
+    defaultStaticDirs = append(defaultStaticDirs, path.Join(wd, "static"))
+    return
 }
 
 type route struct {
@@ -256,6 +255,32 @@ func requiresContext(handlerType reflect.Type) bool {
     return false
 }
 
+// tryServingFile attempts to serve a static file, and returns
+// whether or not the operation is successful.
+// It checks the following directories for the file, in order:
+// 1) Config.StaticDir
+// 2) The 'static' directory in the parent directory of the executable.
+// 3) The 'static' directory in the current working directory
+func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseWriter) bool {
+    //try to serve a static file
+    if s.Config.StaticDir != "" {
+        staticFile := path.Join(s.Config.StaticDir, name)
+        if fileExists(staticFile) {
+            http.ServeFile(w, req, staticFile)
+            return true
+        }
+    } else {
+        for _, staticDir := range defaultStaticDirs {
+            staticFile := path.Join(staticDir, name)
+            if fileExists(staticFile) {
+                http.ServeFile(w, req, staticFile)
+                return true
+            }
+        }
+    }
+    return false
+}
+
 // the main route handler in web.go
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     requestPath := req.URL.Path
@@ -273,7 +298,6 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
         }
         fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
-
     ctx.Server.Logger.Print(logEntry.String())
 
     //set some default headers
@@ -281,15 +305,10 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     tm := time.Now().UTC()
     ctx.SetHeader("Date", webTime(tm), true)
 
-    //try to serve a static file
-    staticDir := s.Config.StaticDir
-    if staticDir == "" {
-        staticDir = defaultStaticDir()
-    }
-    staticFile := path.Join(staticDir, requestPath)
-    if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-        http.ServeFile(&ctx, req, staticFile)
-        return
+    if req.Method == "GET" || req.Method == "HEAD" {
+        if s.tryServingFile(requestPath, req, w) {
+            return
+        }
     }
 
     //Set the default content-type
@@ -344,17 +363,14 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
         return
     }
 
-    //try to serve index.html || index.htm
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
+    // try serving index.html or index.htm
+    if req.Method == "GET" || req.Method == "HEAD" {
+        if s.tryServingFile(path.Join(requestPath, "index.html"), req, w) {
+            return
+        } else if s.tryServingFile(path.Join(requestPath, "index.htm"), req, w) {
+            return
+        }
     }
-
-    if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-        http.ServeFile(&ctx, ctx.Request, indexPath)
-        return
-    }
-
     ctx.Abort(404, "Page not found")
 }
 

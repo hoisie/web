@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Web.go API docs
+title: API docs
 ---
 
 <div id="api">
@@ -9,30 +9,23 @@ title: Web.go API docs
 	Use of this source code is governed by a BSD-style
 	license that can be found in the LICENSE file.
 -->
-<!--
-	Note: Static (i.e., not template-generated) href and id
-	attributes start with "pkg-" to make it impossible for
-	them to conflict with generated attributes (some of which
-	correspond to Go identifiers).
--->
 
 	
-		
 		<div id="short-nav">
 			<dl>
 			<dd><code>import "github.com/hoisie/web"</code></dd>
 			</dl>
 			<dl>
-			<dd><a href="#pkg-overview" class="overviewLink">Overview</a></dd>
-			<dd><a href="#pkg-index" class="indexLink">Index</a></dd>
+			<dd><a href="#overview" class="overviewLink">Overview</a></dd>
+			<dd><a href="#index">Index</a></dd>
 			
 			
-				<dd><a href="#pkg-subdirectories">Subdirectories</a></dd>
+				<dd><a href="#subdirectories">Subdirectories</a></dd>
 			
 			</dl>
 		</div>
 		<!-- The package's Name is printed as title by the top-level template -->
-		<div id="pkg-overview" class="toggleVisible">
+		<div id="overview" class="toggleVisible">
 			<div class="collapsed">
 				<h2 class="toggleButton" title="Click to show Overview section">Overview ▹</h2>
 			</div>
@@ -46,20 +39,14 @@ writing simple, performant backend web services.
 			</div>
 		</div>
 		
-
-		<div id="pkg-index" class="toggleVisible">
-		<div class="collapsed">
-			<h2 class="toggleButton" title="Click to show Index section">Index ▹</h2>
-		</div>
-		<div class="expanded">
-			<h2 class="toggleButton" title="Click to hide Index section">Index ▾</h2>
-
+	
+		<h2 id="index">Index</h2>
 		<!-- Table of contents for API; must be named manual-nav to turn off auto nav. -->
-			<div id="manual-nav">
+		<div id="manual-nav">
 			<dl>
 			
 			
-				<dd><a href="#pkg-variables">Variables</a></dd>
+				<dd><a href="#variables">Variables</a></dd>
 			
 			
 				
@@ -75,13 +62,7 @@ writing simple, performant backend web services.
 				<dd><a href="#Match">func Match(method string, route string, handler interface{})</a></dd>
 			
 				
-				<dd><a href="#NewCookie">func NewCookie(name string, value string, age int64) *http.Cookie</a></dd>
-			
-				
 				<dd><a href="#Post">func Post(route string, handler interface{})</a></dd>
-			
-				
-				<dd><a href="#Process">func Process(c http.ResponseWriter, req *http.Request)</a></dd>
 			
 				
 				<dd><a href="#Put">func Put(route string, handler interface{})</a></dd>
@@ -131,7 +112,7 @@ writing simple, performant backend web services.
 					<dd>&nbsp; &nbsp; <a href="#Context.Redirect">func (ctx *Context) Redirect(status int, url_ string)</a></dd>
 				
 					
-					<dd>&nbsp; &nbsp; <a href="#Context.SetCookie">func (ctx *Context) SetCookie(cookie *http.Cookie)</a></dd>
+					<dd>&nbsp; &nbsp; <a href="#Context.SetCookie">func (ctx *Context) SetCookie(name string, value string, age int64)</a></dd>
 				
 					
 					<dd>&nbsp; &nbsp; <a href="#Context.SetHeader">func (ctx *Context) SetHeader(hdr string, val string, unique bool)</a></dd>
@@ -141,6 +122,11 @@ writing simple, performant backend web services.
 				
 					
 					<dd>&nbsp; &nbsp; <a href="#Context.WriteString">func (ctx *Context) WriteString(content string)</a></dd>
+				
+			
+				
+				<dd><a href="#ResponseWriter">type ResponseWriter</a></dd>
+				
 				
 			
 				
@@ -164,9 +150,6 @@ writing simple, performant backend web services.
 				
 					
 					<dd>&nbsp; &nbsp; <a href="#Server.Post">func (s *Server) Post(route string, handler interface{})</a></dd>
-				
-					
-					<dd>&nbsp; &nbsp; <a href="#Server.Process">func (s *Server) Process(c http.ResponseWriter, req *http.Request)</a></dd>
 				
 					
 					<dd>&nbsp; &nbsp; <a href="#Server.Put">func (s *Server) Put(route string, handler interface{})</a></dd>
@@ -196,8 +179,7 @@ writing simple, performant backend web services.
 				
 			
 			
-			</dl>
-			</div><!-- #manual-nav -->
+		</dl>
 
 		
 
@@ -217,15 +199,13 @@ writing simple, performant backend web services.
 			</span>
 			</p>
 		
-		</div><!-- .expanded -->
-		</div><!-- #pkg-index -->
-
+	
 		
 		
-			<h2 id="pkg-variables">Variables</h2>
+			<h2 id="variables">Variables</h2>
 			
-				<pre>var <span id="Config">Config</span> = &amp;<a href="#ServerConfig">ServerConfig</a>{
-    <a href="#RecoverPanic">RecoverPanic</a>: <a href="/pkg/builtin/#true">true</a>,
+				<pre>var Config = &amp;ServerConfig{
+    RecoverPanic: true,
 }</pre>
 				<p>
 Config is the configuration of the main server.
@@ -236,7 +216,7 @@ Config is the configuration of the main server.
 		
 			
 			
-			<h2 id="Close">func <a href="/target/web.go?s=13668:13680#L472">Close</a></h2>
+			<h2 id="Close">func <a href="/target/web.go?s=14155:14167#L495">Close</a></h2>
 			<pre>func Close()</pre>
 			<p>
 Close stops the main server.
@@ -246,8 +226,8 @@ Close stops the main server.
 		
 			
 			
-			<h2 id="Delete">func <a href="/target/web.go?s=15111:15157#L517">Delete</a></h2>
-			<pre>func Delete(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+			<h2 id="Delete">func <a href="/target/web.go?s=15598:15644#L540">Delete</a></h2>
+			<pre>func Delete(route string, handler interface{})</pre>
 			<p>
 Delete adds a handler for the &#39;DELETE&#39; http method in the main server.
 </p>
@@ -256,8 +236,8 @@ Delete adds a handler for the &#39;DELETE&#39; http method in the main server.
 		
 			
 			
-			<h2 id="Get">func <a href="/target/web.go?s=14621:14664#L502">Get</a></h2>
-			<pre>func Get(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+			<h2 id="Get">func <a href="/target/web.go?s=15108:15151#L525">Get</a></h2>
+			<pre>func Get(route string, handler interface{})</pre>
 			<p>
 Get adds a handler for the &#39;GET&#39; http method in the main server.
 </p>
@@ -266,8 +246,8 @@ Get adds a handler for the &#39;GET&#39; http method in the main server.
 		
 			
 			
-			<h2 id="Match">func <a href="/target/web.go?s=15286:15346#L522">Match</a></h2>
-			<pre>func Match(method <a href="/pkg/builtin/#string">string</a>, route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+			<h2 id="Match">func <a href="/target/web.go?s=15773:15833#L545">Match</a></h2>
+			<pre>func Match(method string, route string, handler interface{})</pre>
 			<p>
 Match adds a handler for an arbitrary http method in the main server.
 </p>
@@ -276,20 +256,8 @@ Match adds a handler for an arbitrary http method in the main server.
 		
 			
 			
-			<h2 id="NewCookie">func <a href="/target/web.go?s=17633:17698#L611">NewCookie</a></h2>
-			<pre>func NewCookie(name <a href="/pkg/builtin/#string">string</a>, value <a href="/pkg/builtin/#string">string</a>, age <a href="/pkg/builtin/#int64">int64</a>) *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Cookie">Cookie</a></pre>
-			<p>
-NewCookie is a helper method that returns a new http.Cookie object.
-Duration is specified in seconds. If the duration is zero, the cookie is permanent.
-This can be used in conjunction with ctx.SetCookie.
-</p>
-
-			
-		
-			
-			
-			<h2 id="Post">func <a href="/target/web.go?s=14775:14819#L507">Post</a></h2>
-			<pre>func Post(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+			<h2 id="Post">func <a href="/target/web.go?s=15262:15306#L530">Post</a></h2>
+			<pre>func Post(route string, handler interface{})</pre>
 			<p>
 Post adds a handler for the &#39;POST&#39; http method in the main server.
 </p>
@@ -298,18 +266,8 @@ Post adds a handler for the &#39;POST&#39; http method in the main server.
 		
 			
 			
-			<h2 id="Process">func <a href="/target/web.go?s=5926:5980#L200">Process</a></h2>
-			<pre>func Process(c <a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#ResponseWriter">ResponseWriter</a>, req *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Request">Request</a>)</pre>
-			<p>
-Process invokes the main server&#39;s routing system.
-</p>
-
-			
-		
-			
-			
-			<h2 id="Put">func <a href="/target/web.go?s=14941:14984#L512">Put</a></h2>
-			<pre>func Put(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+			<h2 id="Put">func <a href="/target/web.go?s=15428:15471#L535">Put</a></h2>
+			<pre>func Put(route string, handler interface{})</pre>
 			<p>
 Put adds a handler for the &#39;PUT&#39; http method in the main server.
 </p>
@@ -318,8 +276,8 @@ Put adds a handler for the &#39;PUT&#39; http method in the main server.
 		
 			
 			
-			<h2 id="Run">func <a href="/target/web.go?s=12205:12226#L416">Run</a></h2>
-			<pre>func Run(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+			<h2 id="Run">func <a href="/target/web.go?s=12692:12713#L439">Run</a></h2>
+			<pre>func Run(addr string)</pre>
 			<p>
 Run starts the web application and serves HTTP requests for the main server.
 </p>
@@ -328,8 +286,8 @@ Run starts the web application and serves HTTP requests for the main server.
 		
 			
 			
-			<h2 id="RunFcgi">func <a href="/target/web.go?s=13475:13500#L460">RunFcgi</a></h2>
-			<pre>func RunFcgi(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+			<h2 id="RunFcgi">func <a href="/target/web.go?s=13962:13987#L483">RunFcgi</a></h2>
+			<pre>func RunFcgi(addr string)</pre>
 			<p>
 RunFcgi starts the web application and serves FastCGI requests for the main server.
 </p>
@@ -338,8 +296,8 @@ RunFcgi starts the web application and serves FastCGI requests for the main serv
 		
 			
 			
-			<h2 id="RunScgi">func <a href="/target/web.go?s=13108:13133#L448">RunScgi</a></h2>
-			<pre>func RunScgi(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+			<h2 id="RunScgi">func <a href="/target/web.go?s=13595:13620#L471">RunScgi</a></h2>
+			<pre>func RunScgi(addr string)</pre>
 			<p>
 RunScgi starts the web application and serves SCGI requests for the main server.
 </p>
@@ -348,8 +306,8 @@ RunScgi starts the web application and serves SCGI requests for the main server.
 		
 			
 			
-			<h2 id="RunTLS">func <a href="/target/web.go?s=12721:12765#L436">RunTLS</a></h2>
-			<pre>func RunTLS(addr <a href="/pkg/builtin/#string">string</a>, config *<a href="/pkg/crypto/tls/">tls</a>.<a href="/pkg/crypto/tls/#Config">Config</a>)</pre>
+			<h2 id="RunTLS">func <a href="/target/web.go?s=13208:13252#L459">RunTLS</a></h2>
+			<pre>func RunTLS(addr string, config *tls.Config)</pre>
 			<p>
 RunTLS starts the web application and serves HTTPS requests for the main server.
 </p>
@@ -358,8 +316,8 @@ RunTLS starts the web application and serves HTTPS requests for the main server.
 		
 			
 			
-			<h2 id="SetLogger">func <a href="/target/web.go?s=15566:15600#L532">SetLogger</a></h2>
-			<pre>func SetLogger(logger *<a href="/pkg/log/">log</a>.<a href="/pkg/log/#Logger">Logger</a>)</pre>
+			<h2 id="SetLogger">func <a href="/target/web.go?s=16053:16087#L555">SetLogger</a></h2>
+			<pre>func SetLogger(logger *log.Logger)</pre>
 			<p>
 SetLogger sets the logger for the main server.
 </p>
@@ -368,8 +326,8 @@ SetLogger sets the logger for the main server.
 		
 			
 			
-			<h2 id="Slug">func <a href="/target/web.go?s=16953:16991#L592">Slug</a></h2>
-			<pre>func Slug(s <a href="/pkg/builtin/#string">string</a>, sep <a href="/pkg/builtin/#string">string</a>) <a href="/pkg/builtin/#string">string</a></pre>
+			<h2 id="Slug">func <a href="/target/web.go?s=17440:17478#L615">Slug</a></h2>
+			<pre>func Slug(s string, sep string) string</pre>
 			<p>
 Slug is a helper function that returns the URL slug for string s.
 It&#39;s used to return clean, URL-friendly strings that can be
@@ -380,8 +338,8 @@ used in routing.
 		
 			
 			
-			<h2 id="Urlencode">func <a href="/target/web.go?s=16442:16487#L575">Urlencode</a></h2>
-			<pre>func Urlencode(data map[<a href="/pkg/builtin/#string">string</a>]<a href="/pkg/builtin/#string">string</a>) <a href="/pkg/builtin/#string">string</a></pre>
+			<h2 id="Urlencode">func <a href="/target/web.go?s=16929:16974#L598">Urlencode</a></h2>
+			<pre>func Urlencode(data map[string]string) string</pre>
 			<p>
 Urlencode is a helper method that converts a map into URL-encoded form data.
 It is a useful when constructing HTTP POST requests.
@@ -392,12 +350,12 @@ It is a useful when constructing HTTP POST requests.
 		
 			
 			
-			<h2 id="Context">type <a href="/target/web.go?s=712:835#L23">Context</a></h2>
+			<h2 id="Context">type <a href="/target/web.go?s=854:972#L30">Context</a></h2>
 			<pre>type Context struct {
-    Request *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Request">Request</a>
-    Params  map[<a href="/pkg/builtin/#string">string</a>]<a href="/pkg/builtin/#string">string</a>
-    Server  *<a href="#Server">Server</a>
-    <a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#ResponseWriter">ResponseWriter</a>
+    Request *http.Request
+    Params  map[string]string
+    Server  *Server
+    ResponseWriter
 }</pre>
 			<p>
 A Context object is created for every incoming HTTP request, and is
@@ -417,8 +375,8 @@ and acts as a Writer for the response.
 
 			
 				
-				<h3 id="Context.Abort">func (*Context) <a href="/target/web.go?s=1223:1273#L39">Abort</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) Abort(status <a href="/pkg/builtin/#int">int</a>, body <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Context.Abort">func (*Context) <a href="/target/web.go?s=1360:1410#L46">Abort</a></h3>
+				<pre>func (ctx *Context) Abort(status int, body string)</pre>
 				<p>
 Abort is a helper method that sends an HTTP header and an optional
 body. It is useful for returning 4xx or 5xx errors.
@@ -430,8 +388,8 @@ not be written to the response.
 				
 			
 				
-				<h3 id="Context.ContentType">func (*Context) <a href="/target/web.go?s=2086:2129#L64">ContentType</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) ContentType(ext <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Context.ContentType">func (*Context) <a href="/target/web.go?s=2223:2266#L71">ContentType</a></h3>
+				<pre>func (ctx *Context) ContentType(ext string)</pre>
 				<p>
 Sets the content type by extension, as defined in the mime package.
 For example, ctx.ContentType(&#34;json&#34;) sets the content-type to &#34;application/json&#34;
@@ -441,15 +399,15 @@ For example, ctx.ContentType(&#34;json&#34;) sets the content-type to &#34;appli
 				
 			
 				
-				<h3 id="Context.GetSecureCookie">func (*Context) <a href="/target/web.go?s=3767:3830#L117">GetSecureCookie</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) GetSecureCookie(name <a href="/pkg/builtin/#string">string</a>) (<a href="/pkg/builtin/#string">string</a>, <a href="/pkg/builtin/#bool">bool</a>)</pre>
+				<h3 id="Context.GetSecureCookie">func (*Context) <a href="/target/web.go?s=4254:4317#L133">GetSecureCookie</a></h3>
+				<pre>func (ctx *Context) GetSecureCookie(name string) (string, bool)</pre>
 				
 				
 				
 			
 				
-				<h3 id="Context.NotFound">func (*Context) <a href="/target/web.go?s=1795:1839#L57">NotFound</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) NotFound(message <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Context.NotFound">func (*Context) <a href="/target/web.go?s=1932:1976#L64">NotFound</a></h3>
+				<pre>func (ctx *Context) NotFound(message string)</pre>
 				<p>
 NotFound writes a 404 HTTP response
 </p>
@@ -458,8 +416,8 @@ NotFound writes a 404 HTTP response
 				
 			
 				
-				<h3 id="Context.NotModified">func (*Context) <a href="/target/web.go?s=1677:1710#L52">NotModified</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) NotModified()</pre>
+				<h3 id="Context.NotModified">func (*Context) <a href="/target/web.go?s=1814:1847#L59">NotModified</a></h3>
+				<pre>func (ctx *Context) NotModified()</pre>
 				<p>
 Notmodified writes a 304 HTTP response
 </p>
@@ -468,8 +426,8 @@ Notmodified writes a 304 HTTP response
 				
 			
 				
-				<h3 id="Context.Redirect">func (*Context) <a href="/target/web.go?s=1415:1468#L45">Redirect</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) Redirect(status <a href="/pkg/builtin/#int">int</a>, url_ <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Context.Redirect">func (*Context) <a href="/target/web.go?s=1552:1605#L52">Redirect</a></h3>
+				<pre>func (ctx *Context) Redirect(status int, url_ string)</pre>
 				<p>
 Redirect is a helper method for 3xx redirects.
 </p>
@@ -478,18 +436,19 @@ Redirect is a helper method for 3xx redirects.
 				
 			
 				
-				<h3 id="Context.SetCookie">func (*Context) <a href="/target/web.go?s=2692:2742#L85">SetCookie</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) SetCookie(cookie *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Cookie">Cookie</a>)</pre>
+				<h3 id="Context.SetCookie">func (*Context) <a href="/target/web.go?s=2900:2967#L93">SetCookie</a></h3>
+				<pre>func (ctx *Context) SetCookie(name string, value string, age int64)</pre>
 				<p>
-SetCookie adds a cookie header to the response.
+SetCookie sets a cookie header. Duration is specified in seconds. If the duration
+is zero, the cookie is permanent.
 </p>
 
 				
 				
 			
 				
-				<h3 id="Context.SetHeader">func (*Context) <a href="/target/web.go?s=2464:2530#L76">SetHeader</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) SetHeader(hdr <a href="/pkg/builtin/#string">string</a>, val <a href="/pkg/builtin/#string">string</a>, unique <a href="/pkg/builtin/#bool">bool</a>)</pre>
+				<h3 id="Context.SetHeader">func (*Context) <a href="/target/web.go?s=2601:2667#L83">SetHeader</a></h3>
+				<pre>func (ctx *Context) SetHeader(hdr string, val string, unique bool)</pre>
 				<p>
 SetHeader sets a response header. If `unique` is true, the current value
 of that header will be overwritten . If false, it will be appended.
@@ -499,15 +458,15 @@ of that header will be overwritten . If false, it will be appended.
 				
 			
 				
-				<h3 id="Context.SetSecureCookie">func (*Context) <a href="/target/web.go?s=3029:3100#L99">SetSecureCookie</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) SetSecureCookie(name <a href="/pkg/builtin/#string">string</a>, val <a href="/pkg/builtin/#string">string</a>, age <a href="/pkg/builtin/#int64">int64</a>)</pre>
+				<h3 id="Context.SetSecureCookie">func (*Context) <a href="/target/web.go?s=3527:3598#L115">SetSecureCookie</a></h3>
+				<pre>func (ctx *Context) SetSecureCookie(name string, val string, age int64)</pre>
 				
 				
 				
 			
 				
-				<h3 id="Context.WriteString">func (*Context) <a href="/target/web.go?s=897:944#L31">WriteString</a></h3>
-				<pre>func (ctx *<a href="#Context">Context</a>) WriteString(content <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Context.WriteString">func (*Context) <a href="/target/web.go?s=1034:1081#L38">WriteString</a></h3>
+				<pre>func (ctx *Context) WriteString(content string)</pre>
 				<p>
 WriteString writes string data into the response object.
 </p>
@@ -518,12 +477,33 @@ WriteString writes string data into the response object.
 		
 			
 			
-			<h2 id="Server">type <a href="/target/web.go?s=10740:10928#L361">Server</a></h2>
-			<pre>type Server struct {
-    Config *<a href="#ServerConfig">ServerConfig</a>
+			<h2 id="ResponseWriter">type <a href="/target/web.go?s=440:580#L19">ResponseWriter</a></h2>
+			<pre>type ResponseWriter interface {
+    Header() http.Header
+    WriteHeader(status int)
+    Write(data []byte) (n int, err error)
+    Close()
+}</pre>
+			
 
-    Logger *<a href="/pkg/log/">log</a>.<a href="/pkg/log/#Logger">Logger</a>
-    Env    map[<a href="/pkg/builtin/#string">string</a>]interface{}
+			
+
+			
+
+			
+
+			
+
+			
+		
+			
+			
+			<h2 id="Server">type <a href="/target/web.go?s=11377:11565#L389">Server</a></h2>
+			<pre>type Server struct {
+    Config *ServerConfig
+
+    Logger *log.Logger
+    Env    map[string]interface{}
     <span class="comment">// contains filtered or unexported fields</span>
 }</pre>
 			<p>
@@ -539,16 +519,16 @@ Server represents a web.go server.
 
 			
 				
-				<h3 id="NewServer">func <a href="/target/web.go?s=10930:10954#L370">NewServer</a></h3>
-				<pre>func NewServer() *<a href="#Server">Server</a></pre>
+				<h3 id="NewServer">func <a href="/target/web.go?s=11567:11591#L398">NewServer</a></h3>
+				<pre>func NewServer() *Server</pre>
 				
 				
 			
 
 			
 				
-				<h3 id="Server.Close">func (*Server) <a href="/target/web.go?s=13560:13584#L465">Close</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Close()</pre>
+				<h3 id="Server.Close">func (*Server) <a href="/target/web.go?s=14047:14071#L488">Close</a></h3>
+				<pre>func (s *Server) Close()</pre>
 				<p>
 Close stops server s.
 </p>
@@ -557,8 +537,8 @@ Close stops server s.
 				
 			
 				
-				<h3 id="Server.Delete">func (*Server) <a href="/target/web.go?s=14264:14322#L492">Delete</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Delete(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+				<h3 id="Server.Delete">func (*Server) <a href="/target/web.go?s=14751:14809#L515">Delete</a></h3>
+				<pre>func (s *Server) Delete(route string, handler interface{})</pre>
 				<p>
 Delete adds a handler for the &#39;DELETE&#39; http method for server s.
 </p>
@@ -567,8 +547,8 @@ Delete adds a handler for the &#39;DELETE&#39; http method for server s.
 				
 			
 				
-				<h3 id="Server.Get">func (*Server) <a href="/target/web.go?s=13771:13826#L477">Get</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Get(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+				<h3 id="Server.Get">func (*Server) <a href="/target/web.go?s=14258:14313#L500">Get</a></h3>
+				<pre>func (s *Server) Get(route string, handler interface{})</pre>
 				<p>
 Get adds a handler for the &#39;GET&#39; http method for server s.
 </p>
@@ -577,8 +557,8 @@ Get adds a handler for the &#39;GET&#39; http method for server s.
 				
 			
 				
-				<h3 id="Server.Match">func (*Server) <a href="/target/web.go?s=14436:14508#L497">Match</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Match(method <a href="/pkg/builtin/#string">string</a>, route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+				<h3 id="Server.Match">func (*Server) <a href="/target/web.go?s=14923:14995#L520">Match</a></h3>
+				<pre>func (s *Server) Match(method string, route string, handler interface{})</pre>
 				<p>
 Match adds a handler for an arbitrary http method for server s.
 </p>
@@ -587,8 +567,8 @@ Match adds a handler for an arbitrary http method for server s.
 				
 			
 				
-				<h3 id="Server.Post">func (*Server) <a href="/target/web.go?s=13934:13990#L482">Post</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Post(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+				<h3 id="Server.Post">func (*Server) <a href="/target/web.go?s=14421:14477#L505">Post</a></h3>
+				<pre>func (s *Server) Post(route string, handler interface{})</pre>
 				<p>
 Post adds a handler for the &#39;POST&#39; http method for server s.
 </p>
@@ -597,18 +577,8 @@ Post adds a handler for the &#39;POST&#39; http method for server s.
 				
 			
 				
-				<h3 id="Server.Process">func (*Server) <a href="/target/web.go?s=11360:11426#L389">Process</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Process(c <a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#ResponseWriter">ResponseWriter</a>, req *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Request">Request</a>)</pre>
-				<p>
-Process invokes the routing system for server s
-</p>
-
-				
-				
-			
-				
-				<h3 id="Server.Put">func (*Server) <a href="/target/web.go?s=14097:14152#L487">Put</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Put(route <a href="/pkg/builtin/#string">string</a>, handler interface{})</pre>
+				<h3 id="Server.Put">func (*Server) <a href="/target/web.go?s=14584:14639#L510">Put</a></h3>
+				<pre>func (s *Server) Put(route string, handler interface{})</pre>
 				<p>
 Put adds a handler for the &#39;PUT&#39; http method for server s.
 </p>
@@ -617,8 +587,8 @@ Put adds a handler for the &#39;PUT&#39; http method for server s.
 				
 			
 				
-				<h3 id="Server.Run">func (*Server) <a href="/target/web.go?s=11524:11557#L394">Run</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) Run(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Server.Run">func (*Server) <a href="/target/web.go?s=12011:12044#L417">Run</a></h3>
+				<pre>func (s *Server) Run(addr string)</pre>
 				<p>
 Run starts the web application and serves HTTP requests for s
 </p>
@@ -627,8 +597,8 @@ Run starts the web application and serves HTTP requests for s
 				
 			
 				
-				<h3 id="Server.RunFcgi">func (*Server) <a href="/target/web.go?s=13241:13278#L453">RunFcgi</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) RunFcgi(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Server.RunFcgi">func (*Server) <a href="/target/web.go?s=13728:13765#L476">RunFcgi</a></h3>
+				<pre>func (s *Server) RunFcgi(addr string)</pre>
 				<p>
 RunFcgi starts the web application and serves FastCGI requests for s.
 </p>
@@ -637,8 +607,8 @@ RunFcgi starts the web application and serves FastCGI requests for s.
 				
 			
 				
-				<h3 id="Server.RunScgi">func (*Server) <a href="/target/web.go?s=12877:12914#L441">RunScgi</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) RunScgi(addr <a href="/pkg/builtin/#string">string</a>)</pre>
+				<h3 id="Server.RunScgi">func (*Server) <a href="/target/web.go?s=13364:13401#L464">RunScgi</a></h3>
+				<pre>func (s *Server) RunScgi(addr string)</pre>
 				<p>
 RunScgi starts the web application and serves SCGI requests for s.
 </p>
@@ -647,8 +617,8 @@ RunScgi starts the web application and serves SCGI requests for s.
 				
 			
 				
-				<h3 id="Server.RunTLS">func (*Server) <a href="/target/web.go?s=12327:12389#L421">RunTLS</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) RunTLS(addr <a href="/pkg/builtin/#string">string</a>, config *<a href="/pkg/crypto/tls/">tls</a>.<a href="/pkg/crypto/tls/#Config">Config</a>) <a href="/pkg/builtin/#error">error</a></pre>
+				<h3 id="Server.RunTLS">func (*Server) <a href="/target/web.go?s=12814:12876#L444">RunTLS</a></h3>
+				<pre>func (s *Server) RunTLS(addr string, config *tls.Config) error</pre>
 				<p>
 RunTLS starts the web application and serves HTTPS requests for s.
 </p>
@@ -657,18 +627,15 @@ RunTLS starts the web application and serves HTTPS requests for s.
 				
 			
 				
-				<h3 id="Server.ServeHTTP">func (*Server) <a href="/target/web.go?s=5777:5845#L195">ServeHTTP</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) ServeHTTP(c <a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#ResponseWriter">ResponseWriter</a>, req *<a href="/pkg/net/http/">http</a>.<a href="/pkg/net/http/#Request">Request</a>)</pre>
-				<p>
-ServeHTTP is the interface method for Go&#39;s http server package
-</p>
-
+				<h3 id="Server.ServeHTTP">func (*Server) <a href="/target/web.go?s=6529:6597#L227">ServeHTTP</a></h3>
+				<pre>func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request)</pre>
+				
 				
 				
 			
 				
-				<h3 id="Server.SetLogger">func (*Server) <a href="/target/web.go?s=15442:15488#L527">SetLogger</a></h3>
-				<pre>func (s *<a href="#Server">Server</a>) SetLogger(logger *<a href="/pkg/log/">log</a>.<a href="/pkg/log/#Logger">Logger</a>)</pre>
+				<h3 id="Server.SetLogger">func (*Server) <a href="/target/web.go?s=15929:15975#L550">SetLogger</a></h3>
+				<pre>func (s *Server) SetLogger(logger *log.Logger)</pre>
 				<p>
 SetLogger sets the logger for server s
 </p>
@@ -679,13 +646,13 @@ SetLogger sets the logger for server s
 		
 			
 			
-			<h2 id="ServerConfig">type <a href="/target/web.go?s=10557:10700#L352">ServerConfig</a></h2>
+			<h2 id="ServerConfig">type <a href="/target/web.go?s=11193:11336#L380">ServerConfig</a></h2>
 			<pre>type ServerConfig struct {
-    StaticDir    <a href="/pkg/builtin/#string">string</a>
-    Addr         <a href="/pkg/builtin/#string">string</a>
-    Port         <a href="/pkg/builtin/#int">int</a>
-    CookieSecret <a href="/pkg/builtin/#string">string</a>
-    RecoverPanic <a href="/pkg/builtin/#bool">bool</a>
+    StaticDir    string
+    Addr         string
+    Port         int
+    CookieSecret string
+    RecoverPanic bool
 }</pre>
 			<p>
 ServerConfig is configuration for server objects.
@@ -702,6 +669,7 @@ ServerConfig is configuration for server objects.
 
 			
 		
+		</div>
 	
 
 	
@@ -710,9 +678,11 @@ ServerConfig is configuration for server objects.
 
 
 
+
+
 	
 	
-		<h2 id="pkg-subdirectories">Subdirectories</h2>
+		<h2 id="subdirectories">Subdirectories</h2>
 	
 	<table class="dir">
 	<tr>
@@ -728,7 +698,7 @@ ServerConfig is configuration for server objects.
 	
 		
 			<tr>
-			<td class="name"><a href="examples/">examples</a></td>
+			<td class="name"><a href="examples">examples</a></td>
 			<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
 			<td style="width: auto"></td>
 			</tr>
@@ -736,7 +706,5 @@ ServerConfig is configuration for server objects.
 	
 	</table>
 	
-
-
 
 </div>

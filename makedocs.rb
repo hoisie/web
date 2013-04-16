@@ -3,7 +3,7 @@
 header = <<-HEAD
 ---
 layout: default
-title: Web.go API docs
+title: API docs
 ---
 
 <div id="api">

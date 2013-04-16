@@ -14,7 +14,7 @@ web.go should be familiar to people who've developed websites with higher-level 
 
 ## Installation
 
-Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `release` branch. If you use the `weekly` branch you may have difficulty compiling web.go. There's an alternative web.go branch, `weekly`, that attempts to keep up with the weekly branch.
+Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). web.go targets the Go `release` branch.
 
 To install web.go, simply run:
 

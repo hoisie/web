@@ -12,7 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
-	//"net/http/pprof"
+	"net/http/pprof"
 	"net/url"
 	"os"
 	"path"
@@ -36,8 +36,8 @@ type WebError struct {
 	Err  string
 }
 
-func (err WebError) Error() string {
-	return err.Err
+type responseWriter struct {
+	http.ResponseWriter
 }
 
 type Context struct {
@@ -49,6 +49,58 @@ type Context struct {
 	User interface{}
 	// False iff 0 bytes of body data have been written so far
 	wroteData bool
+}
+
+type route struct {
+	r       string
+	cr      *regexp.Regexp
+	method  string
+	handler reflect.Value
+}
+
+type ServerConfig struct {
+	StaticDirs   []string
+	Addr         string
+	Port         int
+	CookieSecret string
+	RecoverPanic bool
+	Cert         string
+	Key          string
+	ColorOutput  bool
+}
+
+type Server struct {
+	Config *ServerConfig
+	routes []route
+	Logger *log.Logger
+	Env    map[string]interface{}
+	// Save the listener so it can be closed
+	l net.Listener
+	// Passed verbatim to every handler on every request
+	User interface{}
+}
+
+var (
+	// Small optimization: cache the context type instead of repeteadly calling reflect.Typeof
+	contextType reflect.Type
+
+	exeFile string
+
+	preModules  = []func(*Context) error{}
+	postModules = []func(*Context, interface{}) (interface{}, error){}
+
+	Config = &ServerConfig{
+		RecoverPanic: true,
+		Cert:         "",
+		Key:          "",
+		ColorOutput:  true,
+	}
+
+	mainServer = NewServer()
+)
+
+func (err WebError) Error() string {
+	return err.Err
 }
 
 func (ctx *Context) WriteString(content string) {
@@ -85,8 +137,8 @@ func (ctx *Context) Unauthorized(message string) {
 	ctx.Write([]byte(message))
 }
 
-//Sets the content type by extension, as defined in the mime package. 
-//For example, ctx.ContentType("json") sets the content-type to "application/json"
+// Sets the content type by extension, as defined in the mime package.
+// For example, ctx.ContentType("json") sets the content-type to "application/json"
 func (ctx *Context) ContentType(ext string) {
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
@@ -97,7 +149,7 @@ func (ctx *Context) ContentType(ext string) {
 	}
 }
 
-func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
+func (ctx *Context) SetHeader(hdr, val string, unique bool) {
 	if unique {
 		ctx.Header().Set(hdr, val)
 	} else {
@@ -107,7 +159,7 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 
 // Set a cookie with an explicit path. Duration is the cookie time-to-live in
 // seconds (0 = forever).
-func (ctx *Context) SetCookiePath(name string, value string, age int64, path string) {
+func (ctx *Context) SetCookiePath(name, value string, age int64, path string) {
 	var utctime time.Time
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
@@ -119,8 +171,8 @@ func (ctx *Context) SetCookiePath(name string, value string, age int64, path str
 	ctx.SetHeader("Set-Cookie", cookie.String(), false)
 }
 
-//Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name string, value string, age int64) {
+// Sets a cookie -- duration is the amount of time in seconds. 0 = forever
+func (ctx *Context) SetCookie(name, value string, age int64) {
 	ctx.SetCookiePath(name, value, age, "")
 }
 
@@ -134,8 +186,8 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 	return hex
 }
 
-func (ctx *Context) SetSecureCookiePath(name string, val string, age int64, path string) {
-	//base64 encode the val
+func (ctx *Context) SetSecureCookiePath(name, val string, age int64, path string) {
+	// base64 encode the value
 	if len(ctx.Server.Config.CookieSecret) == 0 {
 		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
 		return
@@ -152,7 +204,7 @@ func (ctx *Context) SetSecureCookiePath(name string, val string, age int64, path
 	ctx.SetCookiePath(name, cookie, age, path)
 }
 
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+func (ctx *Context) SetSecureCookie(name, val string, age int64) {
 	ctx.SetSecureCookiePath(name, val, age, "")
 }
 
@@ -187,12 +239,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 	return "", false
 }
 
-// small optimization: cache the context type instead of repeteadly calling reflect.Typeof
-var contextType reflect.Type
-
-var exeFile string
-
-// default
+// Default
 func defaultStaticDir() string {
 	root, _ := path.Split(exeFile)
 	return path.Join(root, "static")
@@ -200,32 +247,25 @@ func defaultStaticDir() string {
 
 func init() {
 	contextType = reflect.TypeOf(Context{})
-	//find the location of the exe file
+	// find the location of the executable
 	arg0 := path.Clean(os.Args[0])
 	wd, _ := os.Getwd()
 	if strings.HasPrefix(arg0, "/") {
 		exeFile = arg0
 	} else {
-		//TODO for robustness, search each directory in $PATH
+		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
 
-	/* Handle different Accept: types */
+	// Handle different Accept: types
 	AddPostModule(MarshalResponse)
 	RegisterMimeParser("application/json", JSONparser)
 	RegisterMimeParser("application/xml", XMLparser)
 	RegisterMimeParser("text/xml", XMLparser)
 	RegisterMimeParser("image/jpeg", Binaryparser)
 
-	/* Handle different Accept-Encoding: types */
+	// Handle different Accept-Encoding: types
 	AddPostModule(EncodeResponse)
-}
-
-type route struct {
-	r       string
-	cr      *regexp.Regexp
-	method  string
-	handler reflect.Value
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
@@ -241,10 +281,6 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
 		fv := reflect.ValueOf(handler)
 		s.routes = append(s.routes, route{r, cr, method, fv})
 	}
-}
-
-type responseWriter struct {
-	http.ResponseWriter
 }
 
 func (c *responseWriter) Close() {
@@ -268,7 +304,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 	s.routeHandler(req, &w)
 }
 
-//Calls a function with recover block
+// Calls a function with recover block
 func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp []reflect.Value, e interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -315,6 +351,8 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
+	requestURI := req.RequestURI
+
 	ctx := Context{
 		Request:        req,
 		RawBody:        nil,
@@ -327,7 +365,11 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 
 	//log the request
 	var logEntry bytes.Buffer
-	fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+	if s.Config.ColorOutput {
+		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
+	} else {
+		fmt.Fprintf(&logEntry, "%s %s", req.Method, requestURI)
+	}
 
 	//ignore errors from ParseForm because it's usually harmless.
 	req.ParseForm()
@@ -335,19 +377,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 		for k, v := range req.Form {
 			ctx.Params[k] = v[0]
 		}
-		fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
-	} else {
-		// If ParseForm was successful, than the Body will be empty
-		if req.Body != nil {
-			var err error
-			ctx.RawBody, err = ioutil.ReadAll(req.Body)
-			if err != nil {
-				req.Body = nil
-			}
+		if s.Config.ColorOutput {
+			fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+		} else {
+			fmt.Fprintf(&logEntry, "\nParams: %v\n", ctx.Params)
 		}
-		if req.Body == nil {
-			ctx.RawBody = make([]byte, 0)
-		}
+
 	}
 
 	ctx.Server.Logger.Print(logEntry.String())
@@ -357,15 +392,17 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
-	//try to serve a static file
-	staticDir := s.Config.StaticDir
-	if staticDir == "" {
-		staticDir = defaultStaticDir()
+	//try to serve static files
+	staticDirs := s.Config.StaticDirs
+	if len(staticDirs) == 0 {
+		staticDirs = []string{defaultStaticDir()}
 	}
-	staticFile := path.Join(staticDir, requestPath)
-	if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-		http.ServeFile(&ctx, req, staticFile)
-		return
+	for _, staticDir := range staticDirs {
+		staticFile := path.Join(staticDir, requestPath)
+		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+			http.ServeFile(&ctx, req, staticFile)
+			return
+		}
 	}
 
 	//Set the default content-type
@@ -379,24 +416,13 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			continue
 		}
 
-		if !cr.MatchString(requestPath) {
+		if !cr.MatchString(requestURI) {
 			continue
 		}
-		match := cr.FindStringSubmatch(requestPath)
+		match := cr.FindStringSubmatch(requestURI)
 
-		if len(match[0]) != len(requestPath) {
+		if len(match[0]) != len(requestURI) {
 			continue
-		}
-
-		// lets call our pre modules to do any processing
-		// before we start the request
-		for _, module := range preModules {
-			// If a module returns an error, we stop process the request
-			err := module(&ctx)
-			if err != nil {
-				ctx.Abort(err.(WebError).Code, err.Error())
-				return
-			}
 		}
 
 		var args []reflect.Value
@@ -405,92 +431,45 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			args = append(args, reflect.ValueOf(&ctx))
 		}
 		for _, arg := range match[1:] {
-			args = append(args, reflect.ValueOf(arg))
+			rawarg, _ := url.QueryUnescape(arg)
+			args = append(args, reflect.ValueOf(rawarg))
 		}
 
 		ret, err := s.safelyCall(route.handler, args)
-
-		if len(ret) == 0 {
-			s.Logger.Printf("Handler gave 0 return values")
-			ctx.Abort(500, "Server Error")
-			return
-		}
-
-		// Backwards compatability, if there is only one return,
-		// assume there was no error
-		if len(ret) > 1 && !ret[1].IsNil() {
-			err = ret[1].Interface()
+		if err != nil {
 			//there was an error or panic while calling the handler
-			s.Logger.Printf("Handler returned error: %v", err)
-			if werr, ok := err.(*WebError); ok {
-				ctx.Abort(werr.Code, werr.Error())
-			} else {
-				ctx.Abort(500, fmt.Sprintf("%v", err))
-			}
+			ctx.Abort(500, "Server Error")
+		}
+		if len(ret) == 0 {
 			return
 		}
+
 		sval := ret[0]
 
-		// Now we have the content from our response. We should run
-		// our post processing modules now
-		content := sval.Interface()
-		if ctx.wroteData {
-			// Data was already sent to the client; do not transform anything
-			content = []byte(content.(string))
-		} else {
-			for _, module := range postModules {
-				// If a module returns an error, we stop process the request
-				content, err = module(&ctx, content)
-				if err != nil {
-					s.Logger.Printf("PostModule Error: %v", err)
-					ctx.Abort(err.(WebError).Code, err.(WebError).Error())
-					return
-				}
-			}
-		}
+		var content []byte
 
-		if content != nil {
-			typed_content, ok := content.([]byte)
-			if ok {
-				_, err := ctx.Write(typed_content)
-				if err != nil {
-					s.Logger.Printf("Content write error: %v", err)
-					ctx.Abort(500, err.Error())
-				}
-			} else {
-				ctx.Abort(406, "Could not marshal response")
-			}
+		if sval.Kind() == reflect.String {
+			content = []byte(sval.String())
+		} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+			content = sval.Interface().([]byte)
 		}
+		ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+		ctx.Write(content)
 		return
 	}
 
-	//try to serve index.html || index.htm
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.html"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
-	}
-
-	if indexPath := path.Join(path.Join(staticDir, requestPath), "index.htm"); fileExists(indexPath) {
-		http.ServeFile(&ctx, ctx.Request, indexPath)
-		return
+	// Try to serve index.html || index.htm
+	indexFilenames := []string{"index.html", "index.htm"}
+	for _, staticDir := range staticDirs {
+		for _, indexFilename := range indexFilenames {
+			if indexPath := path.Join(path.Join(staticDir, requestPath), indexFilename); fileExists(indexPath) {
+				http.ServeFile(&ctx, ctx.Request, indexPath)
+				return
+			}
+		}
 	}
 
 	ctx.Abort(404, "Page not found")
-}
-
-var Config = &ServerConfig{
-	RecoverPanic: true,
-}
-
-var mainServer = NewServer()
-
-type Server struct {
-	Config *ServerConfig
-	routes []route
-	Logger *log.Logger
-	Env    map[string]interface{}
-	//save the listener so it can be closed
-	l net.Listener
 	// Passed verbatim to every handler on every request
 	User interface{}
 }
@@ -511,6 +490,27 @@ func (s *Server) initServer() {
 	if s.Logger == nil {
 		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
+	// Set two commonly used mimetypes that are often not set by default
+	// Handy for robots.txt and favicon.ico
+	mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
+	mime.AddExtensionType(".ico", "image/x-icon")
+}
+
+func (s *Server) createServeMux(addr string) (*http.ServeMux, error) {
+	mux := http.NewServeMux()
+	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	mux.Handle("/", s)
+
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatal("Listen:", err)
+	}
+	s.l = l
+
+	return mux, err
 }
 
 //Runs the web application and serves http requests
@@ -518,12 +518,6 @@ func (s *Server) Run(addr string) {
 	s.initServer()
 
 	mux := http.NewServeMux()
-	/*
-		mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-		mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-		mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-		mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
-	*/
 	mux.Handle("/", s)
 
 	s.Logger.Printf("web.go serving %s\n", addr)
@@ -551,6 +545,32 @@ func (s *Server) RunSecure(addr string, config tls.Config) error {
 	s.l = l
 	return http.Serve(s.l, mux)
 }
+func (s *Server) RunTLS(addr string, cert string, key string) {
+	s.initServer()
+
+	mux := http.NewServeMux()
+	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	mux.Handle("/", s)
+
+	s.Logger.Printf("web.go serving %s\n", addr)
+	/*
+	   l, err := net.Listen("tcp", addr)
+	   if err != nil {
+	       log.Fatal("ListenAndServe:", err)
+	   }
+	   s.l = l
+	   err = http.Serve(s.l, mux)
+	   s.l.Close()
+	*/
+	err := http.ListenAndServeTLS(addr, cert, key, mux)
+	if err != nil {
+		log.Fatal("ListenAndServe:", err)
+	}
+
+}
 
 //Runs the web application and serves http requests
 func Run(addr string) {
@@ -560,6 +580,31 @@ func Run(addr string) {
 //Runs the secure web application and serves https requests
 func RunSecure(addr string, config tls.Config) {
 	mainServer.RunSecure(addr, config)
+}
+
+func (s *Server) runTLS(addr, certFile, keyFile string) {
+	s.initServer()
+
+	mux, err := s.createServeMux(addr)
+	s.Logger.Printf("web.go serving with TLS %s\n", addr)
+
+	srv := &http.Server{Handler: mux}
+
+	config := &tls.Config{}
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+
+	if err != nil {
+		log.Fatal("TLS error:", err)
+	}
+
+	tlsListener := tls.NewListener(s.l, config)
+	err = srv.Serve(tlsListener)
+	s.l.Close()
+}
+
+func RunTLS(addr, certFile, keyFile string) {
+	mainServer.runTLS(addr, certFile, keyFile)
 }
 
 //Stops the web server
@@ -573,9 +618,6 @@ func (s *Server) Close() {
 func Close() {
 	mainServer.Close()
 }
-
-var preModules = []func(*Context) error{}
-var postModules = []func(*Context, interface{}) (interface{}, error){}
 
 func AddPreModule(module func(*Context) error) {
 	preModules = append(preModules, module)
@@ -676,14 +718,6 @@ func SetLogger(logger *log.Logger) {
 	mainServer.Logger = logger
 }
 
-type ServerConfig struct {
-	StaticDir    string
-	Addr         string
-	Port         int
-	CookieSecret string
-	RecoverPanic bool
-}
-
 func webTime(t time.Time) string {
 	ftime := t.Format(time.RFC1123)
 	if strings.HasSuffix(ftime, "UTC") {
@@ -723,4 +757,18 @@ func Urlencode(data map[string]string) string {
 	}
 	s := buf.String()
 	return s[0 : len(s)-1]
+}
+
+func MethodHandler(val interface{}, name string) reflect.Value {
+	v := reflect.ValueOf(val)
+	typ := v.Type()
+	n := typ.NumMethod()
+	for i := 0; i < n; i++ {
+		m := typ.Method(i)
+		if m.Name == name {
+			return v.Method(i)
+		}
+	}
+
+	return reflect.ValueOf(nil)
 }

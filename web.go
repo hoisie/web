@@ -204,12 +204,22 @@ func (s *Server) safelyCall(f func() error) (softerr error, harderr interface{})
 	return f(), nil
 }
 
+// Determine if this route matches this request purely on the basis of the method
+func matchRouteMethods(req *http.Request, route *route) bool {
+	if req.Method == route.method {
+		return true
+	}
+	if req.Method == "HEAD" && route.method == "GET" {
+		return true
+	}
+	return false
+}
+
 // If this request matches this route return the group matches from the regular
 // expression otherwise return an empty slice. note on success the return value
 // includes the entire match as the first element.
 func matchRoute(req *http.Request, route *route) []string {
-	//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-	if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
+	if !matchRouteMethods(req, route) {
 		return nil
 	}
 	match := route.rex.FindStringSubmatch(req.URL.Path)
@@ -228,10 +238,34 @@ func findMatchingRoute(req *http.Request, routes []*route) (*route, []string) {
 	return nil, nil
 }
 
+// Apply the handler to this context and try to handle errors where possible
+func (s *Server) applyHandler(f handlerf, ctx *Context, groups []string) (err error) {
+	softerr, harderr := s.safelyCall(func() error {
+		return f(ctx, groups...)
+	})
+	if harderr != nil {
+		//there was an error or panic while calling the handler
+		ctx.Abort(500, "Server Error")
+		return fmt.Errorf("%v", harderr)
+	}
+	if softerr != nil {
+		s.Logger.Printf("Handler returned error: %v", softerr)
+		if werr, ok := softerr.(WebError); ok {
+			ctx.Abort(werr.Code, werr.Error())
+		} else {
+			// Non-web errors are not leaked to the outside
+			ctx.Abort(500, "Server Error")
+			err = softerr
+		}
+	}
+	return
+}
+
+// Fully clothed request handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	requestPath := req.URL.Path
 
-	ctx := Context{
+	ctx := &Context{
 		Request:        req,
 		RawBody:        nil,
 		Params:         map[string]string{},
@@ -278,7 +312,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, staticDir := range staticDirs {
 		staticFile := path.Join(staticDir, requestPath)
 		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-			http.ServeFile(&ctx, req, staticFile)
+			http.ServeFile(ctx, req, staticFile)
 			return
 		}
 	}
@@ -287,42 +321,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 
 	route, match := findMatchingRoute(req, s.routes)
-
-	if route == nil {
-		// Try to serve index.html || index.htm
-		indexFilenames := []string{"index.html", "index.htm"}
-		for _, staticDir := range staticDirs {
-			for _, indexFilename := range indexFilenames {
-				if indexPath := path.Join(path.Join(staticDir, requestPath), indexFilename); fileExists(indexPath) {
-					http.ServeFile(&ctx, ctx.Request, indexPath)
-					return
-				}
+	if route != nil {
+		s.applyHandler(route.handler, ctx, match[1:])
+		return
+	}
+	// Try to serve index.html || index.htm
+	indexFilenames := []string{"index.html", "index.htm"}
+	for _, staticDir := range staticDirs {
+		for _, indexFilename := range indexFilenames {
+			if indexPath := path.Join(path.Join(staticDir, requestPath), indexFilename); fileExists(indexPath) {
+				http.ServeFile(ctx, ctx.Request, indexPath)
+				return
 			}
 		}
-		ctx.Abort(404, "Page not found")
-		return
 	}
-
-	softerr, harderr := s.safelyCall(func() error {
-		return route.handler(&ctx, match[1:]...)
-	})
-	if harderr != nil {
-		//there was an error or panic while calling the handler
-		ctx.Abort(500, "Server Error")
-		return
-	}
-	if softerr != nil {
-		s.Logger.Printf("Handler returned error: %v", softerr)
-		if werr, ok := softerr.(WebError); ok {
-			ctx.Abort(werr.Code, werr.Error())
-		} else {
-			// Non-web errors are not leaked to the outside
-			ctx.Abort(500, "Server Error")
-		}
-		return
-	}
+	ctx.Abort(404, "Page not found")
 	return
-
+	return
 }
 
 func NewServer() *Server {

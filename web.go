@@ -89,13 +89,12 @@ func (ctx *Context) WriteString(content string) {
 
 func (ctx *Context) Abort(status int, body string) {
 	ctx.WriteHeader(status)
-	ctx.Write([]byte(body))
+	ctx.WriteString(body)
 }
 
 func (ctx *Context) Redirect(status int, url_ string) {
 	ctx.Header().Set("Location", url_)
-	ctx.WriteHeader(status)
-	ctx.Write([]byte("Redirecting to: " + url_))
+	ctx.Abort(status, "Redirecting to: "+url_)
 }
 
 func (ctx *Context) NotModified() {
@@ -103,18 +102,15 @@ func (ctx *Context) NotModified() {
 }
 
 func (ctx *Context) NotFound(message string) {
-	ctx.WriteHeader(404)
-	ctx.Write([]byte(message))
+	ctx.Abort(404, message)
 }
 
 func (ctx *Context) NotAcceptable(message string) {
-	ctx.WriteHeader(406)
-	ctx.Write([]byte(message))
+	ctx.Abort(406, message)
 }
 
 func (ctx *Context) Unauthorized(message string) {
-	ctx.WriteHeader(401)
-	ctx.Write([]byte(message))
+	ctx.Abort(401, message)
 }
 
 // Sets the content type by extension, as defined in the mime package.

@@ -18,19 +18,9 @@ import (
 	"time"
 )
 
-// Closable http.ResponseWriter
-type ResponseWriter interface {
-	http.ResponseWriter
-	Close()
-}
-
 type WebError struct {
 	Code int
 	Err  string
-}
-
-type responseWriter struct {
-	http.ResponseWriter
 }
 
 type Context struct {
@@ -38,10 +28,10 @@ type Context struct {
 	RawBody []byte
 	Params  map[string]string
 	Server  *Server
-	ResponseWriter
-	User interface{}
+	User    interface{}
 	// False iff 0 bytes of body data have been written so far
 	wroteData bool
+	http.ResponseWriter
 }
 
 type route struct {
@@ -189,17 +179,6 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
 	})
 }
 
-func (c *responseWriter) Close() {
-	rwc, buf, _ := c.ResponseWriter.(http.Hijacker).Hijack()
-	if buf != nil {
-		buf.Flush()
-	}
-
-	if rwc != nil {
-		rwc.Close()
-	}
-}
-
 func (ctx *Context) Write(data []byte) (int, error) {
 	ctx.wroteData = true
 	return ctx.ResponseWriter.Write(data)
@@ -231,14 +210,7 @@ func (s *Server) safelyCall(f func() error) (softerr error, harderr interface{})
 	return f(), nil
 }
 
-func (s *Server) ServeHTTP(httpw http.ResponseWriter, req *http.Request) {
-	var w ResponseWriter
-	if x, ok := httpw.(ResponseWriter); ok {
-		w = x
-	} else {
-		x := responseWriter{httpw}
-		w = &x
-	}
+func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	requestPath := req.URL.Path
 
 	ctx := Context{

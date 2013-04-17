@@ -267,10 +267,37 @@ func (s *Server) applyHandler(f handlerf, ctx *Context, groups []string) (err er
 	return
 }
 
+// Serve up a static file (or index.html if its a dir) or 404 if none found
+func (s *Server) serveStatic(w http.ResponseWriter, req *http.Request) {
+	//try to serve static files
+	staticDirs := s.Config.StaticDirs
+	if len(staticDirs) == 0 {
+		staticDirs = []string{defaultStaticDir()}
+	}
+	for _, staticDir := range staticDirs {
+		staticFile := path.Join(staticDir, req.URL.Path)
+		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+			http.ServeFile(w, req, staticFile)
+			return
+		}
+	}
+
+	// Try to serve index.html || index.htm
+	indexFilenames := []string{"index.html", "index.htm"}
+	for _, staticDir := range staticDirs {
+		for _, indexFilename := range indexFilenames {
+			if indexPath := path.Join(path.Join(staticDir, req.URL.Path), indexFilename); fileExists(indexPath) {
+				http.ServeFile(w, req, indexPath)
+				return
+			}
+		}
+	}
+	http.NotFound(w, req)
+	return
+}
+
 // Fully clothed request handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	requestPath := req.URL.Path
-
 	ctx := &Context{
 		Request:        req,
 		RawBody:        nil,
@@ -284,9 +311,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//log the request
 	var logEntry bytes.Buffer
 	if s.Config.ColorOutput {
-		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, req.URL.Path)
 	} else {
-		fmt.Fprintf(&logEntry, "%s %s", req.Method, requestPath)
+		fmt.Fprintf(&logEntry, "%s %s", req.Method, req.URL.Path)
 	}
 
 	//ignore errors from ParseForm because it's usually harmless.
@@ -309,51 +336,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
-	//Set the default content-type
-	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-
 	route, match := findMatchingRoute(req, s.routes)
-	if route != nil {
-		h := route.handler
-		if route.method == "WEBSOCKET" {
-			// Wrap websocket handler
-			h = func(ctx *Context, args ...string) (err error) {
-				// yo dawg we heard you like wrapped functions
-				websocket.Handler(func(ws *websocket.Conn) {
-					ctx.WebsockConn = ws
-					err = route.handler(ctx, args...)
-				}).ServeHTTP(ctx.ResponseWriter, req)
-				return err
-			}
-		}
-		s.applyHandler(h, ctx, match[1:])
+	if route == nil {
+		s.serveStatic(w, req)
 		return
 	}
-
-	//try to serve static files
-	staticDirs := s.Config.StaticDirs
-	if len(staticDirs) == 0 {
-		staticDirs = []string{defaultStaticDir()}
-	}
-	for _, staticDir := range staticDirs {
-		staticFile := path.Join(staticDir, requestPath)
-		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-			http.ServeFile(ctx, req, staticFile)
-			return
+	//Set the default content-type
+	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+	h := route.handler
+	if route.method == "WEBSOCKET" {
+		// Wrap websocket handler
+		h = func(ctx *Context, args ...string) (err error) {
+			// yo dawg we heard you like wrapped functions
+			websocket.Handler(func(ws *websocket.Conn) {
+				ctx.WebsockConn = ws
+				err = route.handler(ctx, args...)
+			}).ServeHTTP(ctx.ResponseWriter, req)
+			return err
 		}
 	}
-
-	// Try to serve index.html || index.htm
-	indexFilenames := []string{"index.html", "index.htm"}
-	for _, staticDir := range staticDirs {
-		for _, indexFilename := range indexFilenames {
-			if indexPath := path.Join(path.Join(staticDir, requestPath), indexFilename); fileExists(indexPath) {
-				http.ServeFile(ctx, ctx.Request, indexPath)
-				return
-			}
-		}
-	}
-	ctx.Abort(404, "Page not found")
+	s.applyHandler(h, ctx, match[1:])
 	return
 }
 

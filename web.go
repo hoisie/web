@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"code.google.com/p/go.net/websocket"
 )
 
 type WebError struct {
@@ -32,6 +34,7 @@ type Context struct {
 	// False iff 0 bytes of body data have been written so far
 	wroteData bool
 	http.ResponseWriter
+	WebsockConn *websocket.Conn
 }
 
 type route struct {
@@ -212,6 +215,9 @@ func matchRouteMethods(req *http.Request, route *route) bool {
 	if req.Method == "HEAD" && route.method == "GET" {
 		return true
 	}
+	if req.Header.Get("Upgrade") == "websocket" && route.method == "WEBSOCKET" {
+		return true
+	}
 	return false
 }
 
@@ -273,6 +279,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		ResponseWriter: w,
 		User:           s.User,
 		wroteData:      false,
+	}
+
+	// shortcut if websocket
+	if req.Header.Get("Upgrade") == "websocket" {
+		s.Logger.Println("handling websocket request: ", requestPath)
+		route, match := findMatchingRoute(req, s.routes)
+		if route != nil {
+			h := func(ctx *Context, args ...string) (err error) {
+				websocket.Handler(func(ws *websocket.Conn) {
+					ctx.WebsockConn = ws
+					err = route.handler(ctx, args...)
+				}).ServeHTTP(ctx.ResponseWriter, req)
+				return err
+			}
+			s.applyHandler(h, ctx, match[1:])
+		}
 	}
 
 	//log the request
@@ -551,6 +573,11 @@ func (s *Server) Delete(route string, handler interface{}) {
 	s.addRoute(route, "DELETE", handler)
 }
 
+//Adds a handler for websocket
+func (s *Server) Websocket(route string, handler interface{}) {
+	s.addRoute(route, "WEBSOCKET", handler)
+}
+
 //Adds a handler for the 'OPTIONS' http method.
 func Options(route string, handler interface{}) {
 	mainServer.addRoute(route, "OPTIONS", handler)
@@ -574,6 +601,11 @@ func Put(route string, handler interface{}) {
 //Adds a handler for the 'DELETE' http method.
 func Delete(route string, handler interface{}) {
 	mainServer.addRoute(route, "DELETE", handler)
+}
+
+//Adds a handler for websocket
+func Websocket(route string, handler interface{}) {
+	mainServer.addRoute(route, "WEBSOCKET", handler)
 }
 
 func (s *Server) SetLogger(logger *log.Logger) {

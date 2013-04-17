@@ -302,26 +302,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 	}
-
 	ctx.Server.Logger.Print(logEntry.String())
 
 	//set some default headers
 	ctx.SetHeader("Server", "web.go", true)
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
-
-	//try to serve static files
-	staticDirs := s.Config.StaticDirs
-	if len(staticDirs) == 0 {
-		staticDirs = []string{defaultStaticDir()}
-	}
-	for _, staticDir := range staticDirs {
-		staticFile := path.Join(staticDir, requestPath)
-		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-			http.ServeFile(ctx, req, staticFile)
-			return
-		}
-	}
 
 	//Set the default content-type
 	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
@@ -343,6 +329,20 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		s.applyHandler(h, ctx, match[1:])
 		return
 	}
+
+	//try to serve static files
+	staticDirs := s.Config.StaticDirs
+	if len(staticDirs) == 0 {
+		staticDirs = []string{defaultStaticDir()}
+	}
+	for _, staticDir := range staticDirs {
+		staticFile := path.Join(staticDir, requestPath)
+		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
+			http.ServeFile(ctx, req, staticFile)
+			return
+		}
+	}
+
 	// Try to serve index.html || index.htm
 	indexFilenames := []string{"index.html", "index.htm"}
 	for _, staticDir := range staticDirs {
@@ -354,7 +354,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	ctx.Abort(404, "Page not found")
-	return
 	return
 }
 

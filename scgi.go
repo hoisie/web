@@ -148,7 +148,7 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
 	}
 
 	sc := scgiConn{fd, req, make(map[string][]string), false}
-	s.routeHandler(req, &sc)
+	s.ServeHTTP(&sc, req)
 	sc.finishRequest()
 
 	fd.Close()

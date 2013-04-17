@@ -18,10 +18,9 @@ import (
 	"time"
 )
 
+// Closable http.ResponseWriter
 type ResponseWriter interface {
-	Header() http.Header
-	WriteHeader(status int)
-	Write(data []byte) (n int, err error)
+	http.ResponseWriter
 	Close()
 }
 
@@ -206,11 +205,6 @@ func (ctx *Context) Write(data []byte) (int, error) {
 	return ctx.ResponseWriter.Write(data)
 }
 
-func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-	w := responseWriter{c}
-	s.routeHandler(req, &w)
-}
-
 // Calls function with recover block. The first return value is whatever the
 // function returns if it didnt panic. The second is what was passed to panic()
 // if it did.
@@ -237,7 +231,14 @@ func (s *Server) safelyCall(f func() error) (softerr error, harderr interface{})
 	return f(), nil
 }
 
-func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
+func (s *Server) ServeHTTP(httpw http.ResponseWriter, req *http.Request) {
+	var w ResponseWriter
+	if x, ok := httpw.(ResponseWriter); ok {
+		w = x
+	} else {
+		x := responseWriter{httpw}
+		w = &x
+	}
 	requestPath := req.URL.Path
 
 	ctx := Context{

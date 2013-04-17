@@ -309,11 +309,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	//log the request
-	var logEntry bytes.Buffer
 	if s.Config.ColorOutput {
-		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, req.URL.Path)
+		s.Logger.Printf("\033[32;1m%s %s\033[0m", req.Method, req.URL.Path)
 	} else {
-		fmt.Fprintf(&logEntry, "%s %s", req.Method, req.URL.Path)
+		s.Logger.Printf("%s %s", req.Method, req.URL.Path)
 	}
 
 	//ignore errors from ParseForm because it's usually harmless.
@@ -323,13 +322,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ctx.Params[k] = v[0]
 		}
 		if s.Config.ColorOutput {
-			fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+			s.Logger.Printf("\033[37;1mParams: %v\033[0m\n", ctx.Params)
 		} else {
-			fmt.Fprintf(&logEntry, "\nParams: %v\n", ctx.Params)
+			s.Logger.Printf("Params: %v\n", ctx.Params)
 		}
 
 	}
-	ctx.Server.Logger.Print(logEntry.String())
 
 	//set some default headers
 	ctx.SetHeader("Server", "web.go", true)

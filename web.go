@@ -470,8 +470,6 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	}
 
 	ctx.Abort(404, "Page not found")
-	// Passed verbatim to every handler on every request
-	User interface{}
 }
 
 func NewServer() *Server {

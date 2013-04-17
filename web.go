@@ -351,7 +351,6 @@ func requiresContext(handlerType reflect.Type) bool {
 
 func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	requestPath := req.URL.Path
-	requestURI := req.RequestURI
 
 	ctx := Context{
 		Request:        req,
@@ -366,9 +365,9 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 	//log the request
 	var logEntry bytes.Buffer
 	if s.Config.ColorOutput {
-		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestURI)
+		fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
 	} else {
-		fmt.Fprintf(&logEntry, "%s %s", req.Method, requestURI)
+		fmt.Fprintf(&logEntry, "%s %s", req.Method, requestPath)
 	}
 
 	//ignore errors from ParseForm because it's usually harmless.
@@ -416,12 +415,12 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			continue
 		}
 
-		if !cr.MatchString(requestURI) {
+		if !cr.MatchString(requestPath) {
 			continue
 		}
-		match := cr.FindStringSubmatch(requestURI)
+		match := cr.FindStringSubmatch(requestPath)
 
-		if len(match[0]) != len(requestURI) {
+		if len(match[0]) != len(requestPath) {
 			continue
 		}
 

@@ -291,11 +291,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if harderr != nil {
 			//there was an error or panic while calling the handler
 			ctx.Abort(500, "Server Error")
+			return
 		}
 		if softerr != nil {
-			// TODO: if softer.(WebError) ...
 			s.Logger.Printf("Handler returned error: %v", softerr)
-			ctx.Abort(500, "Server Error")
+			if werr, ok := softerr.(WebError); ok {
+				ctx.Abort(werr.Code, werr.Error())
+			} else {
+				// Non-web errors are not leaked to the outside
+				ctx.Abort(500, "Server Error")
+			}
+			return
 		}
 		return
 	}

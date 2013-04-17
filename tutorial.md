@@ -89,7 +89,7 @@ Web.go has the ability to serve static files in a very efficient way. If you pla
 
 For example, if you have a web app in `$HOME/app` being served from `myapp.com`, and there's a file `$HOME/app/static/image.jpg`, requesting `myapp.com/image.jpg` will serve the static file. A common practice is to have `static/images`, `static/stylesheets`, and `static/javascripts` that contain static files. 
 
-You can also change web.ServerConfig.StaticDir to specify a directory.
+Note that Web.go is looking for the `static` directory in both the directory where the web app is located and your current working directory. You can also change web.ServerConfig.StaticDir to specify a directory.
 
 ## Shared hosts
 

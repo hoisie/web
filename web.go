@@ -453,7 +453,10 @@ func (s *Server) routeHandler(req *http.Request, w ResponseWriter) {
 			content = sval.Interface().([]byte)
 		}
 		ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-		ctx.Write(content)
+		_, err = ctx.Write(content)
+		if err != nil {
+			ctx.Abort(500, "Server Error")
+		}
 		return
 	}
 

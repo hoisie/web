@@ -85,8 +85,13 @@ func (err WebError) Error() string {
 	return err.Err
 }
 
-func (ctx *Context) WriteString(content string) {
-	ctx.Write([]byte(content))
+func (ctx *Context) Write(data []byte) (int, error) {
+	ctx.wroteData = true
+	return ctx.ResponseWriter.Write(data)
+}
+
+func (ctx *Context) WriteString(content string) (int, error) {
+	return ctx.Write([]byte(content))
 }
 
 func (ctx *Context) Abort(status int, body string) {
@@ -174,11 +179,6 @@ func (s *Server) addRoute(rawrex string, method string, handler interface{}) {
 		method:  method,
 		handler: fixHandlerSignature(handler),
 	})
-}
-
-func (ctx *Context) Write(data []byte) (int, error) {
-	ctx.wroteData = true
-	return ctx.ResponseWriter.Write(data)
 }
 
 // Calls function with recover block. The first return value is whatever the

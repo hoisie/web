@@ -281,22 +281,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		wroteData:      false,
 	}
 
-	// shortcut if websocket
-	if req.Header.Get("Upgrade") == "websocket" {
-		s.Logger.Println("handling websocket request: ", requestPath)
-		route, match := findMatchingRoute(req, s.routes)
-		if route != nil {
-			h := func(ctx *Context, args ...string) (err error) {
-				websocket.Handler(func(ws *websocket.Conn) {
-					ctx.WebsockConn = ws
-					err = route.handler(ctx, args...)
-				}).ServeHTTP(ctx.ResponseWriter, req)
-				return err
-			}
-			s.applyHandler(h, ctx, match[1:])
-		}
-	}
-
 	//log the request
 	var logEntry bytes.Buffer
 	if s.Config.ColorOutput {
@@ -344,7 +328,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	route, match := findMatchingRoute(req, s.routes)
 	if route != nil {
-		s.applyHandler(route.handler, ctx, match[1:])
+		h := route.handler
+		if route.method == "WEBSOCKET" {
+			// Wrap websocket handler
+			h = func(ctx *Context, args ...string) (err error) {
+				// yo dawg we heard you like wrapped functions
+				websocket.Handler(func(ws *websocket.Conn) {
+					ctx.WebsockConn = ws
+					err = route.handler(ctx, args...)
+				}).ServeHTTP(ctx.ResponseWriter, req)
+				return err
+			}
+		}
+		s.applyHandler(h, ctx, match[1:])
 		return
 	}
 	// Try to serve index.html || index.htm

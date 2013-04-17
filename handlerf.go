@@ -2,6 +2,7 @@ package web
 
 import (
 	"io"
+	"net/http"
 	"reflect"
 )
 
@@ -148,6 +149,13 @@ func value2error(v reflect.Value) error {
 // Beat the supplied handler into a uniform signature. panics if incompatible
 // (may only happen when the wrapped fun is called)
 func fixHandlerSignature(f interface{}) handlerf {
+	// classic net/http.Hander implementors can easily be converted
+	if httph, ok := f.(http.Handler); ok {
+		return func(ctx *Context, args ...string) error {
+			httph.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+			return nil
+		}
+	}
 	fv := reflect.ValueOf(f)
 	var callf valuefun = callableValue(fv)
 	if !requiresContext(fv.Type()) {

@@ -35,8 +35,7 @@ type Context struct {
 }
 
 type route struct {
-	r       string
-	cr      *regexp.Regexp
+	rex     *regexp.Regexp
 	method  string
 	handler handlerf
 }
@@ -161,15 +160,14 @@ func init() {
 	AddPostModule(EncodeResponse)
 }
 
-func (s *Server) addRoute(r string, method string, handler interface{}) {
-	cr, err := regexp.Compile(r)
+func (s *Server) addRoute(rawrex string, method string, handler interface{}) {
+	rex, err := regexp.Compile(rawrex)
 	if err != nil {
-		s.Logger.Printf("Error in route regex %q\n", r)
+		s.Logger.Printf("Error in route regex %q: %v", rawrex, err)
 		return
 	}
 	s.routes = append(s.routes, route{
-		r:       r,
-		cr:      cr,
+		rex:     rex,
 		method:  method,
 		handler: fixHandlerSignature(handler),
 	})
@@ -264,20 +262,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//Set the default content-type
 	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 
-	for i := 0; i < len(s.routes); i++ {
-		route := s.routes[i]
-		cr := route.cr
+	for _, route := range s.routes {
 		//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
 		if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
 			continue
 		}
 
-		if !cr.MatchString(requestPath) {
-			continue
-		}
-		match := cr.FindStringSubmatch(requestPath)
-
-		if len(match[0]) != len(requestPath) {
+		match := route.rex.FindStringSubmatch(requestPath)
+		if match == nil || len(match[0]) != len(requestPath) {
 			continue
 		}
 

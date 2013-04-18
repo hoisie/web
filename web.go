@@ -409,27 +409,6 @@ func AdHoc(c http.ResponseWriter, req *http.Request) {
 	mainServer.ServeHTTP(c, req)
 }
 
-func (s *Server) RunScgi(addr string) {
-	s.Logger.Printf("web.go serving scgi %s\n", addr)
-	s.listenAndServeScgi(addr)
-}
-
-//Runs the web application and serves scgi requests
-func RunScgi(addr string) {
-	mainServer.RunScgi(addr)
-}
-
-//Runs the web application and serves fcgi requests for this Server object.
-func (s *Server) RunFcgi(addr string) {
-	s.Logger.Printf("web.go serving fcgi %s\n", addr)
-	s.listenAndServeFcgi(addr)
-}
-
-//Runs the web application by serving fastcgi requests
-func RunFcgi(addr string) {
-	mainServer.RunFcgi(addr)
-}
-
 func (s *Server) SetLogger(logger *log.Logger) {
 	s.Logger = logger
 }

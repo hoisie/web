@@ -81,6 +81,17 @@ func (s *Server) runTLS(addr, certFile, keyFile string) error {
 	return srv.Serve(tlsListener)
 }
 
+func (s *Server) RunScgi(addr string) {
+	s.Logger.Printf("web.go serving scgi %s\n", addr)
+	s.listenAndServeScgi(addr)
+}
+
+//Runs the web application and serves fcgi requests for this Server object.
+func (s *Server) RunFcgi(addr string) {
+	s.Logger.Printf("web.go serving fcgi %s\n", addr)
+	s.listenAndServeFcgi(addr)
+}
+
 //Runs the web application and serves http requests
 func Run(addr string) {
 	mainServer.Run(addr)
@@ -93,4 +104,14 @@ func RunSecure(addr string, config tls.Config) {
 
 func RunTLS(addr, certFile, keyFile string) {
 	mainServer.runTLS(addr, certFile, keyFile)
+}
+
+//Runs the web application and serves scgi requests
+func RunScgi(addr string) {
+	mainServer.RunScgi(addr)
+}
+
+//Runs the web application by serving fastcgi requests
+func RunFcgi(addr string) {
+	mainServer.RunFcgi(addr)
 }

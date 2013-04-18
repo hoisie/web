@@ -64,16 +64,25 @@ func (ctx *Context) NotFound(message string) {
     ctx.ResponseWriter.Write([]byte(message))
 }
 
-// Sets the content type by extension, as defined in the mime package.
+// ContentType sets the Content-Type header for an HTTP response.
 // For example, ctx.ContentType("json") sets the content-type to "application/json"
-func (ctx *Context) ContentType(ext string) {
-    if !strings.HasPrefix(ext, ".") {
-        ext = "." + ext
+// If the supplied value contains a slash (/) it is set as the Content-Type
+// verbatim. The return value is the content type as it was
+// set, or an empty string if none was found.
+func (ctx *Context) ContentType(val string) string {
+    var ctype string
+    if strings.ContainsRune(val, '/') {
+        ctype = val
+    } else {
+        if !strings.HasPrefix(val, ".") {
+            val = "." + val
+        }
+        ctype = mime.TypeByExtension(val)
     }
-    ctype := mime.TypeByExtension(ext)
     if ctype != "" {
         ctx.Header().Set("Content-Type", ctype)
     }
+    return ctype
 }
 
 // SetHeader sets a response header. If `unique` is true, the current value

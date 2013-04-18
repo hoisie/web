@@ -176,7 +176,7 @@ func init() {
 	})
 
 	Get("/jsonbytes", func(ctx *Context) []byte {
-		ctx.ContentType("json")
+		ctx.ContentType("application/json")
 		data, _ := json.Marshal(ctx.Params)
 		return data
 	})

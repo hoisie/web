@@ -122,14 +122,23 @@ func (ctx *Context) Unauthorized(message string) {
 
 // Sets the content type by extension, as defined in the mime package.
 // For example, ctx.ContentType("json") sets the content-type to "application/json"
-func (ctx *Context) ContentType(ext string) {
-	if !strings.HasPrefix(ext, ".") {
-		ext = "." + ext
+// if the supplied extension contains a slash (/) it is set as the content-type
+// verbatim without passing it to mime.  returns the content type as it was
+// set, or an empty string if none was found.
+func (ctx *Context) ContentType(ext string) string {
+	ctype := ""
+	if strings.ContainsRune(ext, '/') {
+		ctype = ext
+	} else {
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+		ctype = mime.TypeByExtension(ext)
 	}
-	ctype := mime.TypeByExtension(ext)
 	if ctype != "" {
 		ctx.Header().Set("Content-Type", ctype)
 	}
+	return ctype
 }
 
 func (ctx *Context) SetHeader(hdr, val string, unique bool) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/hraban/web"
 )
@@ -25,16 +26,22 @@ func d(ctx *web.Context) (string, error) {
 }
 
 func e(ctx *web.Context) error {
-	fmt.Fprint(ctx, "<a href=f>non-nil error")
+	fmt.Fprint(ctx, "<a href=f>net/http.Handler type")
 	return nil
 }
 
-func f(ctx *web.Context) error {
+type myhandlertype string
+
+func (m myhandlertype) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	w.Write([]byte("<a href=g>" + m))
+}
+
+func g(ctx *web.Context) error {
 	return fmt.Errorf("oh no!")
 }
 
 func root() string {
-	return "<a href=a>start testing: simple handler"
+	return "<a href=a>start: simple handler"
 }
 
 func main() {
@@ -44,6 +51,7 @@ func main() {
 	web.Get("/c", c)
 	web.Get("/d", d)
 	web.Get("/e", e)
-	web.Get("/f", f)
+	web.Get("/f", myhandlertype("non-nil error"))
+	web.Get("/g", g)
 	web.Run("0.0.0.0:8081")
 }

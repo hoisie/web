@@ -21,7 +21,6 @@ func (s *Server) createDebugHandler() http.Handler {
 
 // Runs the web application and serves http requests
 func (s *Server) Run(addr string) error {
-	s.initServer()
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		s.Logger.Print("run web.go: ", err)
@@ -35,7 +34,6 @@ func (s *Server) Run(addr string) error {
 
 //Runs the secure web application and serves https requests
 func (s *Server) RunSecure(addr string, config tls.Config) error {
-	s.initServer()
 	l, err := tls.Listen("tcp4", addr, &config)
 	if err != nil {
 		s.Logger.Print("run web.go: ", err)
@@ -47,7 +45,6 @@ func (s *Server) RunSecure(addr string, config tls.Config) error {
 }
 
 func (s *Server) RunTLS(addr string, cert string, key string) error {
-	s.initServer()
 	debugh := s.createDebugHandler()
 	s.Logger.Print("web.go serving ", addr)
 	err := http.ListenAndServeTLS(addr, cert, key, debugh)
@@ -59,7 +56,6 @@ func (s *Server) RunTLS(addr string, cert string, key string) error {
 }
 
 func (s *Server) runTLS(addr, certFile, keyFile string) error {
-	s.initServer()
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		s.Logger.Print("start web.go: ", err)

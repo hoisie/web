@@ -367,25 +367,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func NewServer() *Server {
-	return &Server{
+	s := &Server{
 		Config: Config,
 		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 		Env:    map[string]interface{}{},
-	}
-}
-
-func (s *Server) initServer() {
-	if s.Config == nil {
-		s.Config = &ServerConfig{}
-	}
-
-	if s.Logger == nil {
-		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
 	// Set two commonly used mimetypes that are often not set by default
 	// Handy for robots.txt and favicon.ico
 	mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
 	mime.AddExtensionType(".ico", "image/x-icon")
+	return s
 }
 
 //Stops the web server
@@ -419,7 +410,6 @@ func AdHoc(c http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) RunScgi(addr string) {
-	s.initServer()
 	s.Logger.Printf("web.go serving scgi %s\n", addr)
 	s.listenAndServeScgi(addr)
 }
@@ -431,7 +421,6 @@ func RunScgi(addr string) {
 
 //Runs the web application and serves fcgi requests for this Server object.
 func (s *Server) RunFcgi(addr string) {
-	s.initServer()
 	s.Logger.Printf("web.go serving fcgi %s\n", addr)
 	s.listenAndServeFcgi(addr)
 }

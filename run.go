@@ -81,37 +81,37 @@ func (s *Server) runTLS(addr, certFile, keyFile string) error {
 	return srv.Serve(tlsListener)
 }
 
-func (s *Server) RunScgi(addr string) {
+func (s *Server) RunScgi(addr string) error {
 	s.Logger.Printf("web.go serving scgi %s\n", addr)
-	s.listenAndServeScgi(addr)
+	return s.listenAndServeScgi(addr)
 }
 
 //Runs the web application and serves fcgi requests for this Server object.
-func (s *Server) RunFcgi(addr string) {
+func (s *Server) RunFcgi(addr string) error {
 	s.Logger.Printf("web.go serving fcgi %s\n", addr)
-	s.listenAndServeFcgi(addr)
+	return s.listenAndServeFcgi(addr)
 }
 
 //Runs the web application and serves http requests
-func Run(addr string) {
-	mainServer.Run(addr)
+func Run(addr string) error {
+	return mainServer.Run(addr)
 }
 
 //Runs the secure web application and serves https requests
-func RunSecure(addr string, config tls.Config) {
-	mainServer.RunSecure(addr, config)
+func RunSecure(addr string, config tls.Config) error {
+	return mainServer.RunSecure(addr, config)
 }
 
-func RunTLS(addr, certFile, keyFile string) {
-	mainServer.runTLS(addr, certFile, keyFile)
+func RunTLS(addr, certFile, keyFile string) error {
+	return mainServer.runTLS(addr, certFile, keyFile)
 }
 
 //Runs the web application and serves scgi requests
-func RunScgi(addr string) {
-	mainServer.RunScgi(addr)
+func RunScgi(addr string) error {
+	return mainServer.RunScgi(addr)
 }
 
 //Runs the web application by serving fastcgi requests
-func RunFcgi(addr string) {
-	mainServer.RunFcgi(addr)
+func RunFcgi(addr string) error {
+	return mainServer.RunFcgi(addr)
 }

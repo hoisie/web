@@ -2,7 +2,6 @@ package web
 
 import (
     "bytes"
-    "encoding/binary"
     "encoding/json"
     "errors"
     "fmt"
@@ -124,22 +123,6 @@ type Test struct {
     body           string
     expectedStatus int
     expectedBody   string
-}
-
-type StructHandler struct {
-    a string
-}
-
-func (s *StructHandler) method() string {
-    return s.a
-}
-
-func (s *StructHandler) method2(ctx *Context) string {
-    return s.a + ctx.Params["b"]
-}
-
-func (s *StructHandler) method3(ctx *Context, b string) string {
-    return s.a + b
 }
 
 //initialize the routes
@@ -462,28 +445,6 @@ func TestReadScgiRequest(t *testing.T) {
     if body.String() != "Hello world!" {
         t.Fatalf("Body mismatch, expected %q, got %q ", "Hello world!", body.String())
     }
-}
-
-func buildFcgiKeyValue(key string, val string) []byte {
-    var buf bytes.Buffer
-    if len(key) <= 127 && len(val) <= 127 {
-        data := struct {
-            A   uint8
-            B   uint8
-        }{uint8(len(key)), uint8(len(val))}
-        binary.Write(&buf, binary.BigEndian, data)
-    } else if len(key) <= 127 && len(val) > 127 {
-        data := struct {
-            A   uint8
-            B   uint32
-        }{uint8(len(key)), uint32(len(val)) | 1<<31}
-
-        binary.Write(&buf, binary.BigEndian, data)
-    }
-    buf.WriteString(key)
-    buf.WriteString(val)
-
-    return buf.Bytes()
 }
 
 func makeCookie(vals map[string]string) []*http.Cookie {

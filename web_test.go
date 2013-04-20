@@ -109,6 +109,14 @@ func getTestResponse(method string, path string, body string, headers map[string
     return buildTestResponse(&buf)
 }
 
+func testGet(path string, headers map[string]string) *testResponse {
+    var header http.Header
+    for k,v := range headers {
+        header.Set(k, v)
+    }
+    return getTestResponse("GET", path, "", header, nil)
+}
+
 type Test struct {
     method         string
     path           string
@@ -203,6 +211,11 @@ func init() {
         ctx.SetHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS", true)
         ctx.SetHeader("Access-Control-Max-Age", "1000", true)
         ctx.WriteHeader(200)
+    })
+
+    Get("/dupeheader", func(ctx *Context) string {
+        ctx.SetHeader("Server", "myserver", true)
+        return ""
     })
 }
 
@@ -532,5 +545,16 @@ func TestSlug(t *testing.T) {
         if v != test[1] {
             t.Fatalf("TestSlug(%v) failed, expected %v, got %v", test[0], test[1], v)
         }
+    }
+}
+
+// tests that we don't duplicate headers
+func TestDuplicateHeader(t *testing.T) {
+    resp := testGet("/dupeheader", nil)
+    if len(resp.headers["Server"]) > 1 {
+        t.Fatalf("Expected only one header, got %#v", resp.headers["Server"])
+    }
+    if resp.headers["Server"][0] != "myserver" {
+        t.Fatalf("Incorrect header, exp 'myserver', got %q", resp.headers["Server"][0])
     }
 }

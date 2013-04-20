@@ -4,12 +4,13 @@ import (
     "bytes"
     "encoding/binary"
     "encoding/json"
+    "errors"
     "fmt"
+    "io"
     "io/ioutil"
     "log"
     "net/http"
     "net/url"
-    "os"
     "runtime"
     "strconv"
     "strings"
@@ -20,21 +21,33 @@ func init() {
     runtime.GOMAXPROCS(4)
 }
 
-//this implements io.ReadWriteCloser, which means it can be passed around as a tcp connection
-type tcpBuffer struct {
+// ioBuffer is a helper that implements io.ReadWriteCloser,
+// which is helpful in imitating a net.Conn
+type ioBuffer struct {
     input  *bytes.Buffer
     output *bytes.Buffer
+    closed bool
 }
 
-func (buf *tcpBuffer) Write(p []uint8) (n int, err error) {
+func (buf *ioBuffer) Write(p []uint8) (n int, err error) {
+    if buf.closed {
+        return 0, errors.New("Write after Close on ioBuffer")
+    }
     return buf.output.Write(p)
 }
 
-func (buf *tcpBuffer) Read(p []byte) (n int, err error) {
+func (buf *ioBuffer) Read(p []byte) (n int, err error) {
+    if buf.closed {
+        return 0, errors.New("Read after Close on ioBuffer")
+    }
     return buf.input.Read(p)
 }
 
-func (buf *tcpBuffer) Close() error { return nil }
+//noop
+func (buf *ioBuffer) Close() error {
+    buf.closed = true
+    return nil
+}
 
 type testResponse struct {
     statusCode int
@@ -90,7 +103,7 @@ func getTestResponse(method string, path string, body string, headers map[string
     req := buildTestRequest(method, path, body, headers, cookies)
     var buf bytes.Buffer
 
-    tcpb := tcpBuffer{nil, &buf}
+    tcpb := ioBuffer{input: nil, output: &buf}
     c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &tcpb}
     mainServer.Process(&c, req)
     return buildTestResponse(&buf)
@@ -123,8 +136,7 @@ func (s *StructHandler) method3(ctx *Context, b string) string {
 
 //initialize the routes
 func init() {
-    f, _ := os.OpenFile(os.DevNull, os.O_RDWR, 0644)
-    mainServer.SetLogger(log.New(f, "", 0))
+    mainServer.SetLogger(log.New(ioutil.Discard, "", 0))
     Get("/", func() string { return "index" })
     Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })
@@ -313,26 +325,14 @@ func TestHead(t *testing.T) {
     }
 }
 
-func buildScgiFields(fields map[string]string, buf *bytes.Buffer) []byte {
-
-    for k, v := range fields {
-        buf.WriteString(k)
-        buf.WriteByte(0)
-        buf.WriteString(v)
-        buf.WriteByte(0)
-    }
-
-    return buf.Bytes()
-}
-
 func buildTestScgiRequest(method string, path string, body string, headers map[string][]string) *bytes.Buffer {
-    var hbuf bytes.Buffer
+    var headerBuf bytes.Buffer
     scgiHeaders := make(map[string]string)
 
-    hbuf.WriteString("CONTENT_LENGTH")
-    hbuf.WriteByte(0)
-    hbuf.WriteString(fmt.Sprintf("%d", len(body)))
-    hbuf.WriteByte(0)
+    headerBuf.WriteString("CONTENT_LENGTH")
+    headerBuf.WriteByte(0)
+    headerBuf.WriteString(fmt.Sprintf("%d", len(body)))
+    headerBuf.WriteByte(0)
 
     scgiHeaders["REQUEST_METHOD"] = method
     scgiHeaders["HTTP_HOST"] = "127.0.0.1"
@@ -349,19 +349,21 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
         key := "HTTP_" + strings.ToUpper(strings.Replace(k, "-", "_", -1))
         scgiHeaders[key] = v[0]
     }
+    for k, v := range scgiHeaders {
+        headerBuf.WriteString(k)
+        headerBuf.WriteByte(0)
+        headerBuf.WriteString(v)
+        headerBuf.WriteByte(0)
+    }
+    headerData := headerBuf.Bytes()
 
-    buildScgiFields(scgiHeaders, &hbuf)
-
-    fielddata := hbuf.Bytes()
     var buf bytes.Buffer
-
     //extra 1 is for the comma at the end
-    dlen := len(fielddata) + len(body) + 1
+    dlen := len(headerData)
     fmt.Fprintf(&buf, "%d:", dlen)
-    buf.Write(fielddata)
+    buf.Write(headerData)
     buf.WriteByte(',')
     buf.WriteString(body)
-
     return &buf
 }
 
@@ -369,7 +371,7 @@ func TestScgi(t *testing.T) {
     for _, test := range tests {
         req := buildTestScgiRequest(test.method, test.path, test.body, test.headers)
         var output bytes.Buffer
-        nb := tcpBuffer{input: req, output: &output}
+        nb := ioBuffer{input: req, output: &output}
         mainServer.handleScgiRequest(&nb)
         resp := buildTestResponse(&output)
 
@@ -392,13 +394,13 @@ func TestScgiHead(t *testing.T) {
 
         req := buildTestScgiRequest("GET", test.path, test.body, make(map[string][]string))
         var output bytes.Buffer
-        nb := tcpBuffer{input: req, output: &output}
+        nb := ioBuffer{input: req, output: &output}
         mainServer.handleScgiRequest(&nb)
         getresp := buildTestResponse(&output)
 
         req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string][]string))
         var output2 bytes.Buffer
-        nb = tcpBuffer{input: req, output: &output2}
+        nb = ioBuffer{input: req, output: &output2}
         mainServer.handleScgiRequest(&nb)
         headresp := buildTestResponse(&output2)
 
@@ -431,10 +433,26 @@ func TestScgiHead(t *testing.T) {
     }
 }
 
+func TestReadScgiRequest(t *testing.T) {
+    headers := map[string][]string{"User-Agent": {"web.go"}}
+    req := buildTestScgiRequest("POST", "/hello", "Hello world!", headers)
+    var s Server
+    httpReq, err := s.readScgiRequest(&ioBuffer{input: req, output: nil})
+    if err != nil {
+        t.Fatalf("Error while reading SCGI request: ", err.Error())
+    }
+    if httpReq.ContentLength != 12 {
+        t.Fatalf("Content length mismatch, expected %d, got %d ", 12, httpReq.ContentLength)
+    }
+    var body bytes.Buffer
+    io.Copy(&body, httpReq.Body)
+    if body.String() != "Hello world!" {
+        t.Fatalf("Body mismatch, expected %q, got %q ", "Hello world!", body.String())
+    }
+}
+
 func buildFcgiKeyValue(key string, val string) []byte {
-
     var buf bytes.Buffer
-
     if len(key) <= 127 && len(val) <= 127 {
         data := struct {
             A   uint8

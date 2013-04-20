@@ -1,17 +1,35 @@
 package web
 
 import (
+    "bufio"
     "bytes"
     "errors"
     "fmt"
     "io"
-    "io/ioutil"
     "net"
     "net/http"
     "net/http/cgi"
     "strconv"
     "strings"
 )
+
+type scgiBody struct {
+    reader io.Reader
+    conn   io.ReadWriteCloser
+    closed bool
+}
+
+func (b *scgiBody) Read(p []byte) (n int, err error) {
+    if b.closed {
+        return 0, errors.New("SCGI read after close")
+    }
+    return b.reader.Read(p)
+}
+
+func (b *scgiBody) Close() error {
+    b.closed = true
+    return b.conn.Close()
+}
 
 type scgiConn struct {
     fd           io.ReadWriteCloser
@@ -75,82 +93,58 @@ func (conn *scgiConn) finishRequest() error {
     return nil
 }
 
-func readScgiRequest(buf *bytes.Buffer) (*http.Request, error) {
+func (s *Server) readScgiRequest(fd io.ReadWriteCloser) (*http.Request, error) {
+    reader := bufio.NewReader(fd)
+    line, err := reader.ReadString(':')
+    if err != nil {
+        s.Logger.Println("Error during SCGI read: ", err.Error())
+    }
+    length, _ := strconv.Atoi(line[0 : len(line)-1])
+    if length > 16384 {
+        s.Logger.Println("Error: max header size is 16k")
+    }
+    headerData := make([]byte, length)
+    _, err = reader.Read(headerData)
+    if err != nil {
+        return nil, err
+    }
+
+    b, err := reader.ReadByte()
+    if err != nil {
+        return nil, err
+    }
+    // discard the trailing comma
+    if b != ',' {
+        return nil, errors.New("SCGI protocol error: missing comma")
+    }
+    headerList := bytes.Split(headerData, []byte{0})
     headers := map[string]string{}
-
-    data := buf.Bytes()
-    var clen int
-
-    colon := bytes.IndexByte(data, ':')
-    data = data[colon+1:]
-    var err error
-    //find the CONTENT_LENGTH
-
-    clfields := bytes.SplitN(data, []byte{0}, 3)
-    if len(clfields) != 3 {
-        return nil, errors.New("Invalid SCGI Request -- no fields")
+    for i := 0; i < len(headerList)-1; i += 2 {
+        headers[string(headerList[i])] = string(headerList[i+1])
     }
-
-    clfields = clfields[0:2]
-    if string(clfields[0]) != "CONTENT_LENGTH" {
-        return nil, errors.New("Invalid SCGI Request -- expecing CONTENT_LENGTH")
+    httpReq, err := cgi.RequestFromMap(headers)
+    if err != nil {
+        return nil, err
     }
-
-    if clen, err = strconv.Atoi(string(clfields[1])); err != nil {
-        return nil, errors.New("Invalid SCGI Request -- invalid CONTENT_LENGTH field")
+    if httpReq.ContentLength > 0 {
+        httpReq.Body = &scgiBody{
+            reader: io.LimitReader(reader, httpReq.ContentLength),
+            conn:   fd,
+        }
+    } else {
+        httpReq.Body = &scgiBody{reader: reader, conn: fd}
     }
-
-    content := data[len(data)-clen:]
-
-    fields := bytes.Split(data[0:len(data)-clen], []byte{0})
-
-    for i := 0; i < len(fields)-1; i += 2 {
-        key := string(fields[i])
-        value := string(fields[i+1])
-        headers[key] = value
-    }
-
-    body := bytes.NewBuffer(content)
-    req, _ := cgi.RequestFromMap(headers)
-    req.Body = ioutil.NopCloser(body)
-    return req, nil
+    return httpReq, nil
 }
 
 func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
-    var buf bytes.Buffer
-    tmp := make([]byte, 1024)
-    n, err := fd.Read(tmp)
-    if err != nil || n == 0 {
-        return
-    }
-
-    colonPos := bytes.IndexByte(tmp[0:], ':')
-
-    read := n
-    length, _ := strconv.Atoi(string(tmp[0:colonPos]))
-    buf.Write(tmp[0:n])
-
-    for read < length {
-        n, err := fd.Read(tmp)
-        if err != nil || n == 0 {
-            break
-        }
-
-        buf.Write(tmp[0:n])
-        read += n
-    }
-
-    req, err := readScgiRequest(&buf)
-
+    req, err := s.readScgiRequest(fd)
     if err != nil {
-        s.Logger.Println("SCGI read error", err.Error())
-        return
+        s.Logger.Println("SCGI error: %q", err.Error())
     }
-
     sc := scgiConn{fd, req, make(map[string][]string), false}
     s.routeHandler(req, &sc)
     sc.finishRequest()
-
     fd.Close()
 }
 

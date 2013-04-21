@@ -2,7 +2,9 @@ GOFMT=gofmt -s -tabs=false -tabwidth=4
 
 GOFILES=\
 	fcgi.go\
+	helpers.go\
 	scgi.go\
+	server.go\
 	status.go\
 	web.go\
 

@@ -37,6 +37,7 @@ type Context struct {
 	wroteData bool
 	http.ResponseWriter
 	WebsockConn *websocket.Conn
+	Wrapper     Wrapper
 }
 
 type route struct {
@@ -65,6 +66,8 @@ type Server struct {
 	l net.Listener
 	// Passed verbatim to every handler on every request
 	User interface{}
+	// All requests are passed through this wrapper if defined
+	Wrapper Wrapper
 }
 
 var (
@@ -372,6 +375,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		simpleh = func(ctx *Context) error {
 			return WebError{404, "Page not found"}
 		}
+	}
+	if s.Wrapper != nil {
+		simpleh = wrapHandler(s.Wrapper, simpleh)
 	}
 	s.applyHandler(simpleh, ctx)
 	return

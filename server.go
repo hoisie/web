@@ -24,6 +24,12 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
+type route struct {
+	rex     *regexp.Regexp
+	method  string
+	handler handlerf
+}
+
 type ServerConfig struct {
 	StaticDirs   []string
 	Addr         string
@@ -351,4 +357,8 @@ func init() {
 		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
+	RegisterMimeParser("application/json", JSONparser)
+	RegisterMimeParser("application/xml", XMLparser)
+	RegisterMimeParser("text/xml", XMLparser)
+	RegisterMimeParser("image/jpeg", Binaryparser)
 }

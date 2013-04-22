@@ -185,18 +185,3 @@ func fixHandlerSignature(f interface{}) handlerf {
 		return value2error(rets[0])
 	}
 }
-
-// this function must either be updated to new internal API or removed
-func MethodHandler(val interface{}, name string) reflect.Value {
-	v := reflect.ValueOf(val)
-	typ := v.Type()
-	n := typ.NumMethod()
-	for i := 0; i < n; i++ {
-		m := typ.Method(i)
-		if m.Name == name {
-			return v.Method(i)
-		}
-	}
-
-	return reflect.ValueOf(nil)
-}

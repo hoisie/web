@@ -278,9 +278,8 @@ func (s *Server) applyHandler(f handlerf, ctx *Context, groups []string) (err er
 	return
 }
 
-// Serve up a static file (or index.html if its a dir) returns whether it was
-// found
-func (s *Server) tryServeStatic(w http.ResponseWriter, req *http.Request) bool {
+// If this request corresponds to a static file return its path
+func (s *Server) findFile(req *http.Request) string {
 	//try to serve static files
 	staticDirs := s.Config.StaticDirs
 	if len(staticDirs) == 0 {
@@ -289,8 +288,7 @@ func (s *Server) tryServeStatic(w http.ResponseWriter, req *http.Request) bool {
 	for _, staticDir := range staticDirs {
 		staticFile := path.Join(staticDir, req.URL.Path)
 		if fileExists(staticFile) && (req.Method == "GET" || req.Method == "HEAD") {
-			http.ServeFile(w, req, staticFile)
-			return true
+			return staticFile
 		}
 	}
 
@@ -299,12 +297,11 @@ func (s *Server) tryServeStatic(w http.ResponseWriter, req *http.Request) bool {
 	for _, staticDir := range staticDirs {
 		for _, indexFilename := range indexFilenames {
 			if indexPath := path.Join(path.Join(staticDir, req.URL.Path), indexFilename); fileExists(indexPath) {
-				http.ServeFile(w, req, indexPath)
-				return true
+				return indexPath
 			}
 		}
 	}
-	return false
+	return ""
 }
 
 // Fully clothed request handler
@@ -347,7 +344,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	route, match := findMatchingRoute(req, s.routes)
 	if route == nil {
-		if !s.tryServeStatic(w, req) {
+		if path := s.findFile(req); path != "" {
+			http.ServeFile(w, req, path)
+		} else {
 			ctx.NotFound("Page not found")
 		}
 		return

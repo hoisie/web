@@ -361,17 +361,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 			simpleh = closeHandler(route.handler, match[1:]...)
 		}
+	} else if path := s.findFile(req); path != "" {
+		// no custom handler found but there is a file with this name
+		simpleh = func(ctx *Context) error {
+			http.ServeFile(ctx, ctx.Request, path)
+			return nil
+		}
 	} else {
-		// no custom handler found try a file, 404 otherwise
-		if path := s.findFile(req); path != "" {
-			simpleh = func(ctx *Context) error {
-				http.ServeFile(ctx, ctx.Request, path)
-				return nil
-			}
-		} else {
-			simpleh = func(ctx *Context) error {
-				return WebError{404, "Page not found"}
-			}
+		// hopeless, 404
+		simpleh = func(ctx *Context) error {
+			return WebError{404, "Page not found"}
 		}
 	}
 	s.applyHandler(simpleh, ctx)

@@ -24,6 +24,7 @@ type ServerConfig struct {
     Port         int
     CookieSecret string
     RecoverPanic bool
+    Profiler    bool
 }
 
 // Server represents a web.go server.
@@ -116,10 +117,12 @@ func (s *Server) Run(addr string) {
     s.initServer()
 
     mux := http.NewServeMux()
-    mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
-    mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
-    mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
-    mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+    if s.Config.Profiler {
+        mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+        mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+        mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
+        mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+    }
     mux.Handle("/", s)
 
     s.Logger.Printf("web.go serving %s\n", addr)

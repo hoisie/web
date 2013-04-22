@@ -36,7 +36,7 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	Config *ServerConfig
+	Config ServerConfig
 	routes []*route
 	Logger *log.Logger
 	Env    map[string]interface{}
@@ -299,7 +299,7 @@ func webTime(t time.Time) string {
 }
 
 func NewServer() *Server {
-	conf := &ServerConfig{
+	conf := ServerConfig{
 		RecoverPanic: true,
 		Cert:         "",
 		Key:          "",

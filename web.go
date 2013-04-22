@@ -16,15 +16,6 @@ type route struct {
 	handler handlerf
 }
 
-var (
-	Config = &ServerConfig{
-		RecoverPanic: true,
-		Cert:         "",
-		Key:          "",
-		ColorOutput:  true,
-	}
-)
-
 func init() {
 	RegisterMimeParser("application/json", JSONparser)
 	RegisterMimeParser("application/xml", XMLparser)

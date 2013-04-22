@@ -299,8 +299,14 @@ func webTime(t time.Time) string {
 }
 
 func NewServer() *Server {
+	conf := &ServerConfig{
+		RecoverPanic: true,
+		Cert:         "",
+		Key:          "",
+		ColorOutput:  true,
+	}
 	s := &Server{
-		Config: Config,
+		Config: conf,
 		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 		Env:    map[string]interface{}{},
 	}

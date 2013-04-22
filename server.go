@@ -2,6 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+// this file is about the actual handling of a request: it comes in, what
+// happens? routing determines which handler is responsible and that is then
+// wrapped appropriately and invoked.
+
 package web
 
 import (

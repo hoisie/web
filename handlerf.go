@@ -14,6 +14,9 @@ import (
 // but transformed (wrapped) early on to match this one.
 type handlerf func(ctx *Context, arg ...string) error
 
+// internal handler whose parameters have been closed over
+type closedhandlerf func(*Context) error
+
 // functions according to reflect
 type valuefun func([]reflect.Value) []reflect.Value
 
@@ -23,6 +26,13 @@ var errtype reflect.Type = reflect.TypeOf(&nilerr).Elem()
 
 // Small optimization: cache the context type instead of repeteadly calling reflect.Typeof
 var contextType reflect.Type = reflect.TypeOf(Context{})
+
+// Bind parameters to a handler
+func closeHandler(h handlerf, arg ...string) closedhandlerf {
+	return func(ctx *Context) error {
+		return h(ctx, arg...)
+	}
+}
 
 //should the context be passed to the handler?
 func requiresContext(handlerType reflect.Type) bool {

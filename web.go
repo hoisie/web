@@ -256,9 +256,9 @@ func findMatchingRoute(req *http.Request, routes []*route) (*route, []string) {
 }
 
 // Apply the handler to this context and try to handle errors where possible
-func (s *Server) applyHandler(f handlerf, ctx *Context, groups []string) (err error) {
+func (s *Server) applyHandler(f closedhandlerf, ctx *Context) (err error) {
 	softerr, harderr := s.safelyCall(func() error {
-		return f(ctx, groups...)
+		return f(ctx)
 	})
 	if harderr != nil {
 		//there was an error or panic while calling the handler
@@ -342,30 +342,39 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	tm := time.Now().UTC()
 	ctx.SetHeader("Date", webTime(tm), true)
 
+	var simpleh closedhandlerf
 	route, match := findMatchingRoute(req, s.routes)
-	if route == nil {
-		if path := s.findFile(req); path != "" {
-			http.ServeFile(w, req, path)
+	if route != nil {
+		// Set the default content-type
+		ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+		if route.method == "WEBSOCKET" {
+			// Wrap websocket handler
+			openh := func(ctx *Context, args ...string) (err error) {
+				// yo dawg we heard you like wrapped functions
+				websocket.Handler(func(ws *websocket.Conn) {
+					ctx.WebsockConn = ws
+					err = route.handler(ctx, args...)
+				}).ServeHTTP(ctx.ResponseWriter, req)
+				return err
+			}
+			simpleh = closeHandler(openh, match[1:]...)
 		} else {
-			ctx.NotFound("Page not found")
+			simpleh = closeHandler(route.handler, match[1:]...)
 		}
-		return
-	}
-	//Set the default content-type
-	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-	h := route.handler
-	if route.method == "WEBSOCKET" {
-		// Wrap websocket handler
-		h = func(ctx *Context, args ...string) (err error) {
-			// yo dawg we heard you like wrapped functions
-			websocket.Handler(func(ws *websocket.Conn) {
-				ctx.WebsockConn = ws
-				err = route.handler(ctx, args...)
-			}).ServeHTTP(ctx.ResponseWriter, req)
-			return err
+	} else {
+		// no custom handler found try a file, 404 otherwise
+		if path := s.findFile(req); path != "" {
+			simpleh = func(ctx *Context) error {
+				http.ServeFile(ctx, ctx.Request, path)
+				return nil
+			}
+		} else {
+			simpleh = func(ctx *Context) error {
+				return WebError{404, "Page not found"}
+			}
 		}
 	}
-	s.applyHandler(h, ctx, match[1:])
+	s.applyHandler(simpleh, ctx)
 	return
 }
 

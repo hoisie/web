@@ -15,11 +15,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
-type WebError struct {
-	Code int
-	Err  string
-}
-
 type Context struct {
 	Request *http.Request
 	RawBody []byte
@@ -49,10 +44,6 @@ var (
 		ColorOutput:  true,
 	}
 )
-
-func (err WebError) Error() string {
-	return err.Err
-}
 
 func (ctx *Context) Write(data []byte) (int, error) {
 	ctx.wroteData = true

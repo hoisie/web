@@ -17,9 +17,6 @@ type route struct {
 }
 
 var (
-	preModules  = []func(*Context) error{}
-	postModules = []func(*Context, interface{}) (interface{}, error){}
-
 	Config = &ServerConfig{
 		RecoverPanic: true,
 		Cert:         "",
@@ -29,28 +26,10 @@ var (
 )
 
 func init() {
-	// Handle different Accept: types
-	AddPostModule(MarshalResponse)
 	RegisterMimeParser("application/json", JSONparser)
 	RegisterMimeParser("application/xml", XMLparser)
 	RegisterMimeParser("text/xml", XMLparser)
 	RegisterMimeParser("image/jpeg", Binaryparser)
-
-	// Handle different Accept-Encoding: types
-	AddPostModule(EncodeResponse)
-}
-
-func AddPreModule(module func(*Context) error) {
-	preModules = append(preModules, module)
-}
-
-func AddPostModule(module func(*Context, interface{}) (interface{}, error)) {
-	postModules = append(postModules, module)
-}
-
-func ResetModules() {
-	preModules = []func(*Context) error{}
-	postModules = []func(*Context, interface{}) (interface{}, error){}
 }
 
 func Urlencode(data map[string]string) string {

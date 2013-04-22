@@ -13,3 +13,5 @@ _testmain.go
 # vim noise
 *.swp
 *~
+# git noise
+*.orig

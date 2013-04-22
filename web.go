@@ -37,7 +37,6 @@ type Context struct {
 	wroteData bool
 	http.ResponseWriter
 	WebsockConn *websocket.Conn
-	Wrapper     Wrapper
 }
 
 type route struct {
@@ -67,7 +66,7 @@ type Server struct {
 	// Passed verbatim to every handler on every request
 	User interface{}
 	// All requests are passed through this wrapper if defined
-	Wrapper Wrapper
+	Wrappers []Wrapper
 }
 
 var (
@@ -340,11 +339,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	}
 
-	//set some default headers
-	ctx.SetHeader("Server", "web.go", true)
-	tm := time.Now().UTC()
-	ctx.SetHeader("Date", webTime(tm), true)
-
 	var simpleh closedhandlerf
 	route, match := findMatchingRoute(req, s.routes)
 	if route != nil {
@@ -376,8 +370,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return WebError{404, "Page not found"}
 		}
 	}
-	if s.Wrapper != nil {
-		simpleh = wrapHandler(s.Wrapper, simpleh)
+	for _, wrap := range s.Wrappers {
+		simpleh = wrapHandler(wrap, simpleh)
 	}
 	s.applyHandler(simpleh, ctx)
 	return
@@ -393,6 +387,13 @@ func NewServer() *Server {
 	// Handy for robots.txt and favicon.ico
 	mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
 	mime.AddExtensionType(".ico", "image/x-icon")
+	// Set some default headers
+	s.AddWrapper(func(h closedhandlerf, ctx *Context) error {
+		ctx.SetHeader("Server", "web.go", true)
+		tm := time.Now().UTC()
+		ctx.SetHeader("Date", webTime(tm), true)
+		return h(ctx)
+	})
 	return s
 }
 
@@ -401,6 +402,10 @@ func (s *Server) Close() {
 	if s.l != nil {
 		s.l.Close()
 	}
+}
+
+func (s *Server) AddWrapper(wrap Wrapper) {
+	s.Wrappers = append(s.Wrappers, wrap)
 }
 
 //Stops the web server

@@ -9,7 +9,7 @@ import ()
 // Called for every request and passed the handler that web.go thinks should be
 // called to process this specific request. Use this to do some global tinkering like:
 //
-// * specialized error pages (if werr, ok := error.(WebError) { ... })
+// * specialized error pages (if werr, ok := err.(WebError); ok { ... })
 // * encode data if client supports it (gzip etc)
 // * set site-wide headers
 //

@@ -345,8 +345,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var simpleh closedhandlerf
 	route, match := findMatchingRoute(req, s.routes)
 	if route != nil {
-		// Set the default content-type
-		ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 		if route.method == "WEBSOCKET" {
 			// Wrap websocket handler
 			openh := func(ctx *Context, args ...string) (err error) {
@@ -359,6 +357,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 			simpleh = closeHandler(openh, match[1:]...)
 		} else {
+			// Set the default content-type
+			ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 			simpleh = closeHandler(route.handler, match[1:]...)
 		}
 	} else {

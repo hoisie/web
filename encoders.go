@@ -24,7 +24,7 @@ var encoders = map[string]MimeEncoder{
 }
 
 // Register a new mimetype and how it should be encoded
-func RegisterMimeParser(mimetype string, enc MimeEncoder) {
+func RegisterMimeEncoder(mimetype string, enc MimeEncoder) {
 	encoders[mimetype] = enc
 }
 

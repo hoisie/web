@@ -8,7 +8,11 @@ import (
 	"github.com/hraban/web"
 )
 
-func hello(val string) string { return "hello " + val }
+// Simple HTTPS app
+
+func hello(val string) string {
+	return "hello " + val
+}
 
 func main() {
 	web.Get("/(.*)", hello)

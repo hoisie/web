@@ -5,8 +5,10 @@
 package main
 
 import (
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
+
+// Multiple server instances
 
 func hello1(val string) string { return "hello1 " + val }
 

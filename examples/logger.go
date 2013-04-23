@@ -8,8 +8,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
+
+// Custom logging
 
 func hello(val string) string { return "hello " + val }
 

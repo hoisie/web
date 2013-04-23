@@ -14,7 +14,8 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
-// The web.go custom request context that is passed to every request handler.
+// Custom web.go request context. Contains information about the request and
+// can be used to manipulate the response.
 type Context struct {
 	// The incoming request that led to this handler being invoked
 	Request *http.Request

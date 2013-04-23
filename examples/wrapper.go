@@ -7,8 +7,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
+
+// Wrap handlers (WARNING: Obsolete code! need to write example for new API)
 
 // This function will be called prior to each web request
 func AuthHandler(ctx *web.Context) error {

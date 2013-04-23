@@ -13,6 +13,8 @@ import (
 	"github.com/hraban/web"
 )
 
+// Explore the different possible handler signatures
+
 func a() string {
 	return "<a href=b>return byte array"
 }

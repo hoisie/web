@@ -10,6 +10,8 @@ import (
 	"github.com/hraban/web"
 )
 
+// Using websockets
+
 func root(ctx *web.Context, name string) error {
 	ws := ctx.WebsockConn
 	ws.Write([]byte("hey " + name))

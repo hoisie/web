@@ -9,8 +9,10 @@ import (
 	"crypto/md5"
 	"fmt"
 
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
+
+// HTML Forms
 
 func Md5(b []byte) string {
 	hash := md5.New()

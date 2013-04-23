@@ -10,6 +10,8 @@ import (
 	"github.com/hraban/web"
 )
 
+// Different types of error handling in web.go
+
 func notfound() error {
 	return web.WebError{404, "Not Found, no sir!"}
 }

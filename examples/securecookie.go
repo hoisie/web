@@ -9,6 +9,9 @@ import (
 	"github.com/hraban/web"
 )
 
+// Store user data in a secure cookie. Fake data cannot be supplied, only
+// original data or no data.
+
 const form = `store something in a secure cookie: 
 <form action="/say" method="POST">
   <input name="said">

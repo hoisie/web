@@ -7,8 +7,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
+
+// Extract POST and GET parameters
 
 type mytype struct {
 	A string

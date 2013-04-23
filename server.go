@@ -55,6 +55,9 @@ type Server struct {
 }
 
 var mainServer = NewServer()
+
+// Configuration of the shared server
+var Config = &mainServer.Config
 var exeFile string
 
 //Stops the web server

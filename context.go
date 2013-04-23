@@ -60,7 +60,8 @@ func (ctx *Context) writeAnything(i interface{}) error {
 		return err
 	}
 	// can't cast to a more specific type than interface{}, try encoders
-	if enc, ok := Encoders[ctx.Header().Get("content-type")]; ok {
+	mime := ctx.Header().Get("content-type")
+	if enc, ok := encoders[mime]; ok {
 		data, err := enc(i)
 		if err != nil {
 			return err

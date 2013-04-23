@@ -360,8 +360,4 @@ func init() {
 		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
-	RegisterMimeParser("application/json", JSONparser)
-	RegisterMimeParser("application/xml", XMLparser)
-	RegisterMimeParser("text/xml", XMLparser)
-	RegisterMimeParser("image/jpeg", Binaryparser)
 }

@@ -12,43 +12,33 @@ import (
 
 type MimeEncoder func(interface{}) ([]byte, error)
 
-var Encoders = make(map[string]MimeEncoder, 100)
-
-/**
-Register a new mimetype and how it should be encoded
-*/
-func RegisterMimeParser(mimetype string, enc MimeEncoder) error {
-	Encoders[mimetype] = enc
-	return nil
+var encoders = map[string]MimeEncoder{
+	"application/json": encodeJSON,
+	"application/xml":  encodeXML,
+	"text/xml":         encodeXML,
 }
 
-/**
-Default encoders
-*/
-func JSONparser(content interface{}) ([]byte, error) {
-	var encoded bytes.Buffer
+// Register a new mimetype and how it should be encoded
+func RegisterMimeParser(mimetype string, enc MimeEncoder) {
+	encoders[mimetype] = enc
+}
 
+func encodeJSON(content interface{}) ([]byte, error) {
+	var encoded bytes.Buffer
 	enc := json.NewEncoder(&encoded)
 	err := enc.Encode(content)
 	if err != nil {
 		return nil, err
 	}
-
 	return encoded.Bytes(), nil
 }
 
-func XMLparser(content interface{}) ([]byte, error) {
+func encodeXML(content interface{}) ([]byte, error) {
 	var encoded bytes.Buffer
-
 	enc := xml.NewEncoder(&encoded)
 	err := enc.Encode(content)
 	if err != nil {
 		return nil, err
 	}
-
 	return encoded.Bytes(), nil
-}
-
-func Binaryparser(content interface{}) ([]byte, error) {
-	return content.([]byte), nil
 }

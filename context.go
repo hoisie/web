@@ -117,11 +117,3 @@ func (ctx *Context) ContentType(ext string) string {
 	}
 	return ctype
 }
-
-func (ctx *Context) SetHeader(hdr, val string, unique bool) {
-	if unique {
-		ctx.Header().Set(hdr, val)
-	} else {
-		ctx.Header().Add(hdr, val)
-	}
-}

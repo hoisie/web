@@ -277,7 +277,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			simpleh = closeHandler(openh, match[1:]...)
 		} else {
 			// Set the default content-type
-			ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+			ctx.ContentType("text/html; charset=utf-8")
 			simpleh = closeHandler(route.handler, match[1:]...)
 		}
 	} else if path := s.findFile(req); path != "" {
@@ -325,9 +325,9 @@ func NewServer() *Server {
 	mime.AddExtensionType(".ico", "image/x-icon")
 	// Set some default headers
 	s.AddWrapper(func(h closedhandlerf, ctx *Context) error {
-		ctx.SetHeader("Server", "web.go", true)
+		ctx.Header().Set("Server", "web.go")
 		tm := time.Now().UTC()
-		ctx.SetHeader("Date", webTime(tm), true)
+		ctx.Header().Set("Date", webTime(tm))
 		return h(ctx)
 	})
 	return s

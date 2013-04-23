@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
 
 func hello(val string) string { return "hello " + val }

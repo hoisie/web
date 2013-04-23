@@ -13,8 +13,8 @@ import (
 func root(ctx *web.Context, name string) error {
 	ws := ctx.WebsockConn
 	ws.Write([]byte("hey " + name))
-	io.Copy(ws, ws)
-	return nil
+	_, err := io.Copy(ws, ws)
+	return err
 }
 
 func main() {

@@ -2,28 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+// Simple hello world application in web.go
 package main
 
 import (
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
 
-type Message struct {
-	Greeting string
-	Response string
-}
-
-func hello(val string) (Message, error) {
-	msg := Message{val, "Hello " + val}
-	return msg, nil
-}
-
-func plain(val string) ([]byte, error) {
-	return []byte("Plain " + val), nil
+func hello(val string) string {
+	return "Hello " + val
 }
 
 func main() {
-	web.Get("/plain/(.*)", plain)
 	web.Get("/(.*)", hello)
-	web.Run("0.0.0.0:9999")
+	web.Run("127.0.0.1:9999")
 }

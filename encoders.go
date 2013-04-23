@@ -5,12 +5,17 @@
 package web
 
 import (
-	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"io"
 )
 
-type MimeEncoder func(interface{}) ([]byte, error)
+// Encode arbitrary data to a response
+type Encoder interface {
+	Encode(data interface{}) error
+}
+
+type MimeEncoder func(w io.Writer) Encoder
 
 var encoders = map[string]MimeEncoder{
 	"application/json": encodeJSON,
@@ -23,22 +28,10 @@ func RegisterMimeParser(mimetype string, enc MimeEncoder) {
 	encoders[mimetype] = enc
 }
 
-func encodeJSON(content interface{}) ([]byte, error) {
-	var encoded bytes.Buffer
-	enc := json.NewEncoder(&encoded)
-	err := enc.Encode(content)
-	if err != nil {
-		return nil, err
-	}
-	return encoded.Bytes(), nil
+func encodeJSON(w io.Writer) Encoder {
+	return Encoder(json.NewEncoder(w))
 }
 
-func encodeXML(content interface{}) ([]byte, error) {
-	var encoded bytes.Buffer
-	enc := xml.NewEncoder(&encoded)
-	err := enc.Encode(content)
-	if err != nil {
-		return nil, err
-	}
-	return encoded.Bytes(), nil
+func encodeXML(w io.Writer) Encoder {
+	return Encoder(xml.NewEncoder(w))
 }

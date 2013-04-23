@@ -62,12 +62,7 @@ func (ctx *Context) writeAnything(i interface{}) error {
 	// can't cast to a more specific type than interface{}, try encoders
 	mime := ctx.Header().Get("content-type")
 	if enc, ok := encoders[mime]; ok {
-		data, err := enc(i)
-		if err != nil {
-			return err
-		}
-		_, err = ctx.Write(data)
-		return err
+		return enc(ctx).Encode(i)
 	}
 	return errors.New("cannot serialize data for writing to client")
 }

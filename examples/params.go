@@ -10,49 +10,27 @@ import (
 	"github.com/hraban/web"
 )
 
-// Extract POST and GET parameters
+// Accessing GET and POST parameters
 
-type mytype struct {
-	A string
-	B string
-	C int
-	D int64
-}
+const page = `
+<form action="/process?foo=bar" method="POST">
 
-var page = `
-<html>
-<head><title>Multipart Test</title></head>
-<body>
-<form action="/process" method="POST">
-
-<label for="a"> Please write some text </label>
-<input id="a" type="text" name="a"/>
-<br>
-<label for="b"> Please write some more text </label>
-<input id="b" type="text" name="b"/>
-<br>
-<label for="c"> Please write a number </label>
-<input id="c" type="text" name="c"/>
-<br>
-<label for="d"> Please write another number </label>
-<input id="d" type="text" name="d"/>
-<br>
-<input type="submit" name="Submit" value="Submit"/>
-
-</body>
-</html>
+<p> a <input name=a> 
+<p> b <input name=b>
+<p> <input type=submit>
 `
 
-func index() string { return page }
+func root() string {
+	return page
+}
 
 func process(ctx *web.Context) string {
-	var data mytype
-	ctx.UnmarshalParams(&data)
-	return fmt.Sprintf("%v\n", data)
+	ctx.ContentType("txt")
+	return fmt.Sprintf("%#v", ctx.Params)
 }
 
 func main() {
-	web.Get("/", index)
+	web.Get("/", root)
 	web.Post("/process", process)
-	web.Run("0.0.0.0:9999")
+	web.Run("127.0.0.1:9999")
 }

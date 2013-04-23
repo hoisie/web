@@ -190,6 +190,7 @@ func init() {
 		B string `json:"b"`
 	}
 	Post("/parsejson", func(ctx *Context) (tmptype, error) {
+		ctx.ContentType("application/json")
 		tmp := tmptype{"hello", "world"}
 		//json.NewDecoder(ctx.Request.Body).Decode(&tmp)
 		return tmp, nil

@@ -60,4 +60,5 @@ To run the application, put the code in a file called hello.go and run:
 
 You can point your browser to http://localhost:9999/world . 
 
-See http://www.godoc.org/github.com/hraban/web.go for a more detailed tutorial.
+See http://www.godoc.org/github.com/hraban/web for a tutorial.  There are more
+example applications in the examples directory.

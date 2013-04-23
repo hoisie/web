@@ -17,9 +17,8 @@ import (
 	"time"
 )
 
-// Set a cookie with an explicit path. Duration is the cookie time-to-live in
-// seconds (0 = forever).
-func (ctx *Context) SetCookiePath(name, value string, age int64, path string) {
+// Duration is the cookie time-to-live in seconds (0 = forever).
+func (ctx *Context) SetCookie(name, value string, age int64) {
 	var utctime time.Time
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
@@ -27,13 +26,8 @@ func (ctx *Context) SetCookiePath(name, value string, age int64, path string) {
 	} else {
 		utctime = time.Unix(time.Now().Unix()+age, 0)
 	}
-	cookie := http.Cookie{Name: name, Value: value, Expires: utctime, Path: path}
+	cookie := http.Cookie{Name: name, Value: value, Expires: utctime, Path: "/"}
 	ctx.SetHeader("Set-Cookie", cookie.String(), false)
-}
-
-// Sets a cookie -- duration is the amount of time in seconds. 0 = forever
-func (ctx *Context) SetCookie(name, value string, age int64) {
-	ctx.SetCookiePath(name, value, age, "")
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
@@ -46,7 +40,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 	return hex
 }
 
-func (ctx *Context) SetSecureCookiePath(name, val string, age int64, path string) {
+func (ctx *Context) SetSecureCookie(name, val string, age int64) {
 	// base64 encode the value
 	if len(ctx.Server.Config.CookieSecret) == 0 {
 		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
@@ -61,11 +55,7 @@ func (ctx *Context) SetSecureCookiePath(name, val string, age int64, path string
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-	ctx.SetCookiePath(name, cookie, age, path)
-}
-
-func (ctx *Context) SetSecureCookie(name, val string, age int64) {
-	ctx.SetSecureCookiePath(name, val, age, "")
+	ctx.SetCookie(name, cookie, age)
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {

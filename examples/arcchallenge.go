@@ -9,26 +9,37 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/xyproto/web"
+	"github.com/hraban/web"
 )
 
-var form = `<form action="say" method="POST"><input name="said"><input type="submit"></form>`
-
 var users = map[string]string{}
+
+func root() string {
+	return `store something in a secure cookie: 
+<form action="/say" method="POST">
+  <input name="said">
+  <input type="submit" value="go">
+</form>`
+}
+
+func say(ctx *web.Context) string {
+	uid := strconv.FormatInt(rand.Int63(), 10)
+	ctx.SetSecureCookie("user", uid, 3600)
+	users[uid] = ctx.Params["said"]
+	ctx.Redirect(303, "/final")
+	return `<a href="/final">Click Here</a>`
+}
+
+func final(ctx *web.Context) string {
+	uid, _ := ctx.GetSecureCookie("user")
+	return "You said " + users[uid]
+}
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
-	web.Get("/said", func() string { return form })
-	web.Post("/say", func(ctx *web.Context) string {
-		uid := strconv.FormatInt(rand.Int63(), 10)
-		ctx.SetSecureCookie("user", uid, 3600)
-		users[uid] = ctx.Params["said"]
-		return `<a href="/final">Click Here</a>`
-	})
-	web.Get("/final", func(ctx *web.Context) string {
-		uid, _ := ctx.GetSecureCookie("user")
-		return "You said " + users[uid]
-	})
-	web.Run("0.0.0.0:9999")
+	web.Get("/", root)
+	web.Post("/say", say)
+	web.Get("/final", final)
+	web.Run("127.0.0.1:9999")
 }

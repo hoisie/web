@@ -5,7 +5,6 @@
 package web
 
 import (
-	"io"
 	"net/http"
 	"reflect"
 )
@@ -87,29 +86,27 @@ func wrapErrorRet(err error) []reflect.Value {
 	return []reflect.Value{nilerrv}
 }
 
-// Wrap f to write its first return value to the first arg (being an io.Writer)
-// requires the original function signature to be one of:
+// Wrap f to write its first return value to the *Context passed in the first
+// arg requires the original function signature to be one of:
 //
-//   * func (io.Writer, ...) (string, error)
-//   * func (io.Writer, ...) ([]byte, error)
-//   * func (io.Writer, ...) (io.WriterTo, error)
-//   * func (io.Writer, ...) (io.Reader, error)
+//   * func (*Context, ...) (string, error)
+//   * func (*Context, ...) ([]byte, error)
+//   * func (*Context, ...) (io.WriterTo, error)
+//   * func (*Context, ...) (io.Reader, error)
 //
 // signature of wrapped function:
 //
-// func (io.Writer, ...) error
+// func (*Context, ...) error
 //
 // if the error value of the original call is not nil that value is passed back
 // verbatim and no further action is taken. If it is nil the wrapper writes the
-// string to the writer and returns whatever error ocurred there, if any.
-//
-// Note that wherever it says string []byte is also okay.
+// value to the client and returns whatever error ocurred there, if any.
 func writeFirstRetToFirstArg(f valuefun) valuefun {
 	return func(args []reflect.Value) []reflect.Value {
 		wv := args[0]
-		w, ok := wv.Interface().(io.Writer)
+		ctx, ok := wv.Interface().(*Context)
 		if !ok {
-			panic("First argument must be an io.Writer")
+			panic("First argument must be a *Context")
 		}
 		ret := f(args)
 		if len(ret) < 2 {
@@ -120,22 +117,7 @@ func writeFirstRetToFirstArg(f valuefun) valuefun {
 			return ret[1:]
 		}
 		if i := ret[0].Interface(); i != nil {
-			switch typed := i.(type) {
-			case string:
-				_, err := w.Write([]byte(typed))
-				return wrapErrorRet(err)
-			case []byte:
-				_, err := w.Write(typed)
-				return wrapErrorRet(err)
-			case io.WriterTo:
-				_, err := typed.WriteTo(w)
-				return wrapErrorRet(err)
-			case io.Reader:
-				_, err := io.Copy(w, typed)
-				return wrapErrorRet(err)
-			default:
-				panic("First return value must be a byte array / string")
-			}
+			return wrapErrorRet(ctx.writeAnything(i))
 		}
 		// if result is nil do nothing
 		return wrapErrorRet(nil)

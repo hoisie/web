@@ -5,6 +5,8 @@
 package web
 
 import (
+	"errors"
+	"io"
 	"mime"
 	"net/http"
 	"strings"
@@ -39,6 +41,25 @@ func (ctx *Context) Write(data []byte) (int, error) {
 
 func (ctx *Context) WriteString(content string) (int, error) {
 	return ctx.Write([]byte(content))
+}
+
+// Best-effort serialization of response data
+func (ctx *Context) writeAnything(i interface{}) error {
+	switch typed := i.(type) {
+	case string:
+		_, err := ctx.Write([]byte(typed))
+		return err
+	case []byte:
+		_, err := ctx.Write(typed)
+		return err
+	case io.WriterTo:
+		_, err := typed.WriteTo(ctx)
+		return err
+	case io.Reader:
+		_, err := io.Copy(ctx, typed)
+		return err
+	}
+	return errors.New("cannot serialize data for writing to client")
 }
 
 func (ctx *Context) Abort(status int, body string) {

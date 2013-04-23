@@ -6,7 +6,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/hraban/web"
 )
@@ -40,7 +42,22 @@ func (m myhandlertype) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Write([]byte("<a href=g>" + m))
 }
 
-func g(ctx *web.Context) error {
+func g(ctx *web.Context) io.Reader {
+	return strings.NewReader("<a href=h>return io.WriterTo")
+}
+
+type towriter struct{ data []byte }
+
+func (t towriter) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write(t.data)
+	return int64(n), err
+}
+
+func h(ctx *web.Context) io.WriterTo {
+	return towriter{[]byte("<a href=i>non-nil error")}
+}
+
+func i(ctx *web.Context) error {
 	return fmt.Errorf("oh no!")
 }
 
@@ -55,7 +72,9 @@ func main() {
 	web.Get("/c", c)
 	web.Get("/d", d)
 	web.Get("/e", e)
-	web.Get("/f", myhandlertype("non-nil error"))
+	web.Get("/f", myhandlertype("return io.Reader"))
 	web.Get("/g", g)
-	web.Run("0.0.0.0:8081")
+	web.Get("/h", h)
+	web.Get("/i", i)
+	web.Run("127.0.0.1:9999")
 }

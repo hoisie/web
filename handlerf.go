@@ -79,10 +79,21 @@ func addNilErrorReturn(f valuefun) valuefun {
 	}
 }
 
-// Wrap f to write its string return value to the first arg (being an io.Writer)
-// requires the original function signature to be:
+// Wrap an error into a reflect.Value compatible return array
+func wrapErrorRet(err error) []reflect.Value {
+	if err != nil {
+		return []reflect.Value{reflect.ValueOf(err)}
+	}
+	return []reflect.Value{nilerrv}
+}
+
+// Wrap f to write its first return value to the first arg (being an io.Writer)
+// requires the original function signature to be one of:
 //
-// func (io.Writer, ...) (string, error)
+//   * func (io.Writer, ...) (string, error)
+//   * func (io.Writer, ...) ([]byte, error)
+//   * func (io.Writer, ...) (io.WriterTo, error)
+//   * func (io.Writer, ...) (io.Reader, error)
 //
 // signature of wrapped function:
 //
@@ -93,7 +104,7 @@ func addNilErrorReturn(f valuefun) valuefun {
 // string to the writer and returns whatever error ocurred there, if any.
 //
 // Note that wherever it says string []byte is also okay.
-func writeStringToFirstArg(f valuefun) valuefun {
+func writeFirstRetToFirstArg(f valuefun) valuefun {
 	return func(args []reflect.Value) []reflect.Value {
 		wv := args[0]
 		w, ok := wv.Interface().(io.Writer)
@@ -104,27 +115,30 @@ func writeStringToFirstArg(f valuefun) valuefun {
 		if len(ret) < 2 {
 			panic("Two return values required for proper wrapping")
 		}
+		// original function returned non-nil error: don't encode return data
 		if i := ret[1].Interface(); i != nil {
 			return ret[1:]
 		}
-		var ar []byte
 		if i := ret[0].Interface(); i != nil {
 			switch typed := i.(type) {
 			case string:
-				ar = []byte(typed)
-				break
+				_, err := w.Write([]byte(typed))
+				return wrapErrorRet(err)
 			case []byte:
-				ar = typed
-				break
+				_, err := w.Write(typed)
+				return wrapErrorRet(err)
+			case io.WriterTo:
+				_, err := typed.WriteTo(w)
+				return wrapErrorRet(err)
+			case io.Reader:
+				_, err := io.Copy(w, typed)
+				return wrapErrorRet(err)
 			default:
 				panic("First return value must be a byte array / string")
 			}
 		}
-		_, err := w.Write(ar)
-		if err != nil {
-			return []reflect.Value{reflect.ValueOf(err)}
-		}
-		return []reflect.Value{nilerrv}
+		// if result is nil do nothing
+		return wrapErrorRet(nil)
 	}
 }
 
@@ -139,7 +153,7 @@ func lastRetIsError(fv reflect.Value) bool {
 	return t.Implements(errtype)
 }
 
-func firstRetIsString(fv reflect.Value) bool {
+func firstRetIsError(fv reflect.Value) bool {
 	// type of fun
 	t := fv.Type()
 	if t.NumOut() == 0 {
@@ -147,7 +161,7 @@ func firstRetIsString(fv reflect.Value) bool {
 	}
 	// type of first return val
 	t = t.Out(0)
-	return t.AssignableTo(reflect.TypeOf("")) || t.AssignableTo(reflect.TypeOf([]byte{}))
+	return t.Implements(errtype)
 }
 
 // convert a value back to the original error interface. panics if value is not
@@ -180,10 +194,10 @@ func fixHandlerSignature(f interface{}) handlerf {
 		callf = addNilErrorReturn(callf)
 	}
 	// now callf definitely returns an error as its last value
-	if firstRetIsString(fv) {
-		callf = writeStringToFirstArg(callf)
+	if !firstRetIsError(fv) {
+		callf = writeFirstRetToFirstArg(callf)
 	}
-	// now callf definitely does not return a string: just an error
+	// now callf definitely does not return its data: just an error
 	// wrap callf in a function with pretty signature
 	return func(ctx *Context, args ...string) error {
 		argvs := make([]reflect.Value, len(args)+1)

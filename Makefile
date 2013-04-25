@@ -19,3 +19,4 @@ format:
 	${GOFMT} -w examples/params.go
 	${GOFMT} -w examples/logger.go
 	${GOFMT} -w examples/tls.go
+	${GOFMT} -w examples/streaming.go

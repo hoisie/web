@@ -24,7 +24,7 @@ type ServerConfig struct {
     Port         int
     CookieSecret string
     RecoverPanic bool
-    Profiler    bool
+    Profiler     bool
 }
 
 // Server represents a web.go server.

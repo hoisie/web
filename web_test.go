@@ -110,7 +110,7 @@ func getTestResponse(method string, path string, body string, headers map[string
 
 func testGet(path string, headers map[string]string) *testResponse {
     var header http.Header
-    for k,v := range headers {
+    for k, v := range headers {
         header.Set(k, v)
     }
     return getTestResponse("GET", path, "", header, nil)

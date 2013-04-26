@@ -30,8 +30,9 @@ puts "Found web.go revision #{git_head} in #{webgo_root}"
 
 # replace local source links with Github links
 doc_html.gsub!(%r(/target/(.*)\?s=(\d+):(\d+)#L\d+)) do |match|
-  line_number = File.read("#{webgo_root}/#{$1}")[0..$2.to_i].lines.count
-  "https://github.com/hoisie/web/blob/#{git_head}/#{$1}#L#{line_number}"
+  start_line = File.read("#{webgo_root}/#{$1}")[0..$2.to_i].lines.count
+  end_line = File.read("#{webgo_root}/#{$1}")[0..$3.to_i].lines.count
+  "https://github.com/hoisie/web/blob/#{git_head}/#{$1}#L#{start_line}-#{end_line}"
 end
 
 puts "Writing to api.html"

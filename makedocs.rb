@@ -25,7 +25,7 @@ doc_html = %x(godoc -html -timestamps=false github.com/hoisie/web)
 
 # get the short-hash of the current branch (for Github source links)
 webgo_root = "#{go_path}/src/github.com/hoisie/web"
-git_head = %x(cd #{webgo_root} && git log --pretty=format:'%h' -n 1 master).to_s.strip
+git_head = %x(cd #{webgo_root} && git log --pretty=format:'%h' -n 1).to_s.strip
 puts "Found web.go revision #{git_head} in #{webgo_root}"
 
 # replace local source links with Github links

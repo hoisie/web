@@ -486,6 +486,8 @@ var defaultMimes = map[string]string{
 	".sisx":     "x-epoc/x-sisx-app",
 	".vrm":      "x-world/x-vrml",
 	"README":    "text/plain; charset=utf-8",
+	// and for some bloody reason this is not part of lighttpd's default list...
+	".json": "application/json",
 }
 
 // register lighttpd default mime types with mime package

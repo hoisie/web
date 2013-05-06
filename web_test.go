@@ -138,7 +138,7 @@ func init() {
 
 	Get("/error/code/(.*)", func(ctx *Context, code string) string {
 		n, _ := strconv.Atoi(code)
-		message := statusText[n]
+		message := http.StatusText(n)
 		ctx.Abort(n, message)
 		return ""
 	})
@@ -218,7 +218,7 @@ var tests = []Test{
 	{"GET", "/error/notfound/notfound", nil, "", 404, "notfound"},
 	{"GET", "/doesnotexist", nil, "", 404, "Page not found"},
 	{"POST", "/doesnotexist", nil, "", 404, "Page not found"},
-	{"GET", "/error/code/500", nil, "", 500, statusText[500]},
+	{"GET", "/error/code/500", nil, "", 500, http.StatusText(500)},
 	{"POST", "/posterror/code/410/failedrequest", nil, "", 410, "failedrequest"},
 	{"GET", "/getparam?a=abcd", nil, "", 200, "abcd"},
 	{"GET", "/getparam?b=abcd", nil, "", 200, ""},

@@ -230,13 +230,12 @@ func (s *Server) findFile(req *http.Request) string {
 // Fully clothed request handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	ctx := &Context{
-		Request:        req,
-		RawBody:        nil,
-		Params:         map[string]string{},
-		Server:         s,
-		ResponseWriter: w,
-		User:           s.User,
-		wroteData:      false,
+		Request:  req,
+		RawBody:  nil,
+		Params:   map[string]string{},
+		Server:   s,
+		Response: responseWriter{w},
+		User:     s.User,
 	}
 
 	//log the request
@@ -270,7 +269,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				websocket.Handler(func(ws *websocket.Conn) {
 					ctx.WebsockConn = ws
 					err = route.handler(ctx, args...)
-				}).ServeHTTP(ctx.ResponseWriter, req)
+				}).ServeHTTP(ctx.Response, req)
 				return err
 			}
 			simpleh = closeHandler(openh, match[1:]...)

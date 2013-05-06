@@ -14,6 +14,11 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
+// wrapper around http.ResponseWriter
+type responseWriter struct {
+	http.ResponseWriter
+}
+
 // Custom web.go request context. Contains information about the request and
 // can be used to manipulate the response.
 type Context struct {
@@ -26,22 +31,27 @@ type Context struct {
 	// Copied from Server.User before the handler is invoked. Use this to
 	// communicate global state between your handlers.
 	User interface{}
-	// False iff 0 bytes of body data have been written so far
-	wroteData bool
 	// The response writer that the handler should write to.
-	http.ResponseWriter
+	Response http.ResponseWriter
 	// In the case of websocket: a reference to the connection object. Nil
 	// otherwise.
 	WebsockConn *websocket.Conn
 }
 
-func (ctx *Context) Write(data []byte) (int, error) {
-	ctx.wroteData = true
-	return ctx.ResponseWriter.Write(data)
+// Response headers not request headers. For clarity use
+// Context.Response.Header() this method exists so Context satisfies the
+// http.ResponseWriter interface.
+func (ctx *Context) Header() http.Header {
+	return ctx.Response.Header()
 }
 
-func (ctx *Context) WriteString(content string) (int, error) {
-	return ctx.Write([]byte(content))
+// write raw data back to the client
+func (ctx *Context) Write(data []byte) (int, error) {
+	return ctx.Response.Write(data)
+}
+
+func (ctx *Context) WriteHeader(status int) {
+	ctx.Response.WriteHeader(status)
 }
 
 // Best-effort serialization of response data
@@ -70,7 +80,7 @@ func (ctx *Context) writeAnything(i interface{}) error {
 
 func (ctx *Context) Abort(status int, body string) {
 	ctx.WriteHeader(status)
-	ctx.WriteString(body)
+	ctx.Write([]byte(body))
 }
 
 func (ctx *Context) Redirect(status int, url_ string) {

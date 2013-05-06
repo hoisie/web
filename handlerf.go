@@ -162,7 +162,7 @@ func fixHandlerSignature(f interface{}) handlerf {
 	// classic net/http.Hander implementors can easily be converted
 	if httph, ok := f.(http.Handler); ok {
 		return func(ctx *Context, args ...string) error {
-			httph.ServeHTTP(ctx.ResponseWriter, ctx.Request)
+			httph.ServeHTTP(ctx.Response, ctx.Request)
 			return nil
 		}
 	}

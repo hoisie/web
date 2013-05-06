@@ -29,7 +29,7 @@ func (conn *scgiConn) WriteHeader(status int) {
 		conn.wroteHeaders = true
 
 		var buf bytes.Buffer
-		text := statusText[status]
+		text := http.StatusText(status)
 
 		fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
 

@@ -11,7 +11,6 @@ package web
 import (
 	"fmt"
 	"log"
-	"mime"
 	"net"
 	"net/http"
 	"os"
@@ -319,10 +318,6 @@ func NewServer() *Server {
 		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 		Env:    map[string]interface{}{},
 	}
-	// Set two commonly used mimetypes that are often not set by default
-	// Handy for robots.txt and favicon.ico
-	mime.AddExtensionType(".txt", "text/plain; charset=utf-8")
-	mime.AddExtensionType(".ico", "image/x-icon")
 	// Set some default headers
 	s.AddWrapper(func(h closedhandlerf, ctx *Context) error {
 		ctx.Header().Set("Server", "web.go")
@@ -360,4 +355,5 @@ func init() {
 		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
+	registerDefaultMimetypes()
 }

@@ -170,6 +170,9 @@ func (s *Server) applyHandler(f closedhandlerf, ctx *Context) (err error) {
 			ctx.Abort(500, "Server Error")
 			err = softerr
 		}
+	} else {
+		// flush the writer by ensuring at least one Write call takes place
+		_, err = ctx.Write([]byte{})
 	}
 	return
 }

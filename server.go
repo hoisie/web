@@ -174,6 +174,9 @@ func (s *Server) applyHandler(f closedhandlerf, ctx *Context) (err error) {
 		// flush the writer by ensuring at least one Write call takes place
 		_, err = ctx.Write([]byte{})
 	}
+	if err == nil {
+		err = ctx.Response.Close()
+	}
 	return
 }
 
@@ -237,7 +240,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		RawBody:  nil,
 		Params:   map[string]string{},
 		Server:   s,
-		Response: responseWriter{w},
+		Response: &ResponseWriter{ResponseWriter: w, BodyWriter: w},
 		User:     s.User,
 	}
 
@@ -284,7 +287,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else if path := s.findFile(req); path != "" {
 		// no custom handler found but there is a file with this name
 		simpleh = func(ctx *Context) error {
-			http.ServeFile(ctx, ctx.Request, path)
+			http.ServeFile(ctx.Response, ctx.Request, path)
 			return nil
 		}
 	} else {

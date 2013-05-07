@@ -14,11 +14,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 )
 
-// wrapper around http.ResponseWriter
-type responseWriter struct {
-	http.ResponseWriter
-}
-
 // Custom web.go request context. Contains information about the request and
 // can be used to manipulate the response.
 type Context struct {
@@ -32,7 +27,7 @@ type Context struct {
 	// communicate global state between your handlers.
 	User interface{}
 	// The response writer that the handler should write to.
-	Response http.ResponseWriter
+	Response *ResponseWriter
 	// In the case of websocket: a reference to the connection object. Nil
 	// otherwise.
 	WebsockConn *websocket.Conn

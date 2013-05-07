@@ -328,8 +328,6 @@ func NewServer() *Server {
 		ctx.Header().Set("Date", webTime(tm))
 		return h(ctx)
 	})
-	// Compress response data when possible
-	s.AddWrapper(CompressWrapper)
 	return s
 }
 

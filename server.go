@@ -26,7 +26,7 @@ import (
 type route struct {
 	rex     *regexp.Regexp
 	method  string
-	handler handlerf
+	handler parametrizedHandler
 }
 
 type ServerConfig struct {
@@ -152,7 +152,7 @@ func findMatchingRoute(req *http.Request, routes []*route) (*route, []string) {
 }
 
 // Apply the handler to this context and try to handle errors where possible
-func (s *Server) applyHandler(f closedhandlerf, ctx *Context) (err error) {
+func (s *Server) applyHandler(f SimpleHandler, ctx *Context) (err error) {
 	softerr, harderr := s.safelyCall(func() error {
 		return f(ctx)
 	})
@@ -265,7 +265,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	}
 
-	var simpleh closedhandlerf
+	var simpleh SimpleHandler
 	route, match := findMatchingRoute(req, s.routes)
 	if route != nil {
 		if route.method == "WEBSOCKET" {
@@ -324,7 +324,7 @@ func NewServer() *Server {
 		Env:    map[string]interface{}{},
 	}
 	// Set some default headers
-	s.AddWrapper(func(h closedhandlerf, ctx *Context) error {
+	s.AddWrapper(func(h SimpleHandler, ctx *Context) error {
 		ctx.Header().Set("Server", "web.go")
 		tm := time.Now().UTC()
 		ctx.Header().Set("Date", webTime(tm))

@@ -9,12 +9,17 @@ import (
 	"reflect"
 )
 
-// internal handler type. handler of slightly differing signatures are accepted
-// but transformed (wrapped) early on to match this one.
-type handlerf func(ctx *Context, arg ...string) error
+// internal type for user defined handlers. handler of slightly differing
+// signatures are accepted but transformed (wrapped) early on to match this
+// one. no data is closed this is just about matching signatures.
+type parametrizedHandler func(ctx *Context, arg ...string) error
 
-// internal handler whose parameters have been closed over
-type closedhandlerf func(*Context) error
+// internal generic handler type. parameters, if any, have been closed. also
+// represents non-user defined handlers like ServeFile and wrapped handlers.
+// Call this with a context and it will perform all necessary magic and finally
+// write the response to the client. Only exported to allow external definition
+// of wrappers.
+type SimpleHandler func(*Context) error
 
 // functions according to reflect
 type valuefun func([]reflect.Value) []reflect.Value
@@ -27,7 +32,7 @@ var errtype reflect.Type = reflect.TypeOf(&nilerr).Elem()
 var contextType reflect.Type = reflect.TypeOf(Context{})
 
 // Bind parameters to a handler
-func closeHandler(h handlerf, arg ...string) closedhandlerf {
+func closeHandler(h parametrizedHandler, arg ...string) SimpleHandler {
 	return func(ctx *Context) error {
 		return h(ctx, arg...)
 	}
@@ -158,7 +163,7 @@ func value2error(v reflect.Value) error {
 
 // Beat the supplied handler into a uniform signature. panics if incompatible
 // (may only happen when the wrapped fun is called)
-func fixHandlerSignature(f interface{}) handlerf {
+func fixHandlerSignature(f interface{}) parametrizedHandler {
 	// classic net/http.Hander implementors can easily be converted
 	if httph, ok := f.(http.Handler); ok {
 		return func(ctx *Context, args ...string) error {

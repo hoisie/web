@@ -65,7 +65,7 @@ func compressResponse(w *ResponseWriter, req *http.Request) {
 
 // Compress response data when applicable (client wants it and response is
 // suitable)
-func CompressWrapper(h closedhandlerf, ctx *Context) error {
+func CompressWrapper(h SimpleHandler, ctx *Context) error {
 	ctx.Response.AddAfterHeaderFunc(func(w *ResponseWriter) {
 		compressResponse(w, ctx.Request)
 	})

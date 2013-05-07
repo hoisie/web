@@ -25,10 +25,10 @@ import ()
 // creates handlers on the fly to handle static files, 404 situations and
 // handler signature mismatches. It is whatever web.go WOULD have called if a
 // wrapper were not defined.
-type Wrapper func(closedhandlerf, *Context) error
+type Wrapper func(SimpleHandler, *Context) error
 
 // Bind a simple request handler to a wrapper
-func wrapHandler(wrapper Wrapper, bareh closedhandlerf) closedhandlerf {
+func wrapHandler(wrapper Wrapper, bareh SimpleHandler) SimpleHandler {
 	return func(ctx *Context) error {
 		return wrapper(bareh, ctx)
 	}

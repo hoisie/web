@@ -74,6 +74,7 @@ func (ctx *Context) writeAnything(i interface{}) error {
 }
 
 func (ctx *Context) Abort(status int, body string) {
+	ctx.ContentType("txt")
 	ctx.WriteHeader(status)
 	ctx.Write([]byte(body))
 }

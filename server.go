@@ -343,6 +343,10 @@ func SetLogger(logger *log.Logger) {
 	mainServer.Logger = logger
 }
 
+func AddWrapper(wrap Wrapper) {
+	mainServer.AddWrapper(wrap)
+}
+
 // The global web server as an object implementing the http.Handler interface
 func GetHTTPHandler() http.Handler {
 	return mainServer

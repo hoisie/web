@@ -9,6 +9,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -60,10 +61,11 @@ var Config = &mainServer.Config
 var exeFile string
 
 //Stops the web server
-func (s *Server) Close() {
+func (s *Server) Close() error {
 	if s.l != nil {
-		s.l.Close()
+		return s.l.Close()
 	}
+	return errors.New("closing non-listening web.go server")
 }
 
 // Queue response wrapper that is called after all other wrappers
@@ -334,13 +336,13 @@ func NewServer() *Server {
 // Package wide proxy functions for global web server object
 
 // Stop the global web server
-func Close() {
-	mainServer.Close()
+func Close() error {
+	return mainServer.Close()
 }
 
 // Set a logger to be used by the global web server
 func SetLogger(logger *log.Logger) {
-	mainServer.Logger = logger
+	mainServer.SetLogger(logger)
 }
 
 func AddWrapper(wrap Wrapper) {

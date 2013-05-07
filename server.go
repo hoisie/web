@@ -282,6 +282,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 			simpleh = closeHandler(openh, match[1:]...)
 		} else {
+			// Set the default content-type
+			ctx.ContentType("text/html; charset=utf-8")
 			simpleh = closeHandler(route.handler, match[1:]...)
 		}
 	} else if path := s.findFile(req); path != "" {

@@ -140,7 +140,7 @@ func lastRetIsError(fv reflect.Value) bool {
 	return t.Implements(errtype)
 }
 
-func firstRetIsError(fv reflect.Value) bool {
+func firstRetIsNonError(fv reflect.Value) bool {
 	// type of fun
 	t := fv.Type()
 	if t.NumOut() == 0 {
@@ -148,7 +148,7 @@ func firstRetIsError(fv reflect.Value) bool {
 	}
 	// type of first return val
 	t = t.Out(0)
-	return t.Implements(errtype)
+	return !t.Implements(errtype)
 }
 
 // convert a value back to the original error interface. panics if value is not
@@ -181,7 +181,7 @@ func fixHandlerSignature(f interface{}) parametrizedHandler {
 		callf = addNilErrorReturn(callf)
 	}
 	// now callf definitely returns an error as its last value
-	if !firstRetIsError(fv) {
+	if firstRetIsNonError(fv) {
 		callf = writeFirstRetToFirstArg(callf)
 	}
 	// now callf definitely does not return its data: just an error

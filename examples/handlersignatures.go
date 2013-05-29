@@ -56,10 +56,14 @@ func (t towriter) WriteTo(w io.Writer) (int64, error) {
 }
 
 func h(ctx *web.Context) io.WriterTo {
-	return towriter{[]byte("<a href=i>non-nil error")}
+	return towriter{[]byte("<a href=i>no return value")}
 }
 
-func i(ctx *web.Context) error {
+func i(ctx *web.Context) {
+	ctx.Write([]byte("<a href=j>non-nil error"))
+}
+
+func j(ctx *web.Context) error {
 	return fmt.Errorf("oh no!")
 }
 
@@ -78,5 +82,6 @@ func main() {
 	web.Get("/g", g)
 	web.Get("/h", h)
 	web.Get("/i", i)
+	web.Get("/j", j)
 	web.Run("127.0.0.1:9999")
 }

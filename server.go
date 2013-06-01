@@ -14,6 +14,7 @@ import (
     "regexp"
     "runtime"
     "strconv"
+    "strings"
     "time"
 )
 
@@ -243,14 +244,14 @@ func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseW
     return false
 }
 
-// the main route handler in web.go
-func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
-    requestPath := req.URL.Path
-    ctx := Context{req, map[string]string{}, s, w}
-
+func (s *Server) LogRequest(ctx Context, sTime time.Time) {
     //log the request
     var logEntry bytes.Buffer
-    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+    req := ctx.Request
+    requestPath := req.URL.Path
+
+    duration := time.Now().Sub(sTime)
+    fmt.Fprintf(&logEntry, "%s - \033[32;1m%s - %s\033[0m - %v", strings.Split(req.RemoteAddr, ":")[0], req.Method, requestPath, duration)
 
     //ignore errors from ParseForm because it's usually harmless.
     req.ParseForm()
@@ -262,6 +263,15 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     }
     ctx.Server.Logger.Print(logEntry.String())
 
+}
+
+// the main route handler in web.go
+func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
+    startTime := time.Now()
+
+    requestPath := req.URL.Path
+    ctx := Context{req, map[string]string{}, s, w}
+
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
     tm := time.Now().UTC()
@@ -269,9 +279,11 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
 
     if req.Method == "GET" || req.Method == "HEAD" {
         if s.tryServingFile(requestPath, req, w) {
+            s.LogRequest(ctx, startTime)
             return
         }
     }
+
 
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
@@ -308,6 +320,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
             ctx.Abort(500, "Server Error")
         }
         if len(ret) == 0 {
+            s.LogRequest(ctx, startTime)
             return
         }
 
@@ -325,6 +338,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
         if err != nil {
             ctx.Server.Logger.Println("Error during write: ", err)
         }
+        s.LogRequest(ctx, startTime)
         return
     }
 

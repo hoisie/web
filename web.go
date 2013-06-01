@@ -19,6 +19,7 @@ import (
     "strconv"
     "strings"
     "time"
+    "code.google.com/p/go.net/websocket"
 )
 
 // A Context object is created for every incoming HTTP request, and is
@@ -235,6 +236,16 @@ func Delete(route string, handler interface{}) {
 // Match adds a handler for an arbitrary http method in the main server.
 func Match(method string, route string, handler interface{}) {
     mainServer.addRoute(route, method, handler)
+}
+
+//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func Handler(route string, method string, httpHandler http.Handler) {
+    mainServer.Handler(route, method, httpHandler)
+}
+
+//Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func Websocket(route string, httpHandler websocket.Handler) {
+    mainServer.Websocket(route, httpHandler)
 }
 
 // SetLogger sets the logger for the main server.

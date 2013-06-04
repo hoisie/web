@@ -64,12 +64,12 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
 	return &buf
 }
 
-func TestScgi(t *testing.T) {
+func testScgi(t *testing.T, s *Server, tests []Test) {
 	for _, test := range tests {
 		req := buildTestScgiRequest(test.method, test.path, test.body, test.headers)
 		var output bytes.Buffer
 		nb := tcpBuffer{input: req, output: &output}
-		mainServer.handleScgiRequest(&nb)
+		s.handleScgiRequest(&nb)
 		resp := buildTestResponse(&output)
 
 		if resp.statusCode != test.expectedStatus {
@@ -82,7 +82,12 @@ func TestScgi(t *testing.T) {
 	}
 }
 
-func TestScgiHead(t *testing.T) {
+func TestScgi(t *testing.T) {
+	s := generalTestServer()
+	testScgi(t, s, generalTests)
+}
+
+func testScgiHead(t *testing.T, s *Server, tests []Test) {
 	for _, test := range tests {
 
 		if test.method != "GET" {
@@ -92,13 +97,13 @@ func TestScgiHead(t *testing.T) {
 		req := buildTestScgiRequest("GET", test.path, test.body, make(map[string][]string))
 		var output bytes.Buffer
 		nb := tcpBuffer{input: req, output: &output}
-		mainServer.handleScgiRequest(&nb)
+		s.handleScgiRequest(&nb)
 		getresp := buildTestResponse(&output)
 
 		req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string][]string))
 		var output2 bytes.Buffer
 		nb = tcpBuffer{input: req, output: &output2}
-		mainServer.handleScgiRequest(&nb)
+		s.handleScgiRequest(&nb)
 		headresp := buildTestResponse(&output2)
 
 		if getresp.statusCode != headresp.statusCode {
@@ -128,4 +133,9 @@ func TestScgiHead(t *testing.T) {
 			t.Fatalf("head and get content-length differ")
 		}
 	}
+}
+
+func TestScgiHead(t *testing.T) {
+	s := generalTestServer()
+	testScgiHead(t, s, generalTests)
 }

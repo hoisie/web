@@ -88,13 +88,13 @@ func buildTestResponse(buf *bytes.Buffer) *testResponse {
 	return &response
 }
 
-func getTestResponse(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *testResponse {
+func getTestResponse(s *Server, method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *testResponse {
 	req := buildTestRequest(method, path, body, headers, cookies)
 	var buf bytes.Buffer
 
 	tcpb := tcpBuffer{nil, &buf}
 	c := &scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &tcpb}
-	mainServer.ServeHTTP(c, req)
+	s.ServeHTTP(c, req)
 	return buildTestResponse(&buf)
 
 }
@@ -108,60 +108,61 @@ type Test struct {
 	expectedBody   string
 }
 
-//initialize the routes
-func init() {
+// Initialize test routes
+func generalTestServer() *Server {
+	s := NewServer()
 	f, _ := os.OpenFile("out" /*os.DevNull*/, os.O_RDWR, 0644)
-	mainServer.SetLogger(log.New(f, "", 0))
-	Get("/", func() string { return "index" })
-	Get("/panic", func() { panic(0) })
-	Get("/echo/(.*)", func(s string) string { return s })
-	Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
-	Post("/post/echo/(.*)", func(s string) string { return s })
-	Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Params[name] })
+	s.SetLogger(log.New(f, "", 0))
+	s.Get("/", func() string { return "index" })
+	s.Get("/panic", func() { panic(0) })
+	s.Get("/echo/(.*)", func(s string) string { return s })
+	s.Get("/multiecho/(.*)/(.*)/(.*)/(.*)", func(a, b, c, d string) string { return a + b + c + d })
+	s.Post("/post/echo/(.*)", func(s string) string { return s })
+	s.Post("/post/echoparam/(.*)", func(ctx *Context, name string) string { return ctx.Params[name] })
 
-	Get("/error/code/(.*)", func(ctx *Context, code string) string {
+	s.Get("/error/code/(.*)", func(ctx *Context, code string) string {
 		n, _ := strconv.Atoi(code)
 		message := http.StatusText(n)
 		ctx.Abort(n, message)
 		return ""
 	})
 
-	Get("/error/notfound/(.*)", func(ctx *Context, message string) (string, error) {
+	s.Get("/error/notfound/(.*)", func(ctx *Context, message string) (string, error) {
 		return "", WebError{404, message}
 	})
 
-	Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
+	s.Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
 		n, _ := strconv.Atoi(code)
 		ctx.Abort(n, message)
 		return ""
 	})
 
-	Get("/writetest", func(ctx *Context) (string, error) { return "hello", nil })
+	s.Get("/writetest", func(ctx *Context) (string, error) { return "hello", nil })
 
-	Post("/securecookie/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
+	s.Post("/securecookie/set/(.+)/(.+)", func(ctx *Context, name string, val string) string {
 		ctx.SetSecureCookie(name, val, 60)
 		return ""
 	})
 
-	Get("/securecookie/get/(.+)", func(ctx *Context, name string) string {
+	s.Get("/securecookie/get/(.+)", func(ctx *Context, name string) string {
 		val, ok := ctx.GetSecureCookie(name)
 		if !ok {
 			return ""
 		}
 		return val
 	})
-	Get("/getparam", func(ctx *Context) string { return ctx.Params["a"] })
-	Get("/fullparams", func(ctx *Context) string {
+	s.Get("/getparam", func(ctx *Context) string { return ctx.Params["a"] })
+	s.Get("/fullparams", func(ctx *Context) string {
 		return strings.Join(ctx.Request.Form["a"], ",")
 	})
 
-	Get("/json", func(ctx *Context) string {
+	s.Get("/json", func(ctx *Context) string {
 		ctx.ContentType("json")
 		data, _ := json.Marshal(ctx.Params)
 		return string(data)
 	})
 
-	Get("/jsonbytes", func(ctx *Context) []byte {
+	s.Get("/jsonbytes", func(ctx *Context) []byte {
 		ctx.ContentType("application/json")
 		data, _ := json.Marshal(ctx.Params)
 		return data
@@ -171,15 +172,16 @@ func init() {
 		A string `json:"a"`
 		B string `json:"b"`
 	}
-	Post("/parsejson", func(ctx *Context) (tmptype, error) {
+	s.Post("/parsejson", func(ctx *Context) (tmptype, error) {
 		ctx.ContentType("application/json")
 		tmp := tmptype{"hello", "world"}
 		//json.NewDecoder(ctx.Request.Body).Decode(&tmp)
 		return tmp, nil
 	})
+	return s
 }
 
-var tests = []Test{
+var generalTests = []Test{
 	{"GET", "/", nil, "", 200, "index"},
 	{"GET", "/echo/hello", nil, "", 200, "hello"},
 	{"GET", "/echo/hello", nil, "", 200, "hello"},
@@ -241,9 +243,9 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 	return &req
 }
 
-func TestRouting(t *testing.T) {
+func testRouting(t *testing.T, s *Server, tests []Test) {
 	for _, test := range tests {
-		resp := getTestResponse(test.method, test.path, test.body, test.headers, nil)
+		resp := getTestResponse(s, test.method, test.path, test.body, test.headers, nil)
 
 		if resp.statusCode != test.expectedStatus {
 			t.Fatalf("%v: expected status %d got %d", test.path, test.expectedStatus, resp.statusCode)
@@ -261,14 +263,19 @@ func TestRouting(t *testing.T) {
 	}
 }
 
-func TestHead(t *testing.T) {
+func TestRouting(t *testing.T) {
+	s := generalTestServer()
+	testRouting(t, s, generalTests)
+}
+
+func testHead(t *testing.T, s *Server, tests []Test) {
 	for _, test := range tests {
 
 		if test.method != "GET" {
 			continue
 		}
-		getresp := getTestResponse("GET", test.path, test.body, test.headers, nil)
-		headresp := getTestResponse("HEAD", test.path, test.body, test.headers, nil)
+		getresp := getTestResponse(s, "GET", test.path, test.body, test.headers, nil)
+		headresp := getTestResponse(s, "HEAD", test.path, test.body, test.headers, nil)
 
 		if getresp.statusCode != headresp.statusCode {
 			t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
@@ -299,6 +306,11 @@ func TestHead(t *testing.T) {
 	}
 }
 
+func TestHead(t *testing.T) {
+	s := generalTestServer()
+	testHead(t, s, generalTests)
+}
+
 func makeCookie(vals map[string]string) []*http.Cookie {
 	var cookies []*http.Cookie
 	for k, v := range vals {
@@ -312,15 +324,16 @@ func makeCookie(vals map[string]string) []*http.Cookie {
 }
 
 func TestSecureCookie(t *testing.T) {
-	mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
-	resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil, nil)
+	s := generalTestServer()
+	s.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+	resp1 := getTestResponse(s, "POST", "/securecookie/set/a/1", "", nil, nil)
 	sval, ok := resp1.cookies["a"]
 	if !ok {
 		t.Fatalf("Failed to get cookie ")
 	}
 	cookies := makeCookie(map[string]string{"a": sval})
 
-	resp2 := getTestResponse("GET", "/securecookie/get/a", "", nil, cookies)
+	resp2 := getTestResponse(s, "GET", "/securecookie/get/a", "", nil, cookies)
 
 	if resp2.body != "1" {
 		t.Fatalf("SecureCookie test failed")

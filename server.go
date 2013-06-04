@@ -10,6 +10,7 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -165,13 +166,14 @@ func findMatchingRoute(req *http.Request, routes []*route) (*route, []string) {
 }
 
 // Apply the handler to this context and try to handle errors where possible
-func (s *Server) applyHandler(f SimpleHandler, ctx *Context) {
+func (s *Server) applyHandler(f SimpleHandler, ctx *Context) (err error) {
 	softerr, harderr := s.safelyCall(func() error {
 		return f(ctx)
 	})
 	if harderr != nil {
 		//there was an error or panic while calling the handler
 		ctx.Abort(500, "Server Error")
+		err = fmt.Errorf("Handler panic: %v", harderr)
 	} else if softerr != nil {
 		if werr, ok := softerr.(WebError); ok {
 			ctx.Abort(werr.Code, werr.Error())
@@ -180,12 +182,14 @@ func (s *Server) applyHandler(f SimpleHandler, ctx *Context) {
 			s.Logger.Printf("Handler returned error: %v", softerr)
 			ctx.Abort(500, "Server Error")
 		}
+		err = softerr
 	} else {
 		// flush the writer by ensuring at least one Write call takes place
 		ctx.Write([]byte{})
 	}
+	// TODO: How to handle this error?
 	ctx.Response.Close()
-	return
+	return err
 }
 
 func dirExists(dir string) bool {
@@ -249,6 +253,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	oal.LogRequest(req)
+	ctx.Response.AddAfterHeaderFunc(func(w *ResponseWriter) {
+		oal.LogHeader(w.status, w.Header())
+	})
 
 	//ignore errors from ParseForm because it's usually harmless.
 	req.ParseForm()
@@ -293,7 +300,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, wrap := range s.Wrappers {
 		simpleh = wrapHandler(wrap, simpleh)
 	}
-	s.applyHandler(simpleh, ctx)
+	err := s.applyHandler(simpleh, ctx)
+	oal.LogDone(err)
 	return
 }
 

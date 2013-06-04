@@ -491,7 +491,7 @@ var defaultMimes = map[string]string{
 }
 
 // register lighttpd default mime types with mime package
-func registerDefaultMimetypes() {
+func init() {
 	for ext, typ := range defaultMimes {
 		mime.AddExtensionType(ext, typ)
 	}

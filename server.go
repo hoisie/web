@@ -366,5 +366,4 @@ func init() {
 		// TODO For robustness, search each directory in $PATH
 		exeFile = path.Join(wd, arg0)
 	}
-	registerDefaultMimetypes()
 }

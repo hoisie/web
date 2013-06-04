@@ -11,12 +11,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 )
+
+var nopLogger = log.New(ioutil.Discard, "", 0)
 
 func init() {
 	runtime.GOMAXPROCS(4)
@@ -111,8 +112,7 @@ type Test struct {
 // Initialize test routes
 func generalTestServer() *Server {
 	s := NewServer()
-	f, _ := os.OpenFile("out" /*os.DevNull*/, os.O_RDWR, 0644)
-	s.SetLogger(log.New(f, "", 0))
+	s.SetLogger(nopLogger)
 	s.Get("/", func() string { return "index" })
 	s.Get("/panic", func() { panic(0) })
 	s.Get("/echo/(.*)", func(s string) string { return s })

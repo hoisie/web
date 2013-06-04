@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"bitbucket.org/kardianos/osext"
 	"code.google.com/p/go.net/websocket"
 )
 
@@ -59,7 +60,9 @@ var mainServer = NewServer()
 
 // Configuration of the shared server
 var Config = &mainServer.Config
-var exeFile string
+
+// Location of the executable (ignore errors)
+var exeDir, _ = osext.ExecutableFolder()
 
 //Stops the web server
 func (s *Server) Close() error {
@@ -201,10 +204,8 @@ func fileExists(dir string) bool {
 	return !info.IsDir()
 }
 
-// Default
 func defaultStaticDir() string {
-	root, _ := path.Split(exeFile)
-	return path.Join(root, "static")
+	return path.Join(exeDir, "static")
 }
 
 // If this request corresponds to a static file return its path
@@ -346,16 +347,4 @@ func AddWrapper(wrap Wrapper) {
 // The global web server as an object implementing the http.Handler interface
 func GetHTTPHandler() http.Handler {
 	return mainServer
-}
-
-func init() {
-	// find the location of the executable
-	arg0 := path.Clean(os.Args[0])
-	wd, _ := os.Getwd()
-	if strings.HasPrefix(arg0, "/") {
-		exeFile = arg0
-	} else {
-		// TODO For robustness, search each directory in $PATH
-		exeFile = path.Join(wd, arg0)
-	}
 }

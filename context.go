@@ -21,7 +21,7 @@ type Context struct {
 	Request *http.Request
 	RawBody []byte
 	// Aggregated parameters from the query string and POST data.
-	Params map[string]string
+	Params Params
 	Server *Server
 	// Copied from Server.User before the handler is invoked. Use this to
 	// communicate global state between your handlers.

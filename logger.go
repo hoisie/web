@@ -9,8 +9,6 @@ import (
 	"net/http"
 )
 
-type Params map[string]string
-
 // Log one request by calling every method in the order defined below. Logging
 // may be done in a separate goroutine from handling. Arguments are passed by
 // reference for efficiency but MUST NOT be changed!

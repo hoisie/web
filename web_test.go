@@ -7,7 +7,6 @@ package web
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -144,7 +143,6 @@ func init() {
 	})
 
 	Get("/error/notfound/(.*)", func(ctx *Context, message string) (string, error) {
-		fmt.Println(message)
 		return "", WebError{404, message}
 	})
 
@@ -244,7 +242,7 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 	headers["User-Agent"] = []string{"web.go test"}
 	if method == "POST" {
-		headers["Content-Length"] = []string{fmt.Sprintf("%d", len(body))}
+		headers["Content-Length"] = []string{strconv.Itoa(len(body))}
 		if headers["Content-Type"] == nil {
 			headers["Content-Type"] = []string{"text/plain"}
 		}
@@ -266,20 +264,19 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 
 func TestRouting(t *testing.T) {
 	for _, test := range tests {
-		fmt.Println("Using %v", test.path)
 		resp := getTestResponse(test.method, test.path, test.body, test.headers, nil)
 
 		if resp.statusCode != test.expectedStatus {
-			t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
+			t.Fatalf("%v: expected status %d got %d", test.path, test.expectedStatus, resp.statusCode)
 		}
 		if resp.body != test.expectedBody {
-			t.Fatalf("expected %q got %q", test.expectedBody, resp.body)
+			t.Fatalf("%v: expected %q got %q", test.path, test.expectedBody, resp.body)
 		}
 		if cl, ok := resp.headers["Content-Length"]; ok {
 			clExp, _ := strconv.Atoi(cl[0])
 			clAct := len(resp.body)
 			if clExp != clAct {
-				t.Fatalf("Content-length doesn't match. expected %d got %d", clExp, clAct)
+				t.Fatalf("%v: Content-length doesn't match. expected %d got %d", test.path, clExp, clAct)
 			}
 		}
 	}

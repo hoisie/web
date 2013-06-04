@@ -29,6 +29,7 @@ type ResponseWriter struct {
 	once sync.Once
 	// Underlying response writer, only use this for the headers
 	http.ResponseWriter
+	status int
 	// body data is written here. can be wrapped by afterheaders functions
 	BodyWriter io.Writer
 }
@@ -47,6 +48,7 @@ func (w *ResponseWriter) Write(data []byte) (int, error) {
 }
 
 func (w *ResponseWriter) WriteHeader(status int) {
+	w.status = status
 	w.triggerAfterHeaders()
 	w.ResponseWriter.WriteHeader(status)
 }

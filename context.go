@@ -30,7 +30,8 @@ type Context struct {
 	Response *ResponseWriter
 	// In the case of websocket: a reference to the connection object. Nil
 	// otherwise.
-	WebsockConn *websocket.Conn
+	WebsockConn     *websocket.Conn
+	oneaccesslogger OneAccessLogger
 }
 
 // Response headers not request headers. For clarity use

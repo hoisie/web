@@ -44,6 +44,7 @@ type ServerConfig struct {
 type Server struct {
 	Config ServerConfig
 	routes []*route
+	// All error / info logging is done to this logger
 	Logger *log.Logger
 	Env    map[string]interface{}
 	// Save the listener so it can be closed
@@ -52,6 +53,8 @@ type Server struct {
 	User interface{}
 	// All requests are passed through this wrapper if defined
 	Wrappers []Wrapper
+	// Factory function that generates access loggers, only used to log requests
+	AccessLogger AccessLogger
 }
 
 var mainServer = NewServer()
@@ -237,6 +240,7 @@ func (s *Server) findFile(req *http.Request) string {
 
 // Fully clothed request handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	oal := s.AccessLogger(s)
 	ctx := &Context{
 		Request:  req,
 		RawBody:  nil,
@@ -244,14 +248,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Server:   s,
 		Response: &ResponseWriter{ResponseWriter: w, BodyWriter: w},
 		User:     s.User,
+		// fresh access logger for every request
+		oneaccesslogger: oal,
 	}
 
-	//log the request
-	if s.Config.ColorOutput {
-		s.Logger.Printf("\033[32;1m%s %s\033[0m", req.Method, req.URL.Path)
-	} else {
-		s.Logger.Printf("%s %s", req.Method, req.URL.Path)
-	}
+	oal.LogRequest(req)
 
 	//ignore errors from ParseForm because it's usually harmless.
 	req.ParseForm()
@@ -259,12 +260,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		for k, v := range req.Form {
 			ctx.Params[k] = v[0]
 		}
-		if s.Config.ColorOutput {
-			s.Logger.Printf("\033[37;1mParams: %v\033[0m\n", ctx.Params)
-		} else {
-			s.Logger.Printf("Params: %v\n", ctx.Params)
-		}
-
+		oal.LogParams(ctx.Params)
 	}
 
 	var simpleh SimpleHandler
@@ -321,9 +317,10 @@ func NewServer() *Server {
 		ColorOutput:  true,
 	}
 	s := &Server{
-		Config: conf,
-		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
-		Env:    map[string]interface{}{},
+		Config:       conf,
+		Logger:       log.New(os.Stdout, "", log.Ldate|log.Ltime),
+		Env:          map[string]interface{}{},
+		AccessLogger: DefaultAccessLogger,
 	}
 	// Set some default headers
 	s.AddWrapper(func(h SimpleHandler, ctx *Context) error {

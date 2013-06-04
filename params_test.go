@@ -17,33 +17,6 @@ func handleS(ctx *Context) string {
 	return ctx.Params.GetString("s")
 }
 
-var paramsTests = []Test{
-	{
-		method:         "GET",
-		path:           "/i?i=40",
-		expectedStatus: 200,
-		expectedBody:   "40",
-	},
-	{
-		method:         "GET",
-		path:           "/i?i=asdf",
-		expectedStatus: 400,
-		expectedBody:   "Illegal integer parameter i",
-	},
-	{
-		method:         "GET",
-		path:           "/s?s=asdf",
-		expectedStatus: 200,
-		expectedBody:   "asdf",
-	},
-	{
-		method:         "GET",
-		path:           "/s",
-		expectedStatus: 400,
-		expectedBody:   "Required parameter s missing",
-	},
-}
-
 func paramsTestServer() *Server {
 	s := NewServer()
 	s.SetLogger(nopLogger)
@@ -52,9 +25,38 @@ func paramsTestServer() *Server {
 	return s
 }
 
-func TestParams(t *testing.T) {
-	s := paramsTestServer()
-	for _, test := range paramsTests {
-		testFull(t, s, test)
-	}
+func TestParams_GetInt(t *testing.T) {
+	testFull(t, paramsTestServer(), Test{
+		method:         "GET",
+		path:           "/i?i=40",
+		expectedStatus: 200,
+		expectedBody:   "40",
+	})
+}
+
+func TestParams_GetInt_Illegal(t *testing.T) {
+	testFull(t, paramsTestServer(), Test{
+		method:         "GET",
+		path:           "/i?i=asdf",
+		expectedStatus: 400,
+		expectedBody:   "Illegal integer parameter i",
+	})
+}
+
+func TestParams_GetString(t *testing.T) {
+	testFull(t, paramsTestServer(), Test{
+		method:         "GET",
+		path:           "/s?s=asdf",
+		expectedStatus: 200,
+		expectedBody:   "asdf",
+	})
+}
+
+func TestParams_GetString_Missing(t *testing.T) {
+	testFull(t, paramsTestServer(), Test{
+		method:         "GET",
+		path:           "/s",
+		expectedStatus: 400,
+		expectedBody:   "Required parameter s missing",
+	})
 }

@@ -315,7 +315,8 @@ func NewServer() *Server {
 		RecoverPanic: true,
 		Cert:         "",
 		Key:          "",
-		ColorOutput:  true,
+		// Don't use colors on Windows by default
+		ColorOutput: runtime.GOOS != "windows",
 	}
 	s := &Server{
 		Config:       conf,

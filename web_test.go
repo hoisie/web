@@ -108,22 +108,6 @@ type Test struct {
 	expectedBody   string
 }
 
-type StructHandler struct {
-	a string
-}
-
-func (s *StructHandler) method() string {
-	return s.a
-}
-
-func (s *StructHandler) method2(ctx *Context) string {
-	return s.a + ctx.Params["b"]
-}
-
-func (s *StructHandler) method3(ctx *Context, b string) string {
-	return s.a + b
-}
-
 //initialize the routes
 func init() {
 	f, _ := os.OpenFile("out" /*os.DevNull*/, os.O_RDWR, 0644)
@@ -193,11 +177,6 @@ func init() {
 		//json.NewDecoder(ctx.Request.Body).Decode(&tmp)
 		return tmp, nil
 	})
-
-	//s := &StructHandler{"a"}
-	//Get("/methodhandler", MethodHandler(s, "method"))
-	//Get("/methodhandler2", MethodHandler(s, "method2"))
-	//Get("/methodhandler3/(.*)", MethodHandler(s, "method3"))
 }
 
 var tests = []Test{

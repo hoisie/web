@@ -186,15 +186,11 @@ func (s *Server) applyHandler(f SimpleHandler, ctx *Context) {
 }
 
 func dirExists(dir string) bool {
-	d, e := os.Stat(dir)
-	switch {
-	case e != nil:
-		return false
-	case !d.IsDir():
+	d, err := os.Stat(dir)
+	if err != nil {
 		return false
 	}
-
-	return true
+	return d.IsDir()
 }
 
 func fileExists(dir string) bool {
@@ -202,7 +198,6 @@ func fileExists(dir string) bool {
 	if err != nil {
 		return false
 	}
-
 	return !info.IsDir()
 }
 

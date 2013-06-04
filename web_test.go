@@ -243,72 +243,71 @@ func buildTestRequest(method string, path string, body string, headers map[strin
 	return &req
 }
 
-func testRouting(t *testing.T, s *Server, tests []Test) {
-	for _, test := range tests {
-		resp := getTestResponse(s, test.method, test.path, test.body, test.headers, nil)
+func testRouting(t *testing.T, s *Server, test Test) {
+	resp := getTestResponse(s, test.method, test.path, test.body, test.headers, nil)
 
-		if resp.statusCode != test.expectedStatus {
-			t.Fatalf("%v: expected status %d got %d", test.path, test.expectedStatus, resp.statusCode)
-		}
-		if resp.body != test.expectedBody {
-			t.Fatalf("%v: expected %q got %q", test.path, test.expectedBody, resp.body)
-		}
-		if cl, ok := resp.headers["Content-Length"]; ok {
-			clExp, _ := strconv.Atoi(cl[0])
-			clAct := len(resp.body)
-			if clExp != clAct {
-				t.Fatalf("%v: Content-length doesn't match. expected %d got %d", test.path, clExp, clAct)
-			}
+	if resp.statusCode != test.expectedStatus {
+		t.Fatalf("%v: expected status %d got %d", test.path, test.expectedStatus, resp.statusCode)
+	}
+	if resp.body != test.expectedBody {
+		t.Fatalf("%v: expected %q got %q", test.path, test.expectedBody, resp.body)
+	}
+	if cl, ok := resp.headers["Content-Length"]; ok {
+		clExp, _ := strconv.Atoi(cl[0])
+		clAct := len(resp.body)
+		if clExp != clAct {
+			t.Fatalf("%v: Content-length doesn't match. expected %d got %d", test.path, clExp, clAct)
 		}
 	}
 }
 
 func TestRouting(t *testing.T) {
 	s := generalTestServer()
-	testRouting(t, s, generalTests)
+	for _, test := range generalTests {
+		testRouting(t, s, test)
+	}
 }
 
-func testHead(t *testing.T, s *Server, tests []Test) {
-	for _, test := range tests {
+func testHead(t *testing.T, s *Server, test Test) {
+	if test.method != "GET" {
+		return
+	}
+	getresp := getTestResponse(s, "GET", test.path, test.body, test.headers, nil)
+	headresp := getTestResponse(s, "HEAD", test.path, test.body, test.headers, nil)
 
-		if test.method != "GET" {
-			continue
-		}
-		getresp := getTestResponse(s, "GET", test.path, test.body, test.headers, nil)
-		headresp := getTestResponse(s, "HEAD", test.path, test.body, test.headers, nil)
+	if getresp.statusCode != headresp.statusCode {
+		t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
+	}
+	if len(headresp.body) != 0 {
+		t.Fatalf("head request arrived with a body")
+	}
 
-		if getresp.statusCode != headresp.statusCode {
-			t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
-		}
-		if len(headresp.body) != 0 {
-			t.Fatalf("head request arrived with a body")
-		}
+	var cl []string
+	var getcl, headcl int
+	var hascl1, hascl2 bool
 
-		var cl []string
-		var getcl, headcl int
-		var hascl1, hascl2 bool
+	if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
+		getcl, _ = strconv.Atoi(cl[0])
+	}
 
-		if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
-			getcl, _ = strconv.Atoi(cl[0])
-		}
+	if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
+		headcl, _ = strconv.Atoi(cl[0])
+	}
 
-		if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
-			headcl, _ = strconv.Atoi(cl[0])
-		}
+	if hascl1 != hascl2 {
+		t.Fatalf("head and get: one has content-length, one doesn't")
+	}
 
-		if hascl1 != hascl2 {
-			t.Fatalf("head and get: one has content-length, one doesn't")
-		}
-
-		if hascl1 == true && getcl != headcl {
-			t.Fatalf("head and get content-length differ")
-		}
+	if hascl1 == true && getcl != headcl {
+		t.Fatalf("head and get content-length differ")
 	}
 }
 
 func TestHead(t *testing.T) {
 	s := generalTestServer()
-	testHead(t, s, generalTests)
+	for _, test := range generalTests {
+		testHead(t, s, test)
+	}
 }
 
 func makeCookie(vals map[string]string) []*http.Cookie {
@@ -343,4 +342,11 @@ func TestSecureCookie(t *testing.T) {
 func TestEarlyClose(t *testing.T) {
 	var server1 Server
 	server1.Close()
+}
+
+func testFull(t *testing.T, s *Server, test Test) {
+	testRouting(t, s, test)
+	testHead(t, s, test)
+	testScgi(t, s, test)
+	testScgiHead(t, s, test)
 }

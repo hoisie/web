@@ -116,8 +116,7 @@ func handlerfTestServer() *Server {
 
 func TestHandlerSig(t *testing.T) {
 	s := handlerfTestServer()
-	testRouting(t, s, handlerfTests)
-	testHead(t, s, handlerfTests)
-	testScgi(t, s, handlerfTests)
-	testScgiHead(t, s, handlerfTests)
+	for _, test := range handlerfTests {
+		testFull(t, s, test)
+	}
 }

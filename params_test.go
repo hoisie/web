@@ -54,8 +54,7 @@ func paramsTestServer() *Server {
 
 func TestParams(t *testing.T) {
 	s := paramsTestServer()
-	testRouting(t, s, paramsTests)
-	testHead(t, s, paramsTests)
-	testScgi(t, s, paramsTests)
-	testScgiHead(t, s, paramsTests)
+	for _, test := range paramsTests {
+		testFull(t, s, test)
+	}
 }

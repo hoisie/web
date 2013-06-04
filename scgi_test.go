@@ -64,78 +64,77 @@ func buildTestScgiRequest(method string, path string, body string, headers map[s
 	return &buf
 }
 
-func testScgi(t *testing.T, s *Server, tests []Test) {
-	for _, test := range tests {
-		req := buildTestScgiRequest(test.method, test.path, test.body, test.headers)
-		var output bytes.Buffer
-		nb := tcpBuffer{input: req, output: &output}
-		s.handleScgiRequest(&nb)
-		resp := buildTestResponse(&output)
+func testScgi(t *testing.T, s *Server, test Test) {
+	req := buildTestScgiRequest(test.method, test.path, test.body, test.headers)
+	var output bytes.Buffer
+	nb := tcpBuffer{input: req, output: &output}
+	s.handleScgiRequest(&nb)
+	resp := buildTestResponse(&output)
 
-		if resp.statusCode != test.expectedStatus {
-			t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
-		}
+	if resp.statusCode != test.expectedStatus {
+		t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
+	}
 
-		if resp.body != test.expectedBody {
-			t.Fatalf("Scgi expected %q got %q", test.expectedBody, resp.body)
-		}
+	if resp.body != test.expectedBody {
+		t.Fatalf("Scgi expected %q got %q", test.expectedBody, resp.body)
 	}
 }
 
 func TestScgi(t *testing.T) {
 	s := generalTestServer()
-	testScgi(t, s, generalTests)
+	for _, test := range generalTests {
+		testScgi(t, s, test)
+	}
 }
 
-func testScgiHead(t *testing.T, s *Server, tests []Test) {
-	for _, test := range tests {
+func testScgiHead(t *testing.T, s *Server, test Test) {
+	if test.method != "GET" {
+		return
+	}
 
-		if test.method != "GET" {
-			continue
-		}
+	req := buildTestScgiRequest("GET", test.path, test.body, make(map[string][]string))
+	var output bytes.Buffer
+	nb := tcpBuffer{input: req, output: &output}
+	s.handleScgiRequest(&nb)
+	getresp := buildTestResponse(&output)
 
-		req := buildTestScgiRequest("GET", test.path, test.body, make(map[string][]string))
-		var output bytes.Buffer
-		nb := tcpBuffer{input: req, output: &output}
-		s.handleScgiRequest(&nb)
-		getresp := buildTestResponse(&output)
+	req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string][]string))
+	var output2 bytes.Buffer
+	nb = tcpBuffer{input: req, output: &output2}
+	s.handleScgiRequest(&nb)
+	headresp := buildTestResponse(&output2)
 
-		req = buildTestScgiRequest("HEAD", test.path, test.body, make(map[string][]string))
-		var output2 bytes.Buffer
-		nb = tcpBuffer{input: req, output: &output2}
-		s.handleScgiRequest(&nb)
-		headresp := buildTestResponse(&output2)
+	if getresp.statusCode != headresp.statusCode {
+		t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
+	}
+	if len(headresp.body) != 0 {
+		t.Fatalf("head request arrived with a body")
+	}
 
-		if getresp.statusCode != headresp.statusCode {
-			t.Fatalf("head and get status differ. expected %d got %d", getresp.statusCode, headresp.statusCode)
-		}
-		if len(headresp.body) != 0 {
-			t.Fatalf("head request arrived with a body")
-		}
+	var cl []string
+	var getcl, headcl int
+	var hascl1, hascl2 bool
 
-		var cl []string
-		var getcl, headcl int
-		var hascl1, hascl2 bool
+	if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
+		getcl, _ = strconv.Atoi(cl[0])
+	}
 
-		if cl, hascl1 = getresp.headers["Content-Length"]; hascl1 {
-			getcl, _ = strconv.Atoi(cl[0])
-		}
+	if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
+		headcl, _ = strconv.Atoi(cl[0])
+	}
 
-		if cl, hascl2 = headresp.headers["Content-Length"]; hascl2 {
-			headcl, _ = strconv.Atoi(cl[0])
-		}
+	if hascl1 != hascl2 {
+		t.Fatalf("head and get: one has content-length, one doesn't")
+	}
 
-		if hascl1 != hascl2 {
-			t.Fatalf("head and get: one has content-length, one doesn't")
-		}
-
-		if hascl1 == true && getcl != headcl {
-			t.Fatalf("head and get content-length differ")
-		}
+	if hascl1 == true && getcl != headcl {
+		t.Fatalf("head and get content-length differ")
 	}
 }
 
 func TestScgiHead(t *testing.T) {
 	s := generalTestServer()
-	testScgiHead(t, s, generalTests)
+	for _, test := range generalTests {
+		testScgiHead(t, s, test)
+	}
 }

@@ -45,7 +45,6 @@ type Server struct {
 	routes []*route
 	// All error / info logging is done to this logger
 	Logger *log.Logger
-	Env    map[string]interface{}
 	// Save the listener so it can be closed
 	l net.Listener
 	// Passed verbatim to every handler on every request
@@ -321,7 +320,6 @@ func NewServer() *Server {
 	s := &Server{
 		Config:       conf,
 		Logger:       log.New(os.Stdout, "", log.Ldate|log.Ltime),
-		Env:          map[string]interface{}{},
 		AccessLogger: DefaultAccessLogger,
 	}
 	// Set some default headers

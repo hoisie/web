@@ -10,7 +10,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -99,11 +98,14 @@ func (s *Server) addRoute(rawrex string, method string, handler interface{}) {
 func (s *Server) safelyCall(f func() error) (softerr error, harderr interface{}) {
 	defer func() {
 		if err := recover(); err != nil {
-			if !s.Config.RecoverPanic {
-				// go back to panic
-				s.Logger.Printf("Panic: %v", err)
-				panic(err)
-			} else {
+			// A panic with a WebError object is considered equivalent to
+			// returning that object
+			if werr, ok := err.(WebError); ok {
+				softerr = werr
+				return
+			}
+			// This is a real panic
+			if s.Config.RecoverPanic {
 				harderr = err
 				s.Logger.Println("Handler crashed with error: ", err)
 				for i := 1; ; i += 1 {
@@ -113,6 +115,10 @@ func (s *Server) safelyCall(f func() error) (softerr error, harderr interface{})
 					}
 					s.Logger.Println(file, line)
 				}
+			} else {
+				// go back to panic
+				s.Logger.Printf("Panic: %v", err)
+				panic(err)
 			}
 		}
 	}()
@@ -157,31 +163,26 @@ func findMatchingRoute(req *http.Request, routes []*route) (*route, []string) {
 }
 
 // Apply the handler to this context and try to handle errors where possible
-func (s *Server) applyHandler(f SimpleHandler, ctx *Context) (err error) {
+func (s *Server) applyHandler(f SimpleHandler, ctx *Context) {
 	softerr, harderr := s.safelyCall(func() error {
 		return f(ctx)
 	})
 	if harderr != nil {
 		//there was an error or panic while calling the handler
 		ctx.Abort(500, "Server Error")
-		return fmt.Errorf("%v", harderr)
-	}
-	if softerr != nil {
-		s.Logger.Printf("Handler returned error: %v", softerr)
+	} else if softerr != nil {
 		if werr, ok := softerr.(WebError); ok {
 			ctx.Abort(werr.Code, werr.Error())
 		} else {
 			// Non-web errors are not leaked to the outside
+			s.Logger.Printf("Handler returned error: %v", softerr)
 			ctx.Abort(500, "Server Error")
-			err = softerr
 		}
 	} else {
 		// flush the writer by ensuring at least one Write call takes place
-		_, err = ctx.Write([]byte{})
+		ctx.Write([]byte{})
 	}
-	if err == nil {
-		err = ctx.Response.Close()
-	}
+	ctx.Response.Close()
 	return
 }
 

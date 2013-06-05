@@ -101,6 +101,10 @@ func (ctx *Context) Unauthorized(message string) {
 	ctx.Abort(401, message)
 }
 
+func (ctx *Context) Forbidden(message string) {
+	ctx.Abort(403, message)
+}
+
 // Sets the content type by extension, as defined in the mime package.
 // For example, ctx.ContentType("json") sets the content-type to "application/json"
 // if the supplied extension contains a slash (/) it is set as the content-type

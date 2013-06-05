@@ -81,3 +81,14 @@ func (w *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 func (w *ResponseWriter) AddAfterHeaderFunc(f func(*ResponseWriter)) {
 	w.afterHeaders = append(w.afterHeaders, f)
 }
+
+// Return true if the status code indicates succesful handling: 1xx, 2xx or
+// 3xx.
+func httpSuccess(status int) bool {
+	return status >= 100 && status <= 399
+}
+
+// True if the writer has sent a status code to the client indicating success
+func (w *ResponseWriter) Success() bool {
+	return httpSuccess(w.status)
+}

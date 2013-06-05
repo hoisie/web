@@ -13,7 +13,7 @@ import (
 func GuessMimetypeWrapper(h SimpleHandler, ctx *Context) error {
 	ctx.Response.AddAfterHeaderFunc(func(w *ResponseWriter) {
 		// dont override existing
-		if w.Header().Get("content-type") != "" {
+		if !w.Success() || w.Header().Get("content-type") != "" {
 			return
 		}
 		if ext := path.Ext(ctx.Request.URL.Path); ext != "" {

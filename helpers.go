@@ -96,6 +96,9 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
 func (ctx *Context) GetBasicAuth() (string, string, error) {
     authHeader := ctx.Request.Header["Authorization"][0]
     authString := strings.Split(string(authHeader), " ")
+    if authString[0] != "Basic" {
+        return "", "", errors.New("Not Basic Authentication")
+    }
     decodedAuth, err := base64.StdEncoding.DecodeString(authString[1])
     if err != nil {
         return "", "", err

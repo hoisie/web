@@ -2,13 +2,14 @@ package web
 
 import (
     "bytes"
+    "encoding/base64"
+    "errors"
     "net/http"
     "net/url"
     "os"
     "regexp"
     "strings"
     "time"
-    "encoding/base64"
 )
 
 // internal utility methods
@@ -90,17 +91,18 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
     return &http.Cookie{Name: name, Value: value, Expires: utctime}
 }
 
-// getBasicAuth is a helper method of *Context that returns the decoded 
+// GetBasicAuth is a helper method of *Context that returns the decoded 
 // user and password from the *Context's authorization header
-func (ctx *Context) getBasicAuth() {
-    authHeader := ctx.Request.Header["Authorization"]
-    authString, err := base64.StdEncoding.DecodeString(authHeader)
+func (ctx *Context) GetBasicAuth() (string, string, error) {
+    authHeader := ctx.Request.Header["Authorization"][0]
+    authString := strings.Split(string(authHeader), " ")
+    decodedAuth, err := base64.StdEncoding.DecodeString(authString[1])
     if err != nil {
-        return nil, nil, err
+        return "", "", err
     }
-    authSlice := strings.Split(authString, ":")
-    if authSlice.len() != 2 {
-        return nil, nil, errors.New("Error delimiting authString into username/password. Malformed input: " + authString)
+    authSlice := strings.Split(string(decodedAuth), ":")
+    if len(authSlice) != 2 {
+        return "", "", errors.New("Error delimiting authString into username/password. Malformed input: " + authString[1])
     }
     return authSlice[0], authSlice[1], nil
 }

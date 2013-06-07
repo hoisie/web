@@ -8,6 +8,7 @@ import (
     "regexp"
     "strings"
     "time"
+    "encoding/base64"
 )
 
 // internal utility methods
@@ -87,4 +88,19 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
         utctime = time.Unix(time.Now().Unix()+age, 0)
     }
     return &http.Cookie{Name: name, Value: value, Expires: utctime}
+}
+
+// getBasicAuth is a helper method of *Context that returns the decoded 
+// user and password from the *Context's authorization header
+func (ctx *Context) getBasicAuth() {
+    authHeader := ctx.Request.Header["Authorization"]
+    authString, err := base64.StdEncoding.DecodeString(authHeader)
+    if err != nil {
+        return nil, nil, err
+    }
+    authSlice := strings.Split(authString, ":")
+    if authSlice.len() != 2 {
+        return nil, nil, errors.New("Error delimiting authString into username/password. Malformed input: " + authString)
+    }
+    return authSlice[0], authSlice[1], nil
 }

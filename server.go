@@ -15,6 +15,7 @@ import (
     "runtime"
     "strconv"
     "time"
+    "code.google.com/p/go.net/websocket"
 )
 
 // ServerConfig is configuration for server objects.
@@ -56,10 +57,11 @@ func (s *Server) initServer() {
 }
 
 type route struct {
-    r       string
-    cr      *regexp.Regexp
-    method  string
-    handler reflect.Value
+    r           string
+    cr          *regexp.Regexp
+    method      string
+    handler     reflect.Value
+    httpHandler http.Handler
 }
 
 func (s *Server) addRoute(r string, method string, handler interface{}) {
@@ -69,11 +71,15 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
         return
     }
 
-    if fv, ok := handler.(reflect.Value); ok {
-        s.routes = append(s.routes, route{r, cr, method, fv})
-    } else {
-        fv := reflect.ValueOf(handler)
-        s.routes = append(s.routes, route{r, cr, method, fv})
+    switch handler.(type) {
+        case http.Handler:
+            s.routes = append(s.routes, route{r: r, cr: cr, method: method, httpHandler: handler.(http.Handler)})
+        case reflect.Value:
+            fv := handler.(reflect.Value)
+            s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
+        default:
+            fv := reflect.ValueOf(handler)
+            s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
     }
 }
 
@@ -84,7 +90,10 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 
 // Process invokes the routing system for server s
 func (s *Server) Process(c http.ResponseWriter, req *http.Request) {
-    s.routeHandler(req, c)
+    route := s.routeHandler(req, c)
+    if route != nil {
+        route.httpHandler.ServeHTTP(c, req)
+    }
 }
 
 // Get adds a handler for the 'GET' http method for server s.
@@ -110,6 +119,16 @@ func (s *Server) Delete(route string, handler interface{}) {
 // Match adds a handler for an arbitrary http method for server s.
 func (s *Server) Match(method string, route string, handler interface{}) {
     s.addRoute(route, method, handler)
+}
+
+//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func (s *Server) Handler(route string, method string, httpHandler http.Handler) {
+    s.addRoute(route, method, httpHandler)
+}
+
+//Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
+    s.addRoute(route, "GET", httpHandler)
 }
 
 // Run starts the web application and serves HTTP requests for s
@@ -244,7 +263,12 @@ func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseW
 }
 
 // the main route handler in web.go
-func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
+// Tries to handle the given request.
+// Finds the route matching the request, and execute the callback associated
+// with it.  In case of custom http handlers, this function returns an "unused"
+// route. The caller is then responsible for calling the httpHandler associated
+// with the returned route.
+func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
 
@@ -293,6 +317,12 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
             continue
         }
 
+        if route.httpHandler != nil {
+            unused = &route
+            // We can not handle custom http handlers here, give back to the caller.
+            return
+        }
+
         var args []reflect.Value
         handlerType := route.handler.Type()
         if requiresContext(handlerType) {
@@ -337,6 +367,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
         }
     }
     ctx.Abort(404, "Page not found")
+    return
 }
 
 // SetLogger sets the logger for server s

@@ -64,7 +64,6 @@ type AccessLogger func(*Server) OneAccessLogger
 func DefaultAccessLogger(s *Server) OneAccessLogger {
 	if s.Config.ColorOutput {
 		return coloredOneAccessLogger{s.Logger}
-	} else {
-		return plainOneAccessLogger{s.Logger}
 	}
+	return plainOneAccessLogger{s.Logger}
 }

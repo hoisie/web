@@ -2,6 +2,7 @@ package web
 
 import (
     "bytes"
+    "encoding/base64"
     "encoding/json"
     "errors"
     "fmt"
@@ -200,6 +201,14 @@ func init() {
         ctx.SetHeader("Server", "myserver", true)
         return ""
     })
+
+    Get("/authorization", func(ctx *Context) string {
+        user, pass, err := ctx.GetBasicAuth()
+        if err != nil {
+            return "fail"
+        }
+        return user + pass
+    })
 }
 
 var tests = []Test{
@@ -228,6 +237,7 @@ var tests = []Test{
     {"GET", "/jsonbytes?a=1&b=2", nil, "", 200, `{"a":"1","b":"2"}`},
     {"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, "hello world"},
     //{"GET", "/testenv", "", 200, "hello world"},
+    {"GET", "/authorization", map[string][]string{"Authorization": {BuildBasicAuthCredentials("foo", "bar")}}, "", 200, "foobar"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *http.Request {
@@ -518,4 +528,9 @@ func TestDuplicateHeader(t *testing.T) {
     if resp.headers["Server"][0] != "myserver" {
         t.Fatalf("Incorrect header, exp 'myserver', got %q", resp.headers["Server"][0])
     }
+}
+
+func BuildBasicAuthCredentials(user string, pass string) string {
+   s := user + ":" + pass
+   return "Basic "+base64.StdEncoding.EncodeToString([]byte(s))
 }

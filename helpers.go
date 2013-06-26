@@ -2,6 +2,8 @@ package web
 
 import (
     "bytes"
+    "encoding/base64"
+    "errors"
     "net/http"
     "net/url"
     "os"
@@ -87,4 +89,23 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
         utctime = time.Unix(time.Now().Unix()+age, 0)
     }
     return &http.Cookie{Name: name, Value: value, Expires: utctime}
+}
+
+// GetBasicAuth is a helper method of *Context that returns the decoded 
+// user and password from the *Context's authorization header
+func (ctx *Context) GetBasicAuth() (string, string, error) {
+    authHeader := ctx.Request.Header["Authorization"][0]
+    authString := strings.Split(string(authHeader), " ")
+    if authString[0] != "Basic" {
+        return "", "", errors.New("Not Basic Authentication")
+    }
+    decodedAuth, err := base64.StdEncoding.DecodeString(authString[1])
+    if err != nil {
+        return "", "", err
+    }
+    authSlice := strings.Split(string(decodedAuth), ":")
+    if len(authSlice) != 2 {
+        return "", "", errors.New("Error delimiting authString into username/password. Malformed input: " + authString[1])
+    }
+    return authSlice[0], authSlice[1], nil
 }

@@ -253,14 +253,10 @@ func (s *Server) LogRequest(ctx Context, sTime time.Time) {
     duration := time.Now().Sub(sTime)
     fmt.Fprintf(&logEntry, "%s - \033[32;1m%s - %s\033[0m - %v", strings.Split(req.RemoteAddr, ":")[0], req.Method, requestPath, duration)
 
-    //ignore errors from ParseForm because it's usually harmless.
-    req.ParseForm()
-    if len(req.Form) > 0 {
-        for k, v := range req.Form {
-            ctx.Params[k] = v[0]
-        }
+    if len(ctx.Params) > 0 {
         fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
+
     ctx.Server.Logger.Print(logEntry.String())
 
 }
@@ -276,6 +272,14 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) {
     ctx.SetHeader("Server", "web.go", true)
     tm := time.Now().UTC()
     ctx.SetHeader("Date", webTime(tm), true)
+
+    //ignore errors from ParseForm because it's usually harmless.
+    req.ParseForm()
+    if len(req.Form) > 0 {
+        for k, v := range req.Form {
+            ctx.Params[k] = v[0]
+        }
+    }
 
     if req.Method == "GET" || req.Method == "HEAD" {
         if s.tryServingFile(requestPath, req, w) {

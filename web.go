@@ -64,8 +64,13 @@ func (ctx *Context) NotFound(message string) {
     ctx.ResponseWriter.Write([]byte(message))
 }
 
-//NotAuthorized writes a 403 HTTP response
-func (ctx *Context) NotAuthorized() {
+//Unauthorized writes a 401 HTTP response
+func (ctx *Context) Unauthorized() {
+    ctx.ResponseWriter.WriteHeader(401)
+}
+
+//Forbidden writes a 403 HTTP response
+func (ctx *Context) Forbidden() {
     ctx.ResponseWriter.WriteHeader(403)
 }
 

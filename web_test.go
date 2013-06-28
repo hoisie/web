@@ -144,8 +144,11 @@ func init() {
 
     Get("/error/notfound/(.*)", func(ctx *Context, message string) { ctx.NotFound(message) })
 
-    Get("/error/unauthorized", func(ctx *Context) { ctx.NotAuthorized() })
-    Post("/error/unauthorized", func(ctx *Context) { ctx.NotAuthorized() })
+    Get("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
+    Post("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
+	
+    Get("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
+    Post("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
 
     Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
         n, _ := strconv.Atoi(code)
@@ -218,8 +221,10 @@ var tests = []Test{
     //long url
     {"GET", "/echo/" + strings.Repeat("0123456789", 100), nil, "", 200, strings.Repeat("0123456789", 100)},
     {"GET", "/writetest", nil, "", 200, "hello"},
-    {"GET", "/error/unauthorized", nil, "", 403, ""},
-    {"POST", "/error/unauthorized", nil, "", 403, ""},
+    {"GET", "/error/unauthorized", nil, "", 401, ""},
+    {"POST", "/error/unauthorized", nil, "", 401, ""},
+	{"GET", "/error/forbidden", nil, "", 403, ""},
+	{"POST", "/error/forbidden", nil, "", 403, ""},
     {"GET", "/error/notfound/notfound", nil, "", 404, "notfound"},
     {"GET", "/doesnotexist", nil, "", 404, "Page not found"},
     {"POST", "/doesnotexist", nil, "", 404, "Page not found"},

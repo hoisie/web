@@ -147,7 +147,7 @@ func init() {
 
     Get("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
     Post("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
-	
+
     Get("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
     Post("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
 
@@ -232,8 +232,8 @@ var tests = []Test{
     {"GET", "/writetest", nil, "", 200, "hello"},
     {"GET", "/error/unauthorized", nil, "", 401, ""},
     {"POST", "/error/unauthorized", nil, "", 401, ""},
-	{"GET", "/error/forbidden", nil, "", 403, ""},
-	{"POST", "/error/forbidden", nil, "", 403, ""},
+    {"GET", "/error/forbidden", nil, "", 403, ""},
+    {"POST", "/error/forbidden", nil, "", 403, ""},
     {"GET", "/error/notfound/notfound", nil, "", 404, "notfound"},
     {"GET", "/doesnotexist", nil, "", 404, "Page not found"},
     {"POST", "/doesnotexist", nil, "", 404, "Page not found"},

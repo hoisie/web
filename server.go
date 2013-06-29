@@ -324,7 +324,6 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
         }
     }
 
-
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 

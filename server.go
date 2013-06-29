@@ -302,8 +302,6 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
 
-    startTime := time.Now()
-
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
     tm := time.Now().UTC()

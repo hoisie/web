@@ -145,6 +145,12 @@ func init() {
 
     Get("/error/notfound/(.*)", func(ctx *Context, message string) { ctx.NotFound(message) })
 
+    Get("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
+    Post("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
+
+    Get("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
+    Post("/error/forbidden", func(ctx *Context) { ctx.Forbidden() })
+
     Post("/posterror/code/(.*)/(.*)", func(ctx *Context, code string, message string) string {
         n, _ := strconv.Atoi(code)
         ctx.Abort(n, message)
@@ -224,6 +230,10 @@ var tests = []Test{
     //long url
     {"GET", "/echo/" + strings.Repeat("0123456789", 100), nil, "", 200, strings.Repeat("0123456789", 100)},
     {"GET", "/writetest", nil, "", 200, "hello"},
+    {"GET", "/error/unauthorized", nil, "", 401, ""},
+    {"POST", "/error/unauthorized", nil, "", 401, ""},
+    {"GET", "/error/forbidden", nil, "", 403, ""},
+    {"POST", "/error/forbidden", nil, "", 403, ""},
     {"GET", "/error/notfound/notfound", nil, "", 404, "notfound"},
     {"GET", "/doesnotexist", nil, "", 404, "Page not found"},
     {"POST", "/doesnotexist", nil, "", 404, "Page not found"},
@@ -278,9 +288,11 @@ func TestRouting(t *testing.T) {
         resp := getTestResponse(test.method, test.path, test.body, test.headers, nil)
 
         if resp.statusCode != test.expectedStatus {
+            fmt.Printf("Failed on path %v using method %v \n", test.path, test.method)
             t.Fatalf("expected status %d got %d", test.expectedStatus, resp.statusCode)
         }
         if resp.body != test.expectedBody {
+            fmt.Printf("Failed on path %v using method %v \n", test.path, test.method)
             t.Fatalf("expected %q got %q", test.expectedBody, resp.body)
         }
         if cl, ok := resp.headers["Content-Length"]; ok {

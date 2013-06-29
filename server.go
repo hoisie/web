@@ -270,8 +270,19 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
     requestPath := req.URL.Path
 
     duration := time.Now().Sub(sTime)
-    client := strings.Split(req.RemoteAddr, ":")
-    fmt.Fprintf(&logEntry, "%s - \033[32;1m %s - %s\033[0m - %v", strings.Join(client[0:len(client)-1], ":") , req.Method, requestPath, duration)
+
+    var client string
+
+    // We suppose RemoteAddr is of the form Ip:Port as specified in the Request
+    // documentation at http://golang.org/pkg/net/http/#Request
+    pos := strings.LastIndex(req.RemoteAddr, ":")
+    if pos > 0 {
+        client = req.RemoteAddr[0:pos]
+    } else {
+        client = req.RemoteAddr
+    }
+
+    fmt.Fprintf(&logEntry, "%s - \033[32;1m %s %s\033[0m - %v", client, req.Method, requestPath, duration)
 
     if len(ctx.Params) > 0 {
         fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
@@ -314,7 +325,6 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
             return
         }
     }
-
 
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)

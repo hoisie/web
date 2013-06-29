@@ -534,3 +534,37 @@ func BuildBasicAuthCredentials(user string, pass string) string {
    s := user + ":" + pass
    return "Basic "+base64.StdEncoding.EncodeToString([]byte(s))
 }
+
+func BenchmarkProcessGet(b *testing.B) {
+    s := NewServer()
+    s.SetLogger(log.New(ioutil.Discard, "", 0))
+    s.Get("/echo/(.*)", func(s string) string {
+        return s
+    })
+    req := buildTestRequest("GET", "/echo/hi", "", nil, nil)
+    var buf bytes.Buffer
+    iob := ioBuffer{input: nil, output: &buf}
+    c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &iob}
+    b.ReportAllocs()
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        s.Process(&c, req)
+    }
+}
+
+func BenchmarkProcessPost(b *testing.B) {
+    s := NewServer()
+    s.SetLogger(log.New(ioutil.Discard, "", 0))
+    s.Post("/echo/(.*)", func(s string) string {
+        return s
+    })
+    req := buildTestRequest("POST", "/echo/hi", "", nil, nil)
+    var buf bytes.Buffer
+    iob := ioBuffer{input: nil, output: &buf}
+    c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &iob}
+    b.ReportAllocs()
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        s.Process(&c, req)
+    }
+}

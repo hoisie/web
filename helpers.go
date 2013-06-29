@@ -91,7 +91,7 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
     return &http.Cookie{Name: name, Value: value, Expires: utctime}
 }
 
-// GetBasicAuth is a helper method of *Context that returns the decoded 
+// GetBasicAuth is a helper method of *Context that returns the decoded
 // user and password from the *Context's authorization header
 func (ctx *Context) GetBasicAuth() (string, string, error) {
     authHeader := ctx.Request.Header["Authorization"][0]

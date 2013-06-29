@@ -531,8 +531,8 @@ func TestDuplicateHeader(t *testing.T) {
 }
 
 func BuildBasicAuthCredentials(user string, pass string) string {
-   s := user + ":" + pass
-   return "Basic "+base64.StdEncoding.EncodeToString([]byte(s))
+    s := user + ":" + pass
+    return "Basic " + base64.StdEncoding.EncodeToString([]byte(s))
 }
 
 func BenchmarkProcessGet(b *testing.B) {

@@ -2,6 +2,7 @@ package web
 
 import (
     "bytes"
+    "code.google.com/p/go.net/websocket"
     "crypto/tls"
     "fmt"
     "log"
@@ -15,7 +16,6 @@ import (
     "runtime"
     "strconv"
     "time"
-    "code.google.com/p/go.net/websocket"
 )
 
 // ServerConfig is configuration for server objects.
@@ -72,14 +72,14 @@ func (s *Server) addRoute(r string, method string, handler interface{}) {
     }
 
     switch handler.(type) {
-        case http.Handler:
-            s.routes = append(s.routes, route{r: r, cr: cr, method: method, httpHandler: handler.(http.Handler)})
-        case reflect.Value:
-            fv := handler.(reflect.Value)
-            s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
-        default:
-            fv := reflect.ValueOf(handler)
-            s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
+    case http.Handler:
+        s.routes = append(s.routes, route{r: r, cr: cr, method: method, httpHandler: handler.(http.Handler)})
+    case reflect.Value:
+        fv := handler.(reflect.Value)
+        s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
+    default:
+        fv := reflect.ValueOf(handler)
+        s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
     }
 }
 

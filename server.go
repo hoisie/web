@@ -15,6 +15,7 @@ import (
     "regexp"
     "runtime"
     "strconv"
+    "strings"
     "time"
 )
 
@@ -262,6 +263,35 @@ func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseW
     return false
 }
 
+func (s *Server) logRequest(ctx Context, sTime time.Time) {
+    //log the request
+    var logEntry bytes.Buffer
+    req := ctx.Request
+    requestPath := req.URL.Path
+
+    duration := time.Now().Sub(sTime)
+
+    var client string
+
+    // We suppose RemoteAddr is of the form Ip:Port as specified in the Request
+    // documentation at http://golang.org/pkg/net/http/#Request
+    pos := strings.LastIndex(req.RemoteAddr, ":")
+    if pos > 0 {
+        client = req.RemoteAddr[0:pos]
+    } else {
+        client = req.RemoteAddr
+    }
+
+    fmt.Fprintf(&logEntry, "%s - \033[32;1m %s %s\033[0m - %v", client, req.Method, requestPath, duration)
+
+    if len(ctx.Params) > 0 {
+        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
+    }
+
+    ctx.Server.Logger.Print(logEntry.String())
+
+}
+
 // the main route handler in web.go
 // Tries to handle the given request.
 // Finds the route matching the request, and execute the callback associated
@@ -272,9 +302,13 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
     requestPath := req.URL.Path
     ctx := Context{req, map[string]string{}, s, w}
 
-    //log the request
-    var logEntry bytes.Buffer
-    fmt.Fprintf(&logEntry, "\033[32;1m%s %s\033[0m", req.Method, requestPath)
+    //set some default headers
+    ctx.SetHeader("Server", "web.go", true)
+    tm := time.Now().UTC()
+
+    defer s.logRequest(ctx, tm)
+
+    ctx.SetHeader("Date", webTime(tm), true)
 
     //ignore errors from ParseForm because it's usually harmless.
     req.ParseForm()
@@ -282,14 +316,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
         for k, v := range req.Form {
             ctx.Params[k] = v[0]
         }
-        fmt.Fprintf(&logEntry, "\n\033[37;1mParams: %v\033[0m\n", ctx.Params)
     }
-    ctx.Server.Logger.Print(logEntry.String())
-
-    //set some default headers
-    ctx.SetHeader("Server", "web.go", true)
-    tm := time.Now().UTC()
-    ctx.SetHeader("Date", webTime(tm), true)
 
     if req.Method == "GET" || req.Method == "HEAD" {
         if s.tryServingFile(requestPath, req, w) {

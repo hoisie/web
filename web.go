@@ -65,6 +65,16 @@ func (ctx *Context) NotFound(message string) {
     ctx.ResponseWriter.Write([]byte(message))
 }
 
+//Unauthorized writes a 401 HTTP response
+func (ctx *Context) Unauthorized() {
+    ctx.ResponseWriter.WriteHeader(401)
+}
+
+//Forbidden writes a 403 HTTP response
+func (ctx *Context) Forbidden() {
+    ctx.ResponseWriter.WriteHeader(403)
+}
+
 // ContentType sets the Content-Type header for an HTTP response.
 // For example, ctx.ContentType("json") sets the content-type to "application/json"
 // If the supplied value contains a slash (/) it is set as the Content-Type

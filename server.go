@@ -32,6 +32,7 @@ type ServerConfig struct {
 // Server represents a web.go server.
 type Server struct {
     Config *ServerConfig
+    middleware []reflect.Value
     routes []route
     Logger *log.Logger
     Env    map[string]interface{}
@@ -147,6 +148,16 @@ func (s *Server) Handler(route string, method string, httpHandler http.Handler) 
 //Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
     s.addHandler(route, "GET", httpHandler)
+}
+
+// Adds a middleware to be called for all endpoints
+func (s *Server) Middleware(handler interface{}) {
+    switch handler.(type) {
+    case reflect.Value:
+        s.middleware = append(s.middleware, handler.(reflect.Value))
+    default:
+        s.middleware = append(s.middleware, reflect.ValueOf(handler))
+    }
 }
 
 // Run starts the web application and serves HTTP requests for s
@@ -317,7 +328,29 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
     routeHit := false
     requestPath := req.URL.Path
+    allContent := make([][]byte, 0)
     ctx := Context{req, map[string]string{}, s, w, false}
+
+    finishResponse := func() {
+        if len(allContent) > 0 {
+            contentLength := 0
+
+            for _, content := range allContent {
+                contentLength += len(content)
+            }
+
+            ctx.SetHeader("Content-Length", strconv.Itoa(contentLength), true)
+
+            for _, content := range allContent {
+                _, err := ctx.ResponseWriter.Write(content)
+
+                if err != nil {
+                    ctx.Server.Logger.Println("Error during write: ", err)
+                    return
+                }
+            }
+        }
+    }
 
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
@@ -332,6 +365,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
     }
 
     defer s.logRequest(ctx, tm)
+    defer finishResponse()
 
     ctx.SetHeader("Date", webTime(tm), true)
 
@@ -343,6 +377,16 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 
     //Set the default content-type
     ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
+
+    //Call the middleware
+    for _, handler := range s.middleware {
+        content, finished := s.callMiddleware(handler, ctx)
+        allContent = append(allContent, content)
+
+        if finished {
+            return
+        }
+    }
 
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
@@ -371,44 +415,10 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 
         for _, handler := range route.handlers {
             routeHit = true
-            var args []reflect.Value
-            handlerType := handler.Type()
+            content, finished := s.callMiddleware(handler, ctx, match[1:]...)
+            allContent = append(allContent, content)
 
-            if requiresContext(handlerType) {
-                args = append(args, reflect.ValueOf(&ctx))
-            }
-
-            for _, arg := range match[1:] {
-                args = append(args, reflect.ValueOf(arg))
-            }
-
-            ret, err := s.safelyCall(handler, args)
-
-            if err != nil {
-                //there was an error or panic while calling the handler
-                ctx.Abort(500, "Server Error")
-                return
-            }
-
-            if ret != nil && len(ret) != 0 {
-                sval := ret[0]
-                var content []byte
-
-                if sval.Kind() == reflect.String {
-                    content = []byte(sval.String())
-                } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
-                    content = sval.Interface().([]byte)
-                }
-
-                ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-                _, err = ctx.ResponseWriter.Write(content)
-
-                if err != nil {
-                    ctx.Server.Logger.Println("Error during write: ", err)
-                }
-            }
-
-            if ctx.IsFinished() {
+            if finished {
                 return
             }
         }
@@ -428,6 +438,42 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
     }
 
     return
+}
+
+func (s *Server) callMiddleware(handler reflect.Value, ctx Context, urlParts ...string) ([]byte, bool) {
+    var args []reflect.Value
+    handlerType := handler.Type()
+
+    if requiresContext(handlerType) {
+        args = append(args, reflect.ValueOf(&ctx))
+    }
+
+    for _, arg := range urlParts {
+        args = append(args, reflect.ValueOf(arg))
+    }
+
+    ret, err := s.safelyCall(handler, args)
+
+    if err != nil {
+        //there was an error or panic while calling the handler
+        ctx.Abort(500, "Server Error")
+        return make([]byte, 0), true
+    }
+
+    if ret != nil && len(ret) != 0 {
+        sval := ret[0]
+        var content []byte
+
+        if sval.Kind() == reflect.String {
+            content = []byte(sval.String())
+        } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+            content = sval.Interface().([]byte)
+        }
+
+        return content, ctx.IsFinished()
+    }
+
+    return make([]byte, 0), ctx.IsFinished()
 }
 
 // SetLogger sets the logger for server s

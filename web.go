@@ -267,6 +267,10 @@ func Websocket(route string, httpHandler websocket.Handler) {
     mainServer.Websocket(route, httpHandler)
 }
 
+func Middleware(handler interface{}) {
+    mainServer.Middleware(handler)
+}
+
 // SetLogger sets the logger for the main server.
 func SetLogger(logger *log.Logger) {
     mainServer.Logger = logger

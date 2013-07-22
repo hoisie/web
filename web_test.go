@@ -129,6 +129,12 @@ type Test struct {
 //initialize the routes
 func init() {
     mainServer.SetLogger(log.New(ioutil.Discard, "", 0))
+
+    Middleware(func(ctx *Context) string {
+        ctx.SetHeader("X-Middleware-Hit", "true", true)
+        return ""
+    })
+
     Get("/", func() string { return "index" })
     Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })
@@ -318,15 +324,25 @@ func TestRouting(t *testing.T) {
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("%v(%v) expected status %d got %d", test.method, test.path, test.expectedStatus, resp.statusCode)
         }
+        
         if resp.body != test.expectedBody {
             t.Fatalf("%v(%v) expected %q got %q", test.method, test.path, test.expectedBody, resp.body)
         }
+        
         if cl, ok := resp.headers["Content-Length"]; ok {
             clExp, _ := strconv.Atoi(cl[0])
             clAct := len(resp.body)
             if clExp != clAct {
                 t.Fatalf("Content-length doesn't match. expected %d got %d", clExp, clAct)
             }
+        }
+
+        mwh, ok := resp.headers["X-Middleware-Hit"]
+
+        if !ok {
+            t.Fatalf("%v(%v) middleware hit header not set", test.method, test.path)
+        } else if mwh[0] != "true" {
+            t.Fatalf("%v(%v) middleware hit header incorrectly set", test.method, test.path)
         }
     }
 }

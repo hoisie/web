@@ -61,27 +61,44 @@ type route struct {
     r           string
     cr          *regexp.Regexp
     method      string
-    handler     reflect.Value
+    handlers    []reflect.Value
     httpHandler http.Handler
 }
 
-func (s *Server) addRoute(r string, method string, handler interface{}) {
+func (s *Server) addRoute(r string, method string, handlers ...interface{}) {
     cr, err := regexp.Compile(r)
     if err != nil {
         s.Logger.Printf("Error in route regex %q\n", r)
         return
     }
 
-    switch handler.(type) {
-    case http.Handler:
-        s.routes = append(s.routes, route{r: r, cr: cr, method: method, httpHandler: handler.(http.Handler)})
-    case reflect.Value:
-        fv := handler.(reflect.Value)
-        s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
-    default:
-        fv := reflect.ValueOf(handler)
-        s.routes = append(s.routes, route{r: r, cr: cr, method: method, handler: fv})
+    if len(handlers) == 0 {
+        s.Logger.Printf("No handler specified for endpoint %s %s", method, r)
+        return
     }
+
+    newHandlers := make([]reflect.Value, len(handlers), len(handlers))
+
+    for i, handler := range handlers {
+        switch handler.(type) {
+        case reflect.Value:
+            newHandlers[i] = handler.(reflect.Value)
+        default:
+            newHandlers[i] = reflect.ValueOf(handler)
+        }
+    }
+
+    s.routes = append(s.routes, route{r: r, cr: cr, method: method, handlers: newHandlers})
+}
+
+func (s *Server) addHandler(r string, method string, handler http.Handler) {
+    cr, err := regexp.Compile(r)
+    if err != nil {
+        s.Logger.Printf("Error in route regex %q\n", r)
+        return
+    }
+
+    s.routes = append(s.routes, route{r: r, cr: cr, method: method, httpHandler: handler.(http.Handler)})
 }
 
 // ServeHTTP is the interface method for Go's http server package
@@ -98,38 +115,38 @@ func (s *Server) Process(c http.ResponseWriter, req *http.Request) {
 }
 
 // Get adds a handler for the 'GET' http method for server s.
-func (s *Server) Get(route string, handler interface{}) {
-    s.addRoute(route, "GET", handler)
+func (s *Server) Get(route string, handlers ...interface{}) {
+    s.addRoute(route, "GET", handlers...)
 }
 
 // Post adds a handler for the 'POST' http method for server s.
-func (s *Server) Post(route string, handler interface{}) {
-    s.addRoute(route, "POST", handler)
+func (s *Server) Post(route string, handlers ...interface{}) {
+    s.addRoute(route, "POST", handlers...)
 }
 
 // Put adds a handler for the 'PUT' http method for server s.
-func (s *Server) Put(route string, handler interface{}) {
-    s.addRoute(route, "PUT", handler)
+func (s *Server) Put(route string, handlers ...interface{}) {
+    s.addRoute(route, "PUT", handlers...)
 }
 
 // Delete adds a handler for the 'DELETE' http method for server s.
-func (s *Server) Delete(route string, handler interface{}) {
-    s.addRoute(route, "DELETE", handler)
+func (s *Server) Delete(route string, handlers ...interface{}) {
+    s.addRoute(route, "DELETE", handlers...)
 }
 
 // Match adds a handler for an arbitrary http method for server s.
-func (s *Server) Match(method string, route string, handler interface{}) {
-    s.addRoute(route, method, handler)
+func (s *Server) Match(method string, route string, handlers ...interface{}) {
+    s.addRoute(route, method, handlers...)
 }
 
 //Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Handler(route string, method string, httpHandler http.Handler) {
-    s.addRoute(route, method, httpHandler)
+    s.addHandler(route, method, httpHandler)
 }
 
 //Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
-    s.addRoute(route, "GET", httpHandler)
+    s.addHandler(route, "GET", httpHandler)
 }
 
 // Run starts the web application and serves HTTP requests for s
@@ -298,8 +315,9 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 // route. The caller is then responsible for calling the httpHandler associated
 // with the returned route.
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
+    routeHit := false
     requestPath := req.URL.Path
-    ctx := Context{req, map[string]string{}, s, w}
+    ctx := Context{req, map[string]string{}, s, w, false}
 
     //set some default headers
     ctx.SetHeader("Server", "web.go", true)
@@ -329,6 +347,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
     for i := 0; i < len(s.routes); i++ {
         route := s.routes[i]
         cr := route.cr
+        
         //if the methods don't match, skip this handler (except HEAD can be used in place of GET)
         if req.Method != route.method && !(req.Method == "HEAD" && route.method == "GET") {
             continue
@@ -337,6 +356,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
         if !cr.MatchString(requestPath) {
             continue
         }
+
         match := cr.FindStringSubmatch(requestPath)
 
         if len(match[0]) != len(requestPath) {
@@ -349,50 +369,64 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
             return
         }
 
-        var args []reflect.Value
-        handlerType := route.handler.Type()
-        if requiresContext(handlerType) {
-            args = append(args, reflect.ValueOf(&ctx))
-        }
-        for _, arg := range match[1:] {
-            args = append(args, reflect.ValueOf(arg))
-        }
+        for _, handler := range route.handlers {
+            routeHit = true
+            var args []reflect.Value
+            handlerType := handler.Type()
 
-        ret, err := s.safelyCall(route.handler, args)
-        if err != nil {
-            //there was an error or panic while calling the handler
-            ctx.Abort(500, "Server Error")
-        }
-        if len(ret) == 0 {
-            return
-        }
+            if requiresContext(handlerType) {
+                args = append(args, reflect.ValueOf(&ctx))
+            }
 
-        sval := ret[0]
+            for _, arg := range match[1:] {
+                args = append(args, reflect.ValueOf(arg))
+            }
 
-        var content []byte
+            ret, err := s.safelyCall(handler, args)
 
-        if sval.Kind() == reflect.String {
-            content = []byte(sval.String())
-        } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
-            content = sval.Interface().([]byte)
+            if err != nil {
+                //there was an error or panic while calling the handler
+                ctx.Abort(500, "Server Error")
+                return
+            }
+
+            if ret != nil && len(ret) != 0 {
+                sval := ret[0]
+                var content []byte
+
+                if sval.Kind() == reflect.String {
+                    content = []byte(sval.String())
+                } else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+                    content = sval.Interface().([]byte)
+                }
+
+                ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
+                _, err = ctx.ResponseWriter.Write(content)
+
+                if err != nil {
+                    ctx.Server.Logger.Println("Error during write: ", err)
+                }
+            }
+
+            if ctx.IsFinished() {
+                return
+            }
         }
-        ctx.SetHeader("Content-Length", strconv.Itoa(len(content)), true)
-        _, err = ctx.ResponseWriter.Write(content)
-        if err != nil {
-            ctx.Server.Logger.Println("Error during write: ", err)
-        }
-        return
     }
 
-    // try serving index.html or index.htm
-    if req.Method == "GET" || req.Method == "HEAD" {
-        if s.tryServingFile(path.Join(requestPath, "index.html"), req, w) {
-            return
-        } else if s.tryServingFile(path.Join(requestPath, "index.htm"), req, w) {
-            return
+    if !routeHit {
+        // try serving index.html or index.htm
+        if req.Method == "GET" || req.Method == "HEAD" {
+            if s.tryServingFile(path.Join(requestPath, "index.html"), req, w) {
+                return
+            } else if s.tryServingFile(path.Join(requestPath, "index.htm"), req, w) {
+                return
+            }
         }
+
+        ctx.Abort(404, "Page not found")
     }
-    ctx.Abort(404, "Page not found")
+
     return
 }
 

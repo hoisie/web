@@ -328,7 +328,7 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
     routeHit := false
     requestPath := req.URL.Path
-    allContent := make([][]byte, 0)
+    allContent := make([][]byte, 0, 2)
     ctx := Context{req, map[string]string{}, s, w, false}
 
     finishResponse := func() {
@@ -364,8 +364,8 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
         }
     }
 
-    defer s.logRequest(ctx, tm)
     defer finishResponse()
+    defer s.logRequest(ctx, tm)
 
     ctx.SetHeader("Date", webTime(tm), true)
 

@@ -281,10 +281,10 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
         client = req.RemoteAddr
     }
 
-    fmt.Fprintf(&logEntry, "%s - \033[32;1m %s %s\033[0m - %v", client, req.Method, requestPath, duration)
+    fmt.Fprintf(&logEntry, "%s - %s %s - %v", client, req.Method, requestPath, duration)
 
     if len(ctx.Params) > 0 {
-        fmt.Fprintf(&logEntry, " - \033[37;1mParams: %v\033[0m\n", ctx.Params)
+        fmt.Fprintf(&logEntry, " - Params: %v\n", ctx.Params)
     }
 
     ctx.Server.Logger.Print(logEntry.String())

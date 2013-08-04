@@ -138,6 +138,7 @@ func (s *Server) Run(addr string) {
 
     mux := http.NewServeMux()
     if s.Config.Profiler {
+        mux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
         mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
         mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
         mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))

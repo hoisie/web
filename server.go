@@ -344,6 +344,8 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
         }
 
         if route.httpHandler != nil {
+            // Reset Content-Type, or http.ServeFile would have wrong content type 
+            ctx.SetHeader("Content-Type", "", true)
             unused = &route
             // We can not handle custom http handlers here, give back to the caller.
             return

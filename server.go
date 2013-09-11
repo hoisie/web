@@ -13,7 +13,7 @@ import (
 	"os"
 	"path"
 	"reflect"
-    "regexp"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -200,6 +200,11 @@ func (s *Server) Run(addr string) {
 	s.l.Close()
 }
 
+func (s *Server) Shutdown() {
+	s.l.Close()
+	//TODO: Existing connections as well must be closed gracefully
+}
+
 // RunFcgi starts the web application and serves FastCGI requests for s.
 func (s *Server) RunFcgi(addr string) {
 	s.initServer()
@@ -263,22 +268,22 @@ func (s *Server) safelyCall(function reflect.Value, args []reflect.Value) (resp 
 // requiresContext determines whether 'handlerType' contains
 // an argument to 'web.Ctx' as its first argument
 func requiresContext(handlerType reflect.Type) bool {
-    //if the method doesn't take arguments, no
-    if handlerType.NumIn() == 0 {
-        return false
-    }
+	//if the method doesn't take arguments, no
+	if handlerType.NumIn() == 0 {
+		return false
+	}
 
-    //if the first argument is not a pointer, no
-    a0 := handlerType.In(0)
-    if a0.Kind() != reflect.Ptr {
-        return false
-    }
-    //if the first argument is a context, yes
-    if a0.Elem() == contextType {
-        return true
-    }
+	//if the first argument is not a pointer, no
+	a0 := handlerType.In(0)
+	if a0.Kind() != reflect.Ptr {
+		return false
+	}
+	//if the first argument is a context, yes
+	if a0.Elem() == contextType {
+		return true
+	}
 
-    return false
+	return false
 }
 
 // tryServingFile attempts to serve a static file, and returns

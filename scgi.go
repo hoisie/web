@@ -143,7 +143,7 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
         s.Logger.Println("SCGI error: %q", err.Error())
     }
     sc := scgiConn{fd, req, make(map[string][]string), false}
-    s.routeHandler(req, &sc)
+	//s.routeHandler(req, &sc)	//TODO: need mux based implementation
     sc.finishRequest()
     fd.Close()
 }

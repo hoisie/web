@@ -1,17 +1,17 @@
 package main
 
 import (
-    "bytes"
-    "crypto/md5"
-    "fmt"
-    "github.com/hoisie/web"
-    "io"
+	"bytes"
+	"crypto/md5"
+	"fmt"
+	"github.com/hoisie/web"
+	"io"
 )
 
 func Md5(r io.Reader) string {
-    hash := md5.New()
-    io.Copy(hash, r)
-    return fmt.Sprintf("%x", hash.Sum(nil))
+	hash := md5.New()
+	io.Copy(hash, r)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 var page = `
@@ -38,25 +38,25 @@ var page = `
 func index() string { return page }
 
 func multipart(ctx *web.Context) string {
-    ctx.Request.ParseMultipartForm(10 * 1024 * 1024)
-    form := ctx.Request.MultipartForm
-    var output bytes.Buffer
-    output.WriteString("<p>input1: " + form.Value["input1"][0] + "</p>")
-    output.WriteString("<p>input2: " + form.Value["input2"][0] + "</p>")
+	ctx.Request.ParseMultipartForm(10 * 1024 * 1024)
+	form := ctx.Request.MultipartForm
+	var output bytes.Buffer
+	output.WriteString("<p>input1: " + form.Value["input1"][0] + "</p>")
+	output.WriteString("<p>input2: " + form.Value["input2"][0] + "</p>")
 
-    fileHeader := form.File["file"][0]
-    filename := fileHeader.Filename
-    file, err := fileHeader.Open()
-    if err != nil {
-        return err.Error()
-    }
+	fileHeader := form.File["file"][0]
+	filename := fileHeader.Filename
+	file, err := fileHeader.Open()
+	if err != nil {
+		return err.Error()
+	}
 
-    output.WriteString("<p>file: " + filename + " " + Md5(file) + "</p>")
-    return output.String()
+	output.WriteString("<p>file: " + filename + " " + Md5(file) + "</p>")
+	return output.String()
 }
 
 func main() {
-    web.Get("/", index)
-    web.Post("/multipart", multipart)
-    web.Run("0.0.0.0:9999")
+	web.Get("/", index)
+	web.Post("/multipart", multipart)
+	web.Run("0.0.0.0:9999")
 }

@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "github.com/hoisie/web"
-    "html"
+	"fmt"
+	"github.com/hoisie/web"
+	"html"
 )
 
 var cookieName = "cookie"
@@ -24,28 +24,28 @@ var form = `
 `
 
 func index(ctx *web.Context) string {
-    cookie, _ := ctx.Request.Cookie(cookieName)
-    var top string
-    if cookie == nil {
-        top = fmt.Sprintf(notice, "The cookie has not been set")
-    } else {
-        var val = html.EscapeString(cookie.Value)
-        top = fmt.Sprintf(notice, "The value of the cookie is '"+val+"'.")
-    }
-    return top + form
+	cookie, _ := ctx.Request.Cookie(cookieName)
+	var top string
+	if cookie == nil {
+		top = fmt.Sprintf(notice, "The cookie has not been set")
+	} else {
+		var val = html.EscapeString(cookie.Value)
+		top = fmt.Sprintf(notice, "The value of the cookie is '"+val+"'.")
+	}
+	return top + form
 }
 
 func update(ctx *web.Context) {
-    if ctx.Params["submit"] == "Delete" {
-        ctx.SetCookie(web.NewCookie(cookieName, "", -1))
-    } else {
-        ctx.SetCookie(web.NewCookie(cookieName, ctx.Params["cookie"], 0))
-    }
-    ctx.Redirect(301, "/")
+	if ctx.Params["submit"] == "Delete" {
+		ctx.SetCookie(web.NewCookie(cookieName, "", -1))
+	} else {
+		ctx.SetCookie(web.NewCookie(cookieName, ctx.Params["cookie"], 0))
+	}
+	ctx.Redirect(301, "/")
 }
 
 func main() {
-    web.Get("/", index)
-    web.Post("/update", update)
-    web.Run("0.0.0.0:9999")
+	web.Get("/", index)
+	web.Post("/update", update)
+	web.Run("0.0.0.0:9999")
 }

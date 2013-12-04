@@ -145,12 +145,13 @@ func (s *Server) Run(addr string) {
     }
     mux.Handle("/", s)
 
-    s.Logger.Printf("web.go serving %s\n", addr)
-
     l, err := net.Listen("tcp", addr)
     if err != nil {
         log.Fatal("ListenAndServe:", err)
     }
+
+    s.Logger.Printf("web.go serving %s\n", l.Addr().String())
+
     s.l = l
     err = http.Serve(s.l, mux)
     s.l.Close()

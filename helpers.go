@@ -94,6 +94,10 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
 // GetBasicAuth is a helper method of *Context that returns the decoded
 // user and password from the *Context's authorization header
 func (ctx *Context) GetBasicAuth() (string, string, error) {
+    if len(ctx.Request.Header) <= 0 {
+        return "", "", errors.New("No Basic Authentication. No authorization header given.")
+    }
+
     authHeader := ctx.Request.Header["Authorization"][0]
     authString := strings.Split(string(authHeader), " ")
     if authString[0] != "Basic" {

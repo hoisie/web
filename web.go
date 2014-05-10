@@ -48,7 +48,13 @@ func (ctx *Context) Abort(status int, body string) {
 }
 
 // Redirect is a helper method for 3xx redirects.
-func (ctx *Context) Redirect(status int, url_ string) {
+func (ctx *Context) Redirect(url_ string) {
+	ctx.ResponseWriter.Header().Set("Location", url_)
+	ctx.ResponseWriter.WriteHeader(302)
+	ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
+}
+
+func (ctx *Context) RedirectWithStatus(status int, url_ string) {
 	ctx.ResponseWriter.Header().Set("Location", url_)
 	ctx.ResponseWriter.WriteHeader(status)
 	ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))

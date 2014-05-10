@@ -237,6 +237,28 @@ func requiresContext(handlerType reflect.Type) bool {
 	return false
 }
 
+func requiresIContext(handlerType reflect.Type) (IContext, bool) {
+	//if the method doesn't take arguments, no
+	if handlerType.NumIn() == 0 {
+		return nil, false
+	}
+
+	//if the first argument is not a pointer, no
+	a0 := handlerType.In(0)
+	if a0.Kind() != reflect.Ptr {
+		return nil, false
+	}
+	//if the first argument implements IContext, yes
+	arg := reflect.New(a0).Elem().Interface()
+	if ctx, ok := arg.(IContext); ok {
+		return ctx, true
+	} else {
+		print("IContext test failed\n")
+	}
+
+	return nil, false
+}
+
 // tryServingFile attempts to serve a static file, and returns
 // whether or not the operation is successful.
 // It checks the following directories for the file, in order:
@@ -354,6 +376,15 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 		if requiresContext(handlerType) {
 			args = append(args, reflect.ValueOf(&ctx))
 		}
+
+		if newContext, ok := requiresIContext(handlerType); ok {
+			obj := newContext.Create(&ctx)
+
+			//todo: must catch panic
+			obj.BeforeHandler()
+			args = append(args, reflect.ValueOf(obj))
+		}
+
 		for _, arg := range match[1:] {
 			args = append(args, reflect.ValueOf(arg))
 		}

@@ -381,7 +381,10 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 			obj := newContext.Create(&ctx)
 
 			//todo: must catch panic
-			obj.BeforeHandler()
+			continueToHandler := obj.BeforeHandler()
+			if continueToHandler != true {
+				return
+			}
 			args = append(args, reflect.ValueOf(obj))
 		}
 

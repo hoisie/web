@@ -31,7 +31,8 @@ type Context struct {
 	Params  map[string]string
 	Server  *Server
 	http.ResponseWriter
-	flash *Flash
+	flash          *Flash
+	SessionStorage ISessionStorage
 }
 
 // WriteString writes string data into the response object.
@@ -272,6 +273,11 @@ func Websocket(route string, httpHandler websocket.Handler) {
 // SetLogger sets the logger for the main server.
 func SetLogger(logger *log.Logger) {
 	mainServer.Logger = logger
+}
+
+// SetLogger sets the logger for the main server.
+func SetSessionStorage(ss ISessionStorage) {
+	mainServer.SessionStorage = ss
 }
 
 // Config is the configuration of the main server.

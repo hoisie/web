@@ -31,10 +31,11 @@ type ServerConfig struct {
 
 // Server represents a web.go server.
 type Server struct {
-	Config *ServerConfig
-	routes []route
-	Logger *log.Logger
-	Env    map[string]interface{}
+	Config         *ServerConfig
+	routes         []route
+	Logger         *log.Logger
+	Env            map[string]interface{}
+	SessionStorage ISessionStorage
 	//save the listener so it can be closed
 	l net.Listener
 }
@@ -321,7 +322,12 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 // with the returned route.
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
 	requestPath := req.URL.Path
-	ctx := Context{req, map[string]string{}, s, w, nil}
+	ctx := Context{
+		Request:        req,
+		Params:         map[string]string{},
+		Server:         s,
+		ResponseWriter: w,
+	}
 
 	//set some default headers
 	ctx.SetHeader("Server", "web.go", true)

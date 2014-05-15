@@ -176,6 +176,10 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 	return "", false
 }
 
+func (ctx *Context) RemoveCookie(name string) {
+	ctx.SetCookie(NewCookie(name, "", -1))
+}
+
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof
 var contextType reflect.Type
 

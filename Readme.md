@@ -1,6 +1,6 @@
-# web.go
+# ZhuQue
 
-web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 
+ZhuQue is adapted from web.go. It's the simplest way to write web applications in the Go programming language. It's ideal for writing simple, yet powerful web services. 
 
 ## Overview
 

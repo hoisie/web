@@ -29,6 +29,11 @@ func (ctx *Context) ClearSession(key string) {
 	ctx.Server.SessionStorage.ClearSession(ctx.GetSessionID(), key)
 }
 
+func (ctx *Context) AbandonSession() {
+	ctx.RemoveCookie(SessionKey)
+	return
+}
+
 func (ctx *Context) SetNewSessionID() (sessionID string) {
 	sessionID = newSessionID()
 	ctx.SetCookie(NewSessionCookie(SessionKey, sessionID))

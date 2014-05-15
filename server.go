@@ -321,7 +321,7 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 // with the returned route.
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
 	requestPath := req.URL.Path
-	ctx := Context{req, map[string]string{}, s, w}
+	ctx := Context{req, map[string]string{}, s, w, nil}
 
 	//set some default headers
 	ctx.SetHeader("Server", "web.go", true)

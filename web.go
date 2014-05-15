@@ -31,6 +31,7 @@ type Context struct {
 	Params  map[string]string
 	Server  *Server
 	http.ResponseWriter
+	flash *Flash
 }
 
 // WriteString writes string data into the response object.

@@ -20,6 +20,10 @@ func (ctx *Context) SetFlashNotice(msg string) {
 }
 
 func (ctx *Context) GetFlash() *Flash {
+	if ctx.flash != nil {
+		return ctx.flash
+	}
+
 	flash := &Flash{}
 	var ok bool
 	flash.Alert, ok = ctx.GetSecureCookie(FlashAlertKey)
@@ -31,5 +35,6 @@ func (ctx *Context) GetFlash() *Flash {
 	if ok {
 		ctx.RemoveCookie(FlashNoticeKey)
 	}
+	ctx.flash = flash
 	return flash
 }

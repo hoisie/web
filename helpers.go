@@ -88,7 +88,13 @@ func NewCookie(name string, value string, age int64) *http.Cookie {
 	} else {
 		utctime = time.Unix(time.Now().Unix()+age, 0)
 	}
-	return &http.Cookie{Name: name, Value: value, Expires: utctime}
+	return &http.Cookie{Name: name, Value: value, Expires: utctime, Path: "/"}
+}
+
+// NewCookie is a helper method that returns a new http.Cookie object without Expires
+// i.e. this cookie would be deleted when browser closed
+func NewSessionCookie(name string, value string) *http.Cookie {
+	return &http.Cookie{Name: name, Value: value, Path: "/"}
 }
 
 // GetBasicAuth is a helper method of *Context that returns the decoded

@@ -116,6 +116,7 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 
 // SetCookie adds a cookie header to the response.
 func (ctx *Context) SetCookie(cookie *http.Cookie) {
+	ctx.Request.AddCookie(cookie)
 	ctx.SetHeader("Set-Cookie", cookie.String(), false)
 }
 

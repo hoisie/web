@@ -1,6 +1,8 @@
 # ZhuQue
 
-ZhuQue is adapted from web.go. It's the simplest way to write web applications in the Go programming language. It's ideal for writing simple, yet powerful web services. 
+[![Build Status](https://travis-ci.org/sipin/web.svg)](https://travis-ci.org/sipin/web)
+
+ZhuQue is adapted from web.go. It's the simplest way to write web applications in the Go programming language. It's ideal for writing simple, yet powerful web services.
 
 ## Overview
 
@@ -28,13 +30,13 @@ To compile it from source:
 ## Example
 ```go
 package main
-    
+
 import (
     "github.com/sipin/web"
 )
-    
-func hello(val string) string { return "hello " + val } 
-    
+
+func hello(val string) string { return "hello " + val }
+
 func main() {
     web.Get("/(.*)", hello)
     web.Run("0.0.0.0:9999")
@@ -44,8 +46,8 @@ func main() {
 To run the application, put the code in a file called hello.go and run:
 
     go run hello.go
-    
-You can point your browser to http://localhost:9999/world . 
+
+You can point your browser to http://localhost:9999/world .
 
 ### Getting parameters
 
@@ -57,13 +59,13 @@ package main
 import (
     "github.com/sipin/web"
 )
-    
-func hello(ctx *web.Context, val string) { 
+
+func hello(ctx *web.Context, val string) {
     for k,v := range ctx.Params {
 		println(k, v)
 	}
-}   
-    
+}
+
 func main() {
     web.Get("/(.*)", hello)
     web.Run("0.0.0.0:9999")
@@ -79,7 +81,7 @@ In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the f
 
 API docs are hosted at http://webgo.io
 
-If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development efforts on features that people will actually use. 
+If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development efforts on features that people will actually use.
 
 ## About
 

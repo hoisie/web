@@ -16,6 +16,9 @@ func getXSRFToken(server *Server, ctx *Context) {
 	if token, ok := ctx.GetSecureCookie("_xsrf"); ok && token != "" {
 		ctx.XSRFToken = token
 	} else {
+		if ctx.Server.XSRFGetUid == nil {
+			return
+		}
 		uid := ctx.Server.XSRFGetUid(ctx)
 		if uid == "" {
 			return

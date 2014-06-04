@@ -1,0 +1,17 @@
+@{
+	var XSRFToken string
+}
+<html>
+    <head>
+        <title>XSRF</title>
+    </head>
+    <body>
+        <p>The form contains a hidden _xsrf form value that will be submitted with this form.</p>
+        <form action="/protected", method="post">
+          <input type="text" name="foo" placeholder="CC Number">
+          <input type="text" name="bar" placeholder="Amount">
+		  @raw(XSRFToken)
+          <input type="submit" value="Submit">
+        </form>
+    </body>
+</html>

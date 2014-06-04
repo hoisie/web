@@ -4,7 +4,6 @@ package web
 
 import (
 	"bytes"
-	"code.google.com/p/go.net/websocket"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/tls"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"code.google.com/p/go.net/websocket"
 )
 
 // A Context object is created for every incoming HTTP request, and is
@@ -33,6 +34,7 @@ type Context struct {
 	http.ResponseWriter
 	flash          *Flash
 	SessionStorage ISessionStorage
+	XSRFToken      string
 }
 
 // WriteString writes string data into the response object.
@@ -279,6 +281,12 @@ func SetLogger(logger *log.Logger) {
 // SetLogger sets the logger for the main server.
 func SetSessionStorage(ss ISessionStorage) {
 	mainServer.SessionStorage = ss
+}
+
+func SetXSRFOption(secret string, getUid func(*Context) string) {
+	mainServer.XSRFSecret = secret
+	mainServer.XSRFGetUid = getUid
+	mainServer.enableXSRF = true
 }
 
 // Config is the configuration of the main server.

@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	"code.google.com/p/go.net/websocket"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -17,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"code.google.com/p/go.net/websocket"
 )
 
 // ServerConfig is configuration for server objects.
@@ -36,6 +37,8 @@ type Server struct {
 	Logger         *log.Logger
 	Env            map[string]interface{}
 	SessionStorage ISessionStorage
+	XSRFSecret     string
+	XSRFGetUid     func(*Context) string
 	//save the listener so it can be closed
 	l net.Listener
 }
@@ -377,6 +380,9 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 			// We can not handle custom http handlers here, give back to the caller.
 			return
 		}
+
+		// generate or get XSRF token
+		getXSRFToken(s, &ctx)
 
 		var args []reflect.Value
 		handlerType := route.handler.Type()

@@ -40,7 +40,8 @@ type Server struct {
 	XSRFSecret     string
 	XSRFGetUid     func(*Context) string
 	//save the listener so it can be closed
-	l net.Listener
+	l          net.Listener
+	enableXSRF bool
 }
 
 func NewServer() *Server {
@@ -382,7 +383,13 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 		}
 
 		// generate or get XSRF token
-		getXSRFToken(s, &ctx)
+		if s.enableXSRF {
+			getXSRFToken(s, &ctx)
+			if req.Method == "POST" && !XSRFValidate(&ctx) {
+				ctx.Unauthorized()
+				return
+			}
+		}
 
 		var args []reflect.Value
 		handlerType := route.handler.Type()

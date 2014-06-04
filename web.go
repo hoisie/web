@@ -285,6 +285,7 @@ func SetSessionStorage(ss ISessionStorage) {
 func SetXSRFOption(secret string, getUid func(*Context) string) {
 	mainServer.XSRFSecret = secret
 	mainServer.XSRFGetUid = getUid
+	mainServer.enableXSRF = true
 }
 
 // Config is the configuration of the main server.

@@ -36,10 +36,6 @@ func protectedPost(ctx *web.Context) {
 		ctx.Redirect("/login")
 		return
 	}
-	if !web.XSRFValidate(ctx) {
-		ctx.Unauthorized()
-		return
-	}
 	ctx.WriteString(tpl.Result("You submitted a valid token"))
 }
 

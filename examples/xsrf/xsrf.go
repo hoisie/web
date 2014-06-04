@@ -41,7 +41,8 @@ func protectedPost(ctx *web.Context) {
 
 func main() {
 	web.Config.CookieSecret = "cv$2!"
-	web.SetXSRFOption("ab12#3", getUid)
+	web.Config.XSRFSecret = "ab12#3"
+	web.SetXSRFOption(getUid)
 
 	web.Get("/", index)
 	web.Get("/login", login)

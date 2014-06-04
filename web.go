@@ -283,8 +283,7 @@ func SetSessionStorage(ss ISessionStorage) {
 	mainServer.SessionStorage = ss
 }
 
-func SetXSRFOption(secret string, getUid func(*Context) string) {
-	mainServer.XSRFSecret = secret
+func SetXSRFOption(getUid func(*Context) string) {
 	mainServer.XSRFGetUid = getUid
 	mainServer.enableXSRF = true
 }

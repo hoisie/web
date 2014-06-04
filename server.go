@@ -26,6 +26,7 @@ type ServerConfig struct {
 	Addr         string
 	Port         int
 	CookieSecret string
+	XSRFSecret   string
 	RecoverPanic bool
 	Profiler     bool
 }
@@ -37,7 +38,6 @@ type Server struct {
 	Logger         *log.Logger
 	Env            map[string]interface{}
 	SessionStorage ISessionStorage
-	XSRFSecret     string
 	XSRFGetUid     func(*Context) string
 	//save the listener so it can be closed
 	l          net.Listener
@@ -386,7 +386,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 		if s.enableXSRF {
 			getXSRFToken(s, &ctx)
 			if req.Method == "POST" && !XSRFValidate(&ctx) {
-				ctx.Unauthorized()
+				ctx.Forbidden()
 				return
 			}
 		}

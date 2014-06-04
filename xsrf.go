@@ -23,7 +23,7 @@ func getXSRFToken(server *Server, ctx *Context) {
 		if uid == "" {
 			return
 		}
-		ctx.XSRFToken = xsrftoken.Generate(ctx.Server.XSRFSecret, uid, "POST")
+		ctx.XSRFToken = xsrftoken.Generate(ctx.Server.Config.XSRFSecret, uid, "POST")
 		ctx.SetSecureCookie("_xsrf", ctx.XSRFToken, int64(xsrftoken.Timeout/time.Second))
 	}
 }

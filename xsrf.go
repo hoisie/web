@@ -44,5 +44,8 @@ func XSRFFormField(ctx *Context) string {
 }
 
 func XSRFGetFormToken(r *http.Request) string {
-	return r.FormValue("_xsrf")
+	if len(r.PostForm) == 0 {
+		r.ParseMultipartForm(32 << 20)
+	}
+	return r.Form.Get("_xsrf")
 }

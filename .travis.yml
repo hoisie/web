@@ -1,0 +1,11 @@
+language: go
+go:
+  - 1.1
+  - 1.2
+  - release
+
+install:
+  - go get github.com/sipin/web
+
+script:
+  - go test -v github.com/sipin/web

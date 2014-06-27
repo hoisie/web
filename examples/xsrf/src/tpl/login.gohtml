@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <title>Martini CSRF</title>
+    </head>
+    <body>
+       <p>This form simulates a login and generates a new session id. You can put whatever you want in these inputs,
+       it doesn't matter.</p>
+       <form action="/login" method="post">
+           <input type="text" name="username" placeholder="username">
+           <input type="password" name="password" placeholder="password">
+           <input type="submit" valid="Login">
+       </form>
+    </body>
+</html>

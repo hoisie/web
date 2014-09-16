@@ -41,7 +41,7 @@ func (ctx *Context) Header() http.Header {
 	return ctx.Response.Header()
 }
 
-// write raw data back to the client
+// Write raw data back to the client
 func (ctx *Context) Write(data []byte) (int, error) {
 	return ctx.Response.Write(data)
 }
@@ -66,7 +66,7 @@ func (ctx *Context) writeAnything(i interface{}) error {
 		_, err := io.Copy(ctx, typed)
 		return err
 	}
-	// can't cast to a more specific type than interface{}, try encoders
+	// Can't cast to a more specific type than interface{}, try encoders
 	mime := ctx.Header().Get("content-type")
 	if enc, ok := encoders[mime]; ok {
 		return enc(ctx).Encode(i)

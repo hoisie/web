@@ -55,7 +55,7 @@ get.
         web.Get("/(.*)", hello)
         web.Run(":3000")
     }
-~~
+~~~
 
 To run the application, put the code in a file called hello.go and run:
 

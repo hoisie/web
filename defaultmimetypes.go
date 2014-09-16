@@ -8,8 +8,9 @@ import (
 	"mime"
 )
 
-// http://redmine.lighttpd.net/projects/lighttpd2/repository/revisions/b6e20b45f90081e61be5a4c74eff56d8b46321c4/entry/doc/mimetypes.conf
+// http://redmine.lighttpd.net/projects/lighttpd2/repository/revisions/b6e20b45f90081e61be5a4c74eff56d8b46321c4/entry/doc/mimetypes.conf + the .json type
 var defaultMimes = map[string]string{
+	".json":     "application/json",
 	".ez":       "application/andrew-inset",
 	".anx":      "application/annodex",
 	".atom":     "application/atom+xml",
@@ -486,11 +487,9 @@ var defaultMimes = map[string]string{
 	".sisx":     "x-epoc/x-sisx-app",
 	".vrm":      "x-world/x-vrml",
 	"README":    "text/plain; charset=utf-8",
-	// and for some bloody reason this is not part of lighttpd's default list...
-	".json": "application/json",
 }
 
-// register lighttpd default mime types with mime package
+// Register additional mime types
 func init() {
 	for ext, typ := range defaultMimes {
 		mime.AddExtensionType(ext, typ)

@@ -1,9 +1,9 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// this file is about the actual handling of a request: it comes in, what
-// happens? routing determines which handler is responsible and that is then
+// This file is about the actual handling of a request: it comes in, what
+// happens? Routing determines which handler is responsible and that is then
 // wrapped appropriately and invoked.
 
 package web
@@ -57,15 +57,17 @@ type Server struct {
 	AccessLogger AccessLogger
 }
 
-var mainServer = NewServer()
+var (
+	mainServer = NewServer()
 
-// Configuration of the shared server
-var Config = &mainServer.Config
+	// Configuration of the shared server
+	Config = &mainServer.Config
 
-// Location of the executable (ignore errors)
-var exeDir, _ = osext.ExecutableFolder()
+	// Location of the executable (ignore errors)
+	exeDir, _ = osext.ExecutableFolder()
+)
 
-//Stops the web server
+// Stops the web server
 func (s *Server) Close() error {
 	if s.l != nil {
 		return s.l.Close()
@@ -143,7 +145,7 @@ func matchRouteMethods(req *http.Request, route *route) bool {
 }
 
 // If this request matches this route return the group matches from the regular
-// expression otherwise return an empty slice. note on success the return value
+// expression otherwise return an empty slice. Note on success the return value
 // includes the entire match as the first element.
 func matchRoute(req *http.Request, route *route) []string {
 	if !matchRouteMethods(req, route) {

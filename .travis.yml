@@ -1,2 +1,4 @@
 language: go
-install: go get -v . && go build -v .
+
+go:
+    - 1.3

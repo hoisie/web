@@ -13,7 +13,7 @@ import (
 // Wrap handlers (WARNING: Obsolete code! need to write example for new API)
 
 // This function will be called prior to each web request
-func AuthHandler(ctx *web.Context) error {
+func AuthHandler(h web.SimpleHandler, ctx *web.Context) error {
 	ctx.User = "Passed from AuthHandler"
 	fmt.Println(ctx.Request.Header)
 	return nil
@@ -24,8 +24,8 @@ func Hello(ctx *web.Context, s string) string {
 }
 
 func main() {
-	// Add AuthHandler to our PreModule list
-	web.AddPreModule(AuthHandler)
+	// Wrap everything in the AuthHandler
+	web.AddWrapper(AuthHandler)
 	web.Get("/(.*)", Hello)
 	web.Run(":3000")
 }

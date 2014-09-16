@@ -14,10 +14,10 @@
 //
 //     func main() {
 //         web.Get("/", helloworld)
-//         web.Run("127.0.0.1:9999")
+//         web.Run(":3000")
 //     }
 //
-// Now visit http://127.0.0.1:9999 to see the greeting
+// Now visit http://localhost:3000/ to see the greeting
 //
 // The routing table is based on regular expressions and allows parameter
 // groups:
@@ -28,10 +28,10 @@
 //
 //     func main() {
 //         web.Get("/(.*)", hello)
-//         web.Run("127.0.0.1:9999")
+//         web.Run(":3000")
 //     }
-// 
-// Visit http://127.0.0.1:9999/fidodido to see 'hello, fidodido'
+//
+// Visit http://localhost:3000/fidodido to see 'hello, fidodido'
 //
 // Route handlers may contain a pointer to web.Context as their first parameter.
 // This variable serves many purposes -- it contains information about the

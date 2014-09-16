@@ -30,7 +30,7 @@ instructions](http://golang.org/doc/install.html).
 
 To install web.go, simply run:
 
-    go get github.com/hraban/web
+    go get github.com/xyproto/web
 
 Note that you need to set the environment variable GOPATH before using go
 get. 
@@ -41,7 +41,7 @@ get.
     package main
 
     import (
-        "github.com/hraban/web"
+        "github.com/xyproto/web"
     )
 
     func hello(val string) string {
@@ -50,7 +50,7 @@ get.
 
     func main() {
         web.Get("/(.*)", hello)
-        web.Run("0.0.0.0:9999")
+        web.Run("0.0.0.0:3000")
     }
 ```
 
@@ -58,7 +58,7 @@ To run the application, put the code in a file called hello.go and run:
 
     go run hello.go
 
-You can point your browser to http://localhost:9999/world . 
+You can point your browser to http://localhost:3000/world . 
 
-See http://www.godoc.org/github.com/hraban/web for a tutorial.  There are more
+See http://www.godoc.org/github.com/xyproto/web for a tutorial.  There are more
 example applications in the examples directory.

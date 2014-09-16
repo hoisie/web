@@ -1,4 +1,5 @@
-# web.go
+web.go
+======
 
 [![Build Status](https://travis-ci.org/xyproto/web.svg?branch=master)](https://travis-ci.org/xyproto/web)
 [![GoDoc](https://godoc.org/github.com/xyproto/web?status.svg)](http://godoc.org/github.com/xyproto/web)

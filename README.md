@@ -1,4 +1,7 @@
-#  web.go
+# web
+
+[![Build Status](https://travis-ci.org/xyproto/web.svg?branch=master)](https://travis-ci.org/xyproto/web)
+[![GoDoc](https://godoc.org/github.com/xyproto/web?status.svg)](http://godoc.org/github.com/xyproto/web)
 
 web.go is the simplest way to write web applications in the Go programming
 language. It's ideal for writing simple, performant backend web services. 
@@ -37,7 +40,7 @@ get.
 
 ## Example
     
-```go
+~~~ go
     package main
 
     import (
@@ -50,9 +53,9 @@ get.
 
     func main() {
         web.Get("/(.*)", hello)
-        web.Run("0.0.0.0:3000")
+        web.Run(":3000")
     }
-```
+~~
 
 To run the application, put the code in a file called hello.go and run:
 

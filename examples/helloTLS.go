@@ -1,11 +1,11 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Simple HTTPS app
@@ -17,5 +17,5 @@ func hello(val string) string {
 func main() {
 	web.Get("/(.*)", hello)
 	// You can create an example cert using generate_cert.go include in pkg crypto/tls
-	web.RunTLS(":9999", "/tmp/cert.pem", "/tmp/key.pem")
+	web.RunTLS(":3000", "/tmp/cert.pem", "/tmp/key.pem")
 }

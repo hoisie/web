@@ -1,4 +1,4 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,7 @@ package main
 import (
 	"errors"
 
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Different types of error handling in web.go
@@ -34,5 +34,5 @@ func main() {
 	web.Get("/404", notfound)
 	web.Get("/teapot", teapot)
 	web.Get("/generic", generic)
-	web.Run("0.0.0.0:8081")
+	web.Run(":3000")
 }

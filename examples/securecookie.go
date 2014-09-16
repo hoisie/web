@@ -1,4 +1,4 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -6,13 +6,13 @@
 package main
 
 import (
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Store user data in a secure cookie. Fake data cannot be supplied, only
 // original data or no data.
 
-const form = `store something in a secure cookie: 
+const form = `store something in a secure cookie:
 <form action="/say" method="POST">
   <input name="said">
   <input type="submit" value="go">
@@ -36,5 +36,5 @@ func main() {
 	web.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
 	web.Get("/", root)
 	web.Post("/say", say)
-	web.Run("127.0.0.1:9999")
+	web.Run(":3000")
 }

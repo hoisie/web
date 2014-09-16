@@ -1,4 +1,4 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Custom logging
@@ -24,5 +24,5 @@ func main() {
 	logger := log.New(f, "", log.Ldate|log.Ltime)
 	web.Get("/(.*)", hello)
 	web.SetLogger(logger)
-	web.Run("0.0.0.0:9999")
+	web.Run(":3000")
 }

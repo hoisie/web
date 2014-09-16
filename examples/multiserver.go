@@ -1,11 +1,11 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
 package main
 
 import (
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Multiple server instances
@@ -18,8 +18,8 @@ func main() {
 	var server1, server2 web.Server
 
 	server1.Get("/(.*)", hello1)
-	go server1.Run("0.0.0.0:9999")
+	go server1.Run(":3000")
 	server2.Get("/(.*)", hello2)
-	go server2.Run("0.0.0.0:8999")
+	go server2.Run(":4242")
 	<-make(chan int)
 }

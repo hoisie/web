@@ -1,4 +1,4 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,7 @@ package main
 import (
 	"io"
 
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // Using websockets
@@ -21,5 +21,5 @@ func root(ctx *web.Context, name string) error {
 
 func main() {
 	web.Websocket("/(.*)", root)
-	web.Run("0.0.0.0:8081")
+	web.Run(":3000")
 }

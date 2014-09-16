@@ -1,4 +1,4 @@
-// Copyright © 2009--2013 The Web.go Authors
+// Copyright © 2009--2014 The Web.go Authors
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,7 @@ import (
 	"crypto/md5"
 	"fmt"
 
-	"github.com/hraban/web"
+	"github.com/xyproto/web"
 )
 
 // HTML Forms
@@ -22,6 +22,7 @@ func Md5(b []byte) string {
 }
 
 var page = `
+<!doctype html>
 <html>
 <head><title>Multipart Test</title></head>
 <body>
@@ -55,5 +56,5 @@ func multipart(ctx *web.Context) string {
 func main() {
 	web.Get("/", index)
 	web.Post("/multipart", multipart)
-	web.Run("0.0.0.0:9999")
+	web.Run(":3000")
 }

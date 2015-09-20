@@ -141,6 +141,7 @@ func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
     req, err := s.readScgiRequest(fd)
     if err != nil {
         s.Logger.Println("SCGI error: %q", err.Error())
+        return
     }
     sc := scgiConn{fd, req, make(map[string][]string), false}
     s.routeHandler(req, &sc)

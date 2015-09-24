@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-    runtime.GOMAXPROCS(4)
+    runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 // ioBuffer is a helper that implements io.ReadWriteCloser,

@@ -4,7 +4,7 @@ import (
     "github.com/hoisie/web"
     "net/http"
     "strconv"
-    "time"
+    
 )
 
 func hello(ctx *web.Context, num string) {

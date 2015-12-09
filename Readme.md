@@ -18,11 +18,11 @@ Make sure you have the a working Go environment. See the [install instructions](
 
 To install web.go, simply run:
 
-    go get github.com/hoisie/web
+    go get github.com/shivakumargn/web
 
 To compile it from source:
 
-    git clone git://github.com/hoisie/web.git
+    git clone git://github.com/shivakumargn/web.git
     cd web && go build
 
 ## Example
@@ -30,7 +30,7 @@ To compile it from source:
 package main
     
 import (
-    "github.com/hoisie/web"
+    "github.com/shivakumargn/web"
 )
     
 func hello(val string) string { return "hello " + val } 
@@ -55,7 +55,7 @@ Route handlers may contain a pointer to web.Context as their first parameter. Th
 package main
 
 import (
-    "github.com/hoisie/web"
+    "github.com/shivakumargn/web"
 )
     
 func hello(ctx *web.Context, val string) { 
@@ -75,14 +75,8 @@ In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the f
     a 1
     b 2
 
-## Documentation
-
-API docs are hosted at http://webgo.io
-
-If you use web.go, I'd greatly appreciate a quick message about what you're building with it. This will help me get a sense of usage patterns, and helps me focus development efforts on features that people will actually use. 
-
 ## About
 
-web.go was written by [Michael Hoisie](http://hoisie.com). 
+This web.go is adapted from github.com/hoisie/web to work with gorilla/mux. 
 
 

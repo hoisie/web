@@ -26,18 +26,43 @@ To compile it from source:
     cd web && go build
 
 ## Example
+(Ignore the ones in the examples folder. These are not adapted from hoisie/web. Use below example instead)
+
 ```go
 package main
-    
+
 import (
-    "github.com/shivakumargn/web"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	"github.com/gorilla/mux"
+	"github.com/shivakumargn/web"
 )
-    
-func hello(val string) string { return "hello " + val } 
-    
+
+var logger = log.New(os.Stdout, "", log.Lshortfile|log.Ldate|log.Ltime)
+
+func Greet(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	action_name := vars["action_name"]
+	fmt.Fprintf(w, action_name+":hi")
+	w.WriteHeader(http.StatusOK)
+	return
+}
+
 func main() {
-    web.Get("/(.*)", hello)
-    web.Run("0.0.0.0:9999")
+	
+	addr := "0.0.0.0:9998"
+	logger.Println("starting http server at -", addr)
+
+	s := web.NewServer()
+
+	// Access the gorilla/mux router as s.Router(). Use gorilla/mux documentation for possible options for the router !
+	s.Router().HandleFunc("/api/v1/greet/{action_name:[A-Za-z0-9_]+}", Greet).Methods("GET", "POST")
+
+	go s.Run(addr)
+	select {}
 }
 ```
 
@@ -45,35 +70,11 @@ To run the application, put the code in a file called hello.go and run:
 
     go run hello.go
     
-You can point your browser to http://localhost:9999/world . 
+You can point your browser to http://localhost:9998/greet/hello_world
 
-### Getting parameters
+### Access url details (including parameters)
 
-Route handlers may contain a pointer to web.Context as their first parameter. This variable serves many purposes -- it contains information about the request, and it provides methods to control the http connection. For instance, to iterate over the web parameters, either from the URL of a GET request, or the form data of a POST request, you can access `ctx.Params`, which is a `map[string]string`:
-
-```go
-package main
-
-import (
-    "github.com/shivakumargn/web"
-)
-    
-func hello(ctx *web.Context, val string) { 
-    for k,v := range ctx.Params {
-		println(k, v)
-	}
-}   
-    
-func main() {
-    web.Get("/(.*)", hello)
-    web.Run("0.0.0.0:9999")
-}
-```
-
-In this example, if you visit `http://localhost:9999/?a=1&b=2`, you'll see the following printed out in the terminal:
-
-    a 1
-    b 2
+The gorilla/mux router is used as the underlying router. Server created as web.NewServer() provides Router() method that can be used to access and configure the underlying gorilla/mux router.
 
 ## About
 

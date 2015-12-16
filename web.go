@@ -16,7 +16,6 @@ import (
     "net/http"
     "os"
     "path"
-    "reflect"
     "strconv"
     "strings"
     "time"
@@ -26,61 +25,63 @@ import (
 // passed to handlers as an optional first argument. It provides information
 // about the request, including the http.Request object, the GET and POST params,
 // and acts as a Writer for the response.
+/*
 type Context struct {
     Request *http.Request
     Params  map[string]string
     Server  *Server
     http.ResponseWriter
 }
+*/
 
 // WriteString writes string data into the response object.
-func (ctx *Context) WriteString(content string) {
-    ctx.ResponseWriter.Write([]byte(content))
+func WriteString(w http.ResponseWriter, content string) {
+	w.Write([]byte(content))
 }
 
 // Abort is a helper method that sends an HTTP header and an optional
 // body. It is useful for returning 4xx or 5xx errors.
 // Once it has been called, any return value from the handler will
 // not be written to the response.
-func (ctx *Context) Abort(status int, body string) {
-    ctx.ResponseWriter.WriteHeader(status)
-    ctx.ResponseWriter.Write([]byte(body))
+func Abort(w http.ResponseWriter, status int, body string) {
+	w.WriteHeader(status)
+	w.Write([]byte(body))
 }
 
 // Redirect is a helper method for 3xx redirects.
-func (ctx *Context) Redirect(status int, url_ string) {
-    ctx.ResponseWriter.Header().Set("Location", url_)
-    ctx.ResponseWriter.WriteHeader(status)
-    ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
+func Redirect(w http.ResponseWriter, status int, url_ string) {
+	w.Header().Set("Location", url_)
+	w.WriteHeader(status)
+	w.Write([]byte("Redirecting to: " + url_))
 }
 
 // Notmodified writes a 304 HTTP response
-func (ctx *Context) NotModified() {
-    ctx.ResponseWriter.WriteHeader(304)
+func NotModified(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNotModified)
 }
 
 // NotFound writes a 404 HTTP response
-func (ctx *Context) NotFound(message string) {
-    ctx.ResponseWriter.WriteHeader(404)
-    ctx.ResponseWriter.Write([]byte(message))
+func NotFound(w http.ResponseWriter, message string) {
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(message))
 }
 
 //Unauthorized writes a 401 HTTP response
-func (ctx *Context) Unauthorized() {
-    ctx.ResponseWriter.WriteHeader(401)
+func Unauthorized(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusUnauthorized)
 }
 
 //Forbidden writes a 403 HTTP response
-func (ctx *Context) Forbidden() {
-    ctx.ResponseWriter.WriteHeader(403)
+func Forbidden(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusForbidden)
 }
 
 // ContentType sets the Content-Type header for an HTTP response.
-// For example, ctx.ContentType("json") sets the content-type to "application/json"
+// For example, ContentType(w, "json") sets the content-type to "application/json"
 // If the supplied value contains a slash (/) it is set as the Content-Type
 // verbatim. The return value is the content type as it was
 // set, or an empty string if none was found.
-func (ctx *Context) ContentType(val string) string {
+func ContentType(w http.ResponseWriter, val string) string {
     var ctype string
     if strings.ContainsRune(val, '/') {
         ctype = val
@@ -91,24 +92,24 @@ func (ctx *Context) ContentType(val string) string {
         ctype = mime.TypeByExtension(val)
     }
     if ctype != "" {
-        ctx.Header().Set("Content-Type", ctype)
+		w.Header().Set("Content-Type", ctype)
     }
     return ctype
 }
 
 // SetHeader sets a response header. If `unique` is true, the current value
 // of that header will be overwritten . If false, it will be appended.
-func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
+func SetHeader(w http.ResponseWriter, hdr string, val string, unique bool) {
     if unique {
-        ctx.Header().Set(hdr, val)
+		w.Header().Set(hdr, val)
     } else {
-        ctx.Header().Add(hdr, val)
+		w.Header().Add(hdr, val)
     }
 }
 
 // SetCookie adds a cookie header to the response.
-func (ctx *Context) SetCookie(cookie *http.Cookie) {
-    ctx.SetHeader("Set-Cookie", cookie.String(), false)
+func SetCookie(w http.ResponseWriter, cookie *http.Cookie) {
+	SetHeader(w, "Set-Cookie", cookie.String(), false)
 }
 
 func getCookieSig(key string, val []byte, timestamp string) string {
@@ -121,10 +122,10 @@ func getCookieSig(key string, val []byte, timestamp string) string {
     return hex
 }
 
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
+func SetSecureCookie(w http.ResponseWriter, s *Server, name string, val string, age int64) {
     //base64 encode the val
-    if len(ctx.Server.Config.CookieSecret) == 0 {
-        ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
+	if len(s.Config.CookieSecret) == 0 {
+		s.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
         return
     }
     var buf bytes.Buffer
@@ -134,13 +135,13 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
     vs := buf.String()
     vb := buf.Bytes()
     timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-    sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
+	sig := getCookieSig(s.Config.CookieSecret, vb, timestamp)
     cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-    ctx.SetCookie(NewCookie(name, cookie, age))
+	SetCookie(w, NewCookie(name, cookie, age))
 }
 
-func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-    for _, cookie := range ctx.Request.Cookies() {
+func GetSecureCookie(r *http.Request, s *Server, name string) (string, bool) {
+	for _, cookie := range r.Cookies() {
         if cookie.Name != name {
             continue
         }
@@ -151,7 +152,7 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
         timestamp := parts[1]
         sig := parts[2]
 
-        if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
+		if getCookieSig(s.Config.CookieSecret, []byte(val), timestamp) != sig {
             return "", false
         }
 
@@ -170,13 +171,9 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
     return "", false
 }
 
-// small optimization: cache the context type instead of repeteadly calling reflect.Typeof
-var contextType reflect.Type
-
 var defaultStaticDirs []string
 
 func init() {
-    contextType = reflect.TypeOf(Context{})
     //find the location of the exe file
     wd, _ := os.Getwd()
     arg0 := path.Clean(os.Args[0])
@@ -191,11 +188,6 @@ func init() {
     defaultStaticDirs = append(defaultStaticDirs, path.Join(parent, "static"))
     defaultStaticDirs = append(defaultStaticDirs, path.Join(wd, "static"))
     return
-}
-
-// Process invokes the main server's routing system.
-func Process(c http.ResponseWriter, req *http.Request) {
-    mainServer.Process(c, req)
 }
 
 // Run starts the web application and serves HTTP requests for the main server.

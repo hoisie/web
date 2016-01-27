@@ -1,22 +1,22 @@
 package web
 
 import (
-    "bytes"
-    "code.google.com/p/go.net/websocket"
-    "crypto/tls"
-    "fmt"
-    "log"
-    "net"
-    "net/http"
-    "net/http/pprof"
-    "os"
-    "path"
-    "reflect"
-    "regexp"
-    "runtime"
-    "strconv"
-    "strings"
-    "time"
+	"bytes"
+	"crypto/tls"
+	"fmt"
+	"golang.org/x/net/websocket"
+	"log"
+	"net"
+	"net/http"
+	"net/http/pprof"
+	"os"
+	"path"
+	"reflect"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // ServerConfig is configuration for server objects.

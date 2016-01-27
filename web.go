@@ -4,7 +4,7 @@ package web
 
 import (
     "bytes"
-    "code.google.com/p/go.net/websocket"
+    "golang.org/x/net/websocket"
     "crypto/hmac"
     "crypto/sha1"
     "crypto/tls"

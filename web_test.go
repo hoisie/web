@@ -129,6 +129,12 @@ type Test struct {
 //initialize the routes
 func init() {
     mainServer.SetLogger(log.New(ioutil.Discard, "", 0))
+
+    Middleware(func(ctx *Context) string {
+        ctx.SetHeader("X-Middleware-Hit", "true", true)
+        return ""
+    })
+
     Get("/", func() string { return "index" })
     Get("/panic", func() { panic(0) })
     Get("/echo/(.*)", func(s string) string { return s })
@@ -215,6 +221,32 @@ func init() {
         }
         return user + pass
     })
+
+    // Test for multiple functions in a call. f1, f2 and f3 should be hit, f4
+    // should be skipped since f3 finishes. Thus the overall response
+    // should be an HTTP 401 (unauthorized) with a body "response1\nresponse3"
+    f1 := func(ctx *Context) string {
+        ctx.Unauthorized()
+        return "response1\n"
+    }
+
+    f2 := func(ctx *Context) []string {
+        return nil
+    }
+
+    f3 := func(ctx *Context) string {
+        ctx.Finish()
+        return "response3"
+    }
+
+    f4 := func(ctx *Context) string {
+        return "response4"
+    }
+
+    Get("/multifunc", f1, f2, f3, f4)
+
+    // Test for no handler specification. Should return a 404.
+    Get("/nofunc")    
 }
 
 var tests = []Test{
@@ -248,6 +280,8 @@ var tests = []Test{
     {"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, "hello world"},
     //{"GET", "/testenv", "", 200, "hello world"},
     {"GET", "/authorization", map[string][]string{"Authorization": {BuildBasicAuthCredentials("foo", "bar")}}, "", 200, "foobar"},
+    {"GET", "/multifunc", nil, "", 401, "response1\nresponse3"},
+    {"GET", "/nofunc", nil, "", 404, "Page not found"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *http.Request {
@@ -290,15 +324,25 @@ func TestRouting(t *testing.T) {
         if resp.statusCode != test.expectedStatus {
             t.Fatalf("%v(%v) expected status %d got %d", test.method, test.path, test.expectedStatus, resp.statusCode)
         }
+        
         if resp.body != test.expectedBody {
             t.Fatalf("%v(%v) expected %q got %q", test.method, test.path, test.expectedBody, resp.body)
         }
+        
         if cl, ok := resp.headers["Content-Length"]; ok {
             clExp, _ := strconv.Atoi(cl[0])
             clAct := len(resp.body)
             if clExp != clAct {
                 t.Fatalf("Content-length doesn't match. expected %d got %d", clExp, clAct)
             }
+        }
+
+        mwh, ok := resp.headers["X-Middleware-Hit"]
+
+        if !ok {
+            t.Fatalf("%v(%v) middleware hit header not set", test.method, test.path)
+        } else if mwh[0] != "true" {
+            t.Fatalf("%v(%v) middleware hit header incorrectly set", test.method, test.path)
         }
     }
 }

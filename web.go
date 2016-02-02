@@ -31,6 +31,7 @@ type Context struct {
     Params  map[string]string
     Server  *Server
     http.ResponseWriter
+    finished bool
 }
 
 // WriteString writes string data into the response object.
@@ -170,6 +171,14 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
     return "", false
 }
 
+func (ctx *Context) IsFinished() bool {
+    return ctx.finished
+}
+
+func (ctx *Context) Finish() {
+    ctx.finished = true
+}
+
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof
 var contextType reflect.Type
 
@@ -224,28 +233,28 @@ func Close() {
 }
 
 // Get adds a handler for the 'GET' http method in the main server.
-func Get(route string, handler interface{}) {
-    mainServer.Get(route, handler)
+func Get(route string, handlers ...interface{}) {
+    mainServer.addRoute(route, "GET", handlers...)
 }
 
 // Post adds a handler for the 'POST' http method in the main server.
-func Post(route string, handler interface{}) {
-    mainServer.addRoute(route, "POST", handler)
+func Post(route string, handlers ...interface{}) {
+    mainServer.addRoute(route, "POST", handlers...)
 }
 
 // Put adds a handler for the 'PUT' http method in the main server.
-func Put(route string, handler interface{}) {
-    mainServer.addRoute(route, "PUT", handler)
+func Put(route string, handlers ...interface{}) {
+    mainServer.addRoute(route, "PUT", handlers...)
 }
 
 // Delete adds a handler for the 'DELETE' http method in the main server.
-func Delete(route string, handler interface{}) {
-    mainServer.addRoute(route, "DELETE", handler)
+func Delete(route string, handlers ...interface{}) {
+    mainServer.addRoute(route, "DELETE", handlers...)
 }
 
 // Match adds a handler for an arbitrary http method in the main server.
-func Match(method string, route string, handler interface{}) {
-    mainServer.addRoute(route, method, handler)
+func Match(method string, route string, handlers ...interface{}) {
+    mainServer.addRoute(route, method, handlers...)
 }
 
 //Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
@@ -256,6 +265,10 @@ func Handler(route string, method string, httpHandler http.Handler) {
 //Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func Websocket(route string, httpHandler websocket.Handler) {
     mainServer.Websocket(route, httpHandler)
+}
+
+func Middleware(handler interface{}) {
+    mainServer.Middleware(handler)
 }
 
 // SetLogger sets the logger for the main server.

@@ -42,7 +42,7 @@ Then point your browser to http://localhost:9999/world
 
 ## Tutorial
 
-For more detailed information about writing apps in web.go, check out the [tutorial](/tutorial.html)
+For more detailed information about writing apps in web.go, check out the [tutorial](tutorial.html)
 
 ## Development
 

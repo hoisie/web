@@ -7,7 +7,7 @@ title: Tutorial
 
 ## Getting started
 
-For installation insructions, check out the [quickstart guide](/index.html).
+For installation insructions, check out the [quickstart guide](index.html).
 
 This is the classic hello world web application, written in Go, which this tutorial often references:
 

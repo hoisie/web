@@ -117,8 +117,7 @@ func getCookieSig(key string, val []byte, timestamp string) string {
     hm.Write(val)
     hm.Write([]byte(timestamp))
 
-    hex := fmt.Sprintf("%02x", hm.Sum(nil))
-    return hex
+    return fmt.Sprintf("%02x", hm.Sum(nil))
 }
 
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {

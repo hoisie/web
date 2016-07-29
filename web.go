@@ -139,34 +139,36 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
 }
 
 func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-    for _, cookie := range ctx.Request.Cookies() {
-        if cookie.Name != name {
-            continue
-        }
+	for _, cookie := range ctx.Request.Cookies() {
+		if cookie.Name != name {
+			continue
+		}
 
-        parts := strings.SplitN(cookie.Value, "|", 3)
+		parts := strings.SplitN(cookie.Value, "|", 3)
 
-        val := parts[0]
-        timestamp := parts[1]
-        sig := parts[2]
+		if len(parts) == 3 {
+			val := parts[0]
+			timestamp := parts[1]
+			sig := parts[2]
 
-        if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
-            return "", false
-        }
+			if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
+				return "", false
+			}
 
-        ts, _ := strconv.ParseInt(timestamp, 0, 64)
+			ts, _ := strconv.ParseInt(timestamp, 0, 64)
 
-        if time.Now().Unix()-31*86400 > ts {
-            return "", false
-        }
+			if time.Now().Unix()-31*86400 > ts {
+				return "", false
+			}
 
-        buf := bytes.NewBufferString(val)
-        encoder := base64.NewDecoder(base64.StdEncoding, buf)
+			buf := bytes.NewBufferString(val)
+			encoder := base64.NewDecoder(base64.StdEncoding, buf)
 
-        res, _ := ioutil.ReadAll(encoder)
-        return string(res), true
-    }
-    return "", false
+			res, _ := ioutil.ReadAll(encoder)
+			return string(res), true
+		}
+	}
+	return "", false
 }
 
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof

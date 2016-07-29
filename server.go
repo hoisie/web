@@ -150,7 +150,7 @@ func (s *Server) Run(addr string) {
         log.Fatal("ListenAndServe:", err)
     }
 
-    s.Logger.Printf("web.go serving %s\n", l.Addr().String())
+    s.Logger.Printf("web.go serving %s\n", l.Addr())
 
     s.l = l
     err = http.Serve(s.l, mux)
@@ -177,13 +177,12 @@ func (s *Server) RunTLS(addr string, config *tls.Config) error {
     mux := http.NewServeMux()
     mux.Handle("/", s)
 
-    s.Logger.Printf("web.go serving %s\n", addr)
-
     l, err := tls.Listen("tcp", addr, config)
     if err != nil {
         log.Fatal("Listen:", err)
         return err
     }
+    s.Logger.Printf("web.go serving %s\n", l.Addr())
 
     s.l = l
     return http.Serve(s.l, mux)

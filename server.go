@@ -175,6 +175,9 @@ func (s *Server) RunTLS(addr string, config *tls.Config) error {
     s.initServer()
     mux := http.NewServeMux()
     mux.Handle("/", s)
+
+    s.Logger.Printf("web.go serving %s\n", addr)
+
     l, err := tls.Listen("tcp", addr, config)
     if err != nil {
         log.Fatal("Listen:", err)

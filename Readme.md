@@ -1,4 +1,4 @@
-# web.go
+# web.go [![codebeat](https://codebeat.co/badges/b724faad-43db-431c-851a-dec713f8e5a0)](https://codebeat.co/projects/github-com-hoisie-web)
 
 web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 
 

@@ -1,3 +1,5 @@
+[![Build Status](https://drone.io/github.com/hoisie/web/status.png)](https://drone.io/github.com/hoisie/web/latest)
+
 # web.go
 
 web.go is the simplest way to write web applications in the Go programming language. It's ideal for writing simple, performant backend web services. 

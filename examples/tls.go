@@ -1,8 +1,8 @@
 package main
 
 import (
-    "crypto/tls"
-    "github.com/hoisie/web"
+	"crypto/tls"
+	"github.com/hoisie/web"
 )
 
 // an arbitrary self-signed certificate, generated with
@@ -50,19 +50,19 @@ gWrxykqyLToIiAuL+pvC3Jv8IOPIiVFsY032rOqcwSGdVUyhTsG28+7KnR6744tM
 func hello(val string) string { return "hello " + val }
 
 func main() {
-    config := tls.Config{
-        Time: nil,
-    }
+	config := tls.Config{
+		Time: nil,
+	}
 
-    config.Certificates = make([]tls.Certificate, 1)
-    var err error
-    config.Certificates[0], err = tls.X509KeyPair([]byte(cert), []byte(pkey))
-    if err != nil {
-        println(err.Error())
-        return
-    }
+	config.Certificates = make([]tls.Certificate, 1)
+	var err error
+	config.Certificates[0], err = tls.X509KeyPair([]byte(cert), []byte(pkey))
+	if err != nil {
+		println(err.Error())
+		return
+	}
 
-    // you must access the server with an HTTPS address, i.e https://localhost:9999/world
-    web.Get("/(.*)", hello)
-    web.RunTLS("0.0.0.0:9999", &config)
+	// you must access the server with an HTTPS address, i.e https://localhost:9999/world
+	web.Get("/(.*)", hello)
+	web.RunTLS("0.0.0.0:9999", &config)
 }

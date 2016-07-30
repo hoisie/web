@@ -4,9 +4,9 @@ import (
 	"github.com/hoisie/web"
 )
 
-func hello1(val string) string { return "hello1 " + val }
+func hello1(val string) string { return "hello1 " + val + "\n" }
 
-func hello2(val string) string { return "hello2 " + val }
+func hello2(val string) string { return "hello2 " + val + "\n" }
 
 func main() {
 	var server1 web.Server

@@ -47,7 +47,7 @@ gWrxykqyLToIiAuL+pvC3Jv8IOPIiVFsY032rOqcwSGdVUyhTsG28+7KnR6744tM
 -----END CERTIFICATE-----
 `
 
-func hello(val string) string { return "hello " + val }
+func hello(val string) string { return "hello " + val + "\n" }
 
 func main() {
 	config := tls.Config{

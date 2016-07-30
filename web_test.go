@@ -540,6 +540,45 @@ func TestDuplicateHeader(t *testing.T) {
 	}
 }
 
+// test that output contains ASCII color codes by default
+func TestColorOutputDefault(t *testing.T) {
+	s := NewServer()
+	var logOutput bytes.Buffer
+	logger := log.New(&logOutput, "", 0)
+	s.Logger = logger
+	s.Get("/test", func() string {
+		return "test"
+	})
+	req := buildTestRequest("GET", "/test", "", nil, nil)
+	var buf bytes.Buffer
+	iob := ioBuffer{input: nil, output: &buf}
+	c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &iob}
+	s.Process(&c, req)
+	if !strings.Contains(logOutput.String(), "\x1b") {
+		t.Fatalf("The default log output does not seem to be colored")
+	}
+}
+
+// test that output contains ASCII color codes by default
+func TestNoColorOutput(t *testing.T) {
+	s := NewServer()
+	s.Config.ColorOutput = false
+	var logOutput bytes.Buffer
+	logger := log.New(&logOutput, "", 0)
+	s.Logger = logger
+	s.Get("/test", func() string {
+		return "test"
+	})
+	req := buildTestRequest("GET", "/test", "", nil, nil)
+	var buf bytes.Buffer
+	iob := ioBuffer{input: nil, output: &buf}
+	c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &iob}
+	s.Process(&c, req)
+	if strings.Contains(logOutput.String(), "\x1b") {
+		t.Fatalf("The log contains color escape codes")
+	}
+}
+
 func BuildBasicAuthCredentials(user string, pass string) string {
 	s := user + ":" + pass
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(s))

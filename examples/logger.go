@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func hello(val string) string { return "hello " + val }
+func hello(val string) string { return "hello " + val + "\n" }
 
 func main() {
 	f, err := os.Create("server.log")

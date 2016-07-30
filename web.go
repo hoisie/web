@@ -145,6 +145,9 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 		}
 
 		parts := strings.SplitN(cookie.Value, "|", 3)
+		if len(parts) != 3 {
+			return "", false
+		}
 
 		val := parts[0]
 		timestamp := parts[1]

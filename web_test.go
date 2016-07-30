@@ -496,6 +496,17 @@ func TestSecureCookie(t *testing.T) {
 	}
 }
 
+func TestEmptySecureCookie(t *testing.T) {
+	mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+	cookies := makeCookie(map[string]string{"empty": ""})
+
+	resp2 := getTestResponse("GET", "/securecookie/get/empty", "", nil, cookies)
+
+	if resp2.body != "" {
+		t.Fatalf("Expected an empty secure cookie")
+	}
+}
+
 func TestEarlyClose(t *testing.T) {
 	var server1 Server
 	server1.Close()

@@ -1,4 +1,4 @@
-[![Build Status](https://drone.io/github.com/hoisie/web/status.png)](https://drone.io/github.com/hoisie/web/latest)
+[![Build Status](https://travis-ci.org/hoisie/web.svg?branch=master)](https://travis-ci.org/hoisie/web)
 
 # web.go
 

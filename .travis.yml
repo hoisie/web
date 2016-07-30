@@ -2,4 +2,6 @@ language: go
 
 install: go get
 
-script: go test -short
+script:
+  - ./.travis.gofmt.sh
+  - go test -short

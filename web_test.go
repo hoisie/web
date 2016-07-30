@@ -248,6 +248,7 @@ var tests = []Test{
 	{"POST", "/parsejson", map[string][]string{"Content-Type": {"application/json"}}, `{"a":"hello", "b":"world"}`, 200, "hello world"},
 	//{"GET", "/testenv", "", 200, "hello world"},
 	{"GET", "/authorization", map[string][]string{"Authorization": {BuildBasicAuthCredentials("foo", "bar")}}, "", 200, "foobar"},
+	{"GET", "/authorization", nil, "", 200, "fail"},
 }
 
 func buildTestRequest(method string, path string, body string, headers map[string][]string, cookies []*http.Cookie) *http.Request {

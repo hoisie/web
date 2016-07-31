@@ -1,4 +1,3 @@
-Gemfile.lock
 test/dest
 *.gem
 pkg/

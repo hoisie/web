@@ -1,4 +1,4 @@
 safe: true
 destination: _site
 lsi: false
-pygments: true
+highlighter: true

@@ -7,10 +7,10 @@ end
 
 desc 'Build and start server with --auto'
 task :server do
-  jekyll '--pygments --no-lsi --safe --server --auto'
+  jekyll 'serve --safe --watch'
 end
 
 def jekyll(opts = '')
   sh 'rm -rf _site'
-  sh 'jekyll ' + opts
+  sh 'bundle exec jekyll ' + opts
 end

@@ -591,6 +591,24 @@ func TestNoColorOutput(t *testing.T) {
 	}
 }
 
+type TestHandler struct{}
+
+func (t *TestHandler) ServeHTTP(c http.ResponseWriter, req *http.Request) {
+}
+
+// When a custom HTTP handler is used, the Content-Type header should not be set to a default.
+// Go's FileHandler does not replace the Content-Type header if it is already set.
+func TestCustomHandlerContentType(t *testing.T) {
+	s := NewServer()
+	s.Handle("/testHandler", "GET", &TestHandler{})
+	req := buildTestRequest("GET", "/testHandler", "", nil, nil)
+	c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: nil}
+	s.Process(&c, req)
+	if c.headers["Content-Type"] != nil {
+		t.Fatalf("A default Content-Type should not be present when using a custom HTTP handler")
+	}
+}
+
 func BuildBasicAuthCredentials(user string, pass string) string {
 	s := user + ":" + pass
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(s))

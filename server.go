@@ -123,8 +123,8 @@ func (s *Server) Match(method string, route string, handler interface{}) {
 	s.addRoute(route, method, handler)
 }
 
-//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
-func (s *Server) Handler(route string, method string, httpHandler http.Handler) {
+// Add a custom http.Handler. Will have no effect when running as FCGI or SCGI.
+func (s *Server) Handle(route string, method string, httpHandler http.Handler) {
 	s.addRoute(route, method, httpHandler)
 }
 
@@ -335,9 +335,6 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 		}
 	}
 
-	//Set the default content-type
-	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
-
 	for i := 0; i < len(s.routes); i++ {
 		route := s.routes[i]
 		cr := route.cr
@@ -360,6 +357,9 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 			// We can not handle custom http handlers here, give back to the caller.
 			return
 		}
+
+		// set the default content-type
+		ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 
 		var args []reflect.Value
 		handlerType := route.handler.Type()

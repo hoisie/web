@@ -43,6 +43,7 @@ func (ctx *Context) WriteString(content string) {
 // Once it has been called, any return value from the handler will
 // not be written to the response.
 func (ctx *Context) Abort(status int, body string) {
+	ctx.SetHeader("Content-Type", "text/html; charset=utf-8", true)
 	ctx.ResponseWriter.WriteHeader(status)
 	ctx.ResponseWriter.Write([]byte(body))
 }
@@ -250,7 +251,7 @@ func Match(method string, route string, handler interface{}) {
 	mainServer.addRoute(route, method, handler)
 }
 
-// Add a custom HTTP handler for a path. This will have no effect when running as FCGI or SCGI.
+// Add a custom http.Handler. Will have no effect when running as FCGI or SCGI.
 func Handle(route string, method string, httpHandler http.Handler) {
 	mainServer.Handle(route, method, httpHandler)
 }

@@ -100,7 +100,7 @@ You should only call ctx.WriteHeader once. After it is called, setting additiona
 
 There is a convenience method on web.Context, `SetHeader`, that can be used to set HTTP response headers. The first
 two parameters are the header key and value, and the last parameter, `unique`, is a boolean that determines whether
-exiting values for this headers should be overwritten.
+existing values for this header should be overwritten.
 
 You can also call `Header` on the to get the actual response header map. This has methods `Add` and `Set` that can be used to set the HTTP headers as well. When `WriteHeader` is called, this map is included in the response.
 

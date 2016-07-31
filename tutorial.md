@@ -126,7 +126,7 @@ func main() {
 
 ### Setting cookies
 
-web.Context has a method `SetCookie` that takes an http.Cookie object and sets it as a response header. It is often used in conjunction with the helper method web.NewCookie. For example, the following code is a modified hello world example that sets the cookie in the response.
+web.Context has a method `SetCookie` that takes an http.Cookie object and sets it as a response header. It is often used in conjunction with the helper method web.NewCookie. For example, the following code is a modified hello world example that sets a permanent cookie in the response. The last parameter of `NewCookie` determines the age of the cookie.
 
 {% highlight go %}
 package main
@@ -136,7 +136,7 @@ import (
 )
 
 func hello(ctx *web.Context, val string) string {
-    ctx.SetCookie(web.NewCookie("value", val))
+    ctx.SetCookie(web.NewCookie("value", val, 0))
     return "hello " + val 
 } 
 

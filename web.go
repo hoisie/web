@@ -250,9 +250,9 @@ func Match(method string, route string, handler interface{}) {
 	mainServer.addRoute(route, method, handler)
 }
 
-//Adds a custom handler. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
-func Handler(route string, method string, httpHandler http.Handler) {
-	mainServer.Handler(route, method, httpHandler)
+// Add a custom HTTP handler for a path. This will have no effect when running as FCGI or SCGI.
+func Handle(route string, method string, httpHandler http.Handler) {
+	mainServer.Handle(route, method, httpHandler)
 }
 
 //Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.

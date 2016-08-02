@@ -591,6 +591,29 @@ func TestNoColorOutput(t *testing.T) {
 	}
 }
 
+// a malformed SCGI request should be discarded and not cause a panic
+func TestMaformedScgiRequest(t *testing.T) {
+	var headerBuf bytes.Buffer
+
+	headerBuf.WriteString("CONTENT_LENGTH")
+	headerBuf.WriteByte(0)
+	headerBuf.WriteString("0")
+	headerBuf.WriteByte(0)
+	headerData := headerBuf.Bytes()
+
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "%d:", len(headerData))
+	buf.Write(headerData)
+	buf.WriteByte(',')
+
+	var output bytes.Buffer
+	nb := ioBuffer{input: &buf, output: &output}
+	mainServer.handleScgiRequest(&nb)
+	if !nb.closed {
+		t.Fatalf("The connection should have been closed")
+	}
+}
+
 type TestHandler struct{}
 
 func (t *TestHandler) ServeHTTP(c http.ResponseWriter, req *http.Request) {

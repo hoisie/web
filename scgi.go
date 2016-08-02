@@ -97,18 +97,20 @@ func (s *Server) readScgiRequest(fd io.ReadWriteCloser) (*http.Request, error) {
 	reader := bufio.NewReader(fd)
 	line, err := reader.ReadString(':')
 	if err != nil {
-		s.Logger.Println("Error during SCGI read: ", err.Error())
+		return nil, err
 	}
-	length, _ := strconv.Atoi(line[0 : len(line)-1])
+	length, err := strconv.Atoi(line[0 : len(line)-1])
+	if err != nil {
+		return nil, err
+	}
 	if length > 16384 {
-		s.Logger.Println("Error: max header size is 16k")
+		return nil, errors.New("Max header size is 16k")
 	}
 	headerData := make([]byte, length)
 	_, err = reader.Read(headerData)
 	if err != nil {
 		return nil, err
 	}
-
 	b, err := reader.ReadByte()
 	if err != nil {
 		return nil, err
@@ -138,14 +140,15 @@ func (s *Server) readScgiRequest(fd io.ReadWriteCloser) (*http.Request, error) {
 }
 
 func (s *Server) handleScgiRequest(fd io.ReadWriteCloser) {
+	defer fd.Close()
 	req, err := s.readScgiRequest(fd)
 	if err != nil {
-		s.Logger.Println("SCGI error: %q", err.Error())
+		s.Logger.Println("Error reading SCGI request: %q", err.Error())
+		return
 	}
 	sc := scgiConn{fd, req, make(map[string][]string), false}
 	s.routeHandler(req, &sc)
 	sc.finishRequest()
-	fd.Close()
 }
 
 func (s *Server) listenAndServeScgi(addr string) error {

@@ -623,6 +623,7 @@ func (t *TestHandler) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 // Go's FileHandler does not replace the Content-Type header if it is already set.
 func TestCustomHandlerContentType(t *testing.T) {
 	s := NewServer()
+	s.SetLogger(log.New(ioutil.Discard, "", 0))
 	s.Handle("/testHandler", "GET", &TestHandler{})
 	req := buildTestRequest("GET", "/testHandler", "", nil, nil)
 	c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: nil}

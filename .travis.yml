@@ -3,5 +3,5 @@ language: go
 install: go get
 
 script:
-  - ./.travis.gofmt.sh
+  - diff -u <(echo -n) <(gofmt -d -s .)
   - go test -short

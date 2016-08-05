@@ -145,6 +145,9 @@ func init() {
 
 	Get("/error/notfound/(.*)", func(ctx *Context, message string) { ctx.NotFound(message) })
 
+	Get("/error/badrequest", func(ctx *Context) { ctx.BadRequest() })
+	Post("/error/badrequest", func(ctx *Context) { ctx.BadRequest() })
+
 	Get("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
 	Post("/error/unauthorized", func(ctx *Context) { ctx.Unauthorized() })
 
@@ -230,6 +233,8 @@ var tests = []Test{
 	//long url
 	{"GET", "/echo/" + strings.Repeat("0123456789", 100), nil, "", 200, strings.Repeat("0123456789", 100)},
 	{"GET", "/writetest", nil, "", 200, "hello"},
+	{"GET", "/error/badrequest", nil, "", 400, ""},
+	{"POST", "/error/badrequest", nil, "", 400, ""},
 	{"GET", "/error/unauthorized", nil, "", 401, ""},
 	{"POST", "/error/unauthorized", nil, "", 401, ""},
 	{"GET", "/error/forbidden", nil, "", 403, ""},

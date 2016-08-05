@@ -55,15 +55,14 @@ func (ctx *Context) Redirect(status int, url_ string) {
 	ctx.ResponseWriter.Write([]byte("Redirecting to: " + url_))
 }
 
+//BadRequest writes a 400 HTTP response
+func (ctx *Context) BadRequest() {
+	ctx.ResponseWriter.WriteHeader(400)
+}
+
 // Notmodified writes a 304 HTTP response
 func (ctx *Context) NotModified() {
 	ctx.ResponseWriter.WriteHeader(304)
-}
-
-// NotFound writes a 404 HTTP response
-func (ctx *Context) NotFound(message string) {
-	ctx.ResponseWriter.WriteHeader(404)
-	ctx.ResponseWriter.Write([]byte(message))
 }
 
 //Unauthorized writes a 401 HTTP response
@@ -74,6 +73,12 @@ func (ctx *Context) Unauthorized() {
 //Forbidden writes a 403 HTTP response
 func (ctx *Context) Forbidden() {
 	ctx.ResponseWriter.WriteHeader(403)
+}
+
+// NotFound writes a 404 HTTP response
+func (ctx *Context) NotFound(message string) {
+	ctx.ResponseWriter.WriteHeader(404)
+	ctx.ResponseWriter.Write([]byte(message))
 }
 
 // ContentType sets the Content-Type header for an HTTP response.

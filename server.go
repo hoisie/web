@@ -269,7 +269,6 @@ func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseW
 
 func (s *Server) logRequest(ctx Context, sTime time.Time) {
 	//log the request
-	var logEntry bytes.Buffer
 	req := ctx.Request
 	requestPath := req.URL.Path
 
@@ -285,22 +284,30 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 		client = req.RemoteAddr
 	}
 
-	if s.Config.ColorOutput {
-		fmt.Fprintf(&logEntry, "%s - \x1b[32;1m%s %s\x1b[0m - %v", client, req.Method, requestPath, duration)
-	} else {
-		fmt.Fprintf(&logEntry, "%s - %s %s - %v", client, req.Method, requestPath, duration)
-	}
-
+	var logEntry bytes.Buffer
+	logEntry.WriteString(client)
+	logEntry.WriteString(" - " + s.ttyGreen(req.Method+" "+requestPath))
+	logEntry.WriteString(" - " + duration.String())
 	if len(ctx.Params) > 0 {
-		if s.Config.ColorOutput {
-			fmt.Fprintf(&logEntry, " - \x1b[37;1mParams: %v\x1b[0m\n", ctx.Params)
-		} else {
-			fmt.Fprintf(&logEntry, " - Params: %v\n", ctx.Params)
-		}
+		logEntry.WriteString(" - " + s.ttyWhite(fmt.Sprintf("Params: %v\n", ctx.Params)))
 	}
-
 	ctx.Server.Logger.Print(logEntry.String())
+}
 
+func (s *Server) ttyGreen(msg string) string {
+	return s.ttyColor(msg, ttyCodes.green)
+}
+
+func (s *Server) ttyWhite(msg string) string {
+	return s.ttyColor(msg, ttyCodes.white)
+}
+
+func (s *Server) ttyColor(msg string, colorCode string) string {
+	if s.Config.ColorOutput {
+		return colorCode + msg + ttyCodes.reset
+	} else {
+		return msg
+	}
 }
 
 // the main route handler in web.go

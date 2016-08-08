@@ -127,20 +127,14 @@ func getCookieSig(key string, val []byte, timestamp string) string {
 }
 
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
-	//base64 encode the val
 	if len(ctx.Server.Config.CookieSecret) == 0 {
 		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
 		return
 	}
-	var buf bytes.Buffer
-	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
-	encoder.Write([]byte(val))
-	encoder.Close()
-	vs := buf.String()
-	vb := buf.Bytes()
+	encoded := base64.StdEncoding.EncodeToString([]byte(val))
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	sig := getCookieSig(ctx.Server.Config.CookieSecret, vb, timestamp)
-	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
+	sig := getCookieSig(ctx.Server.Config.CookieSecret, []byte(encoded), timestamp)
+	cookie := strings.Join([]string{encoded, timestamp, sig}, "|")
 	ctx.SetCookie(NewCookie(name, cookie, age))
 }
 

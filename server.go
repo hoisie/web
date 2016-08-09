@@ -62,10 +62,10 @@ func (s *Server) initServer() {
 		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	}
 	if s.Config.StaticDir != "" {
-    dirs := strings.Split(s.Config.StaticDir, ",")
-    for _, dir := range dirs {
-      s.Config.StaticDirs = append(s.Config.StaticDirs, dir)
-    }
+		dirs := strings.Split(s.Config.StaticDir, ",")
+		for _, dir := range dirs {
+			s.Config.StaticDirs = append(s.Config.StaticDirs, dir)
+		}
 	}
 }
 

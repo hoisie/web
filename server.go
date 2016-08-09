@@ -22,6 +22,7 @@ import (
 // ServerConfig is configuration for server objects.
 type ServerConfig struct {
 	StaticDir    string
+	StaticDirs   []string
 	Addr         string
 	Port         int
 	CookieSecret string
@@ -48,6 +49,10 @@ func NewServer() *Server {
 	}
 }
 
+// initialises the server in the following steps
+// if no configuration is provided, initialise an empty (default) configuration
+// if no logger is provided create a default one
+// if the config contains StaticDir data, tokenize it and add it to the array form
 func (s *Server) initServer() {
 	if s.Config == nil {
 		s.Config = &ServerConfig{}
@@ -55,6 +60,12 @@ func (s *Server) initServer() {
 
 	if s.Logger == nil {
 		s.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	}
+	if s.Config.StaticDir != "" {
+    dirs := strings.Split(s.Config.StaticDir, ",")
+    for _, dir := range dirs {
+      s.Config.StaticDirs = append(s.Config.StaticDirs, dir)
+    }
 	}
 }
 
@@ -244,19 +255,13 @@ func requiresContext(handlerType reflect.Type) bool {
 // tryServingFile attempts to serve a static file, and returns
 // whether or not the operation is successful.
 // It checks the following directories for the file, in order:
-// 1) Config.StaticDir
+// 1) Directors specified in Config.StaticDirs
 // 2) The 'static' directory in the parent directory of the executable.
 // 3) The 'static' directory in the current working directory
 func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseWriter) bool {
 	//try to serve a static file
-	if s.Config.StaticDir != "" {
-		staticFile := path.Join(s.Config.StaticDir, name)
-		if fileExists(staticFile) {
-			http.ServeFile(w, req, staticFile)
-			return true
-		}
-	} else {
-		for _, staticDir := range defaultStaticDirs {
+	if len(c.Config.StaticDirs) > 0 {
+		for _, staticDir := range c.Config.StaticDirs {
 			staticFile := path.Join(staticDir, name)
 			if fileExists(staticFile) {
 				http.ServeFile(w, req, staticFile)
@@ -264,6 +269,14 @@ func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseW
 			}
 		}
 	}
+	for _, staticDir := range defaultStaticDirs {
+		staticFile := path.Join(staticDir, name)
+		if fileExists(staticFile) {
+			http.ServeFile(w, req, staticFile)
+			return true
+		}
+	}
+
 	return false
 }
 

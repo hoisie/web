@@ -487,6 +487,7 @@ func makeCookie(vals map[string]string) []*http.Cookie {
 
 func TestSecureCookie(t *testing.T) {
 	mainServer.Config.CookieSecret = "7C19QRmwf3mHZ9CPAaPQ0hsWeufKd"
+	mainServer.initServer()
 	resp1 := getTestResponse("POST", "/securecookie/set/a/1", "", nil, nil)
 	sval, ok := resp1.cookies["a"]
 	if !ok {

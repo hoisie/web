@@ -28,8 +28,6 @@ type ServerConfig struct {
 	RecoverPanic bool
 	Profiler     bool
 	ColorOutput  bool
-	encKey       []byte
-	signKey      []byte
 }
 
 // Server represents a web.go server.
@@ -39,7 +37,9 @@ type Server struct {
 	Logger *log.Logger
 	Env    map[string]interface{}
 	//save the listener so it can be closed
-	l net.Listener
+	l       net.Listener
+	encKey  []byte
+	signKey []byte
 }
 
 func NewServer() *Server {
@@ -61,8 +61,8 @@ func (s *Server) initServer() {
 
 	if len(s.Config.CookieSecret) > 0 {
 		s.Logger.Println("Generating cookie encryption keys")
-		s.Config.encKey = genKey(s.Config.CookieSecret, "encryption key salt")
-		s.Config.signKey = genKey(s.Config.CookieSecret, "signature key salt")
+		s.encKey = genKey(s.Config.CookieSecret, "encryption key salt")
+		s.signKey = genKey(s.Config.CookieSecret, "signature key salt")
 	}
 }
 

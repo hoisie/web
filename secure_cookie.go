@@ -25,18 +25,18 @@ var (
 )
 
 func (ctx *Context) SetSecureCookie(name string, val string, age int64) error {
-	serverConfig := ctx.Server.Config
-	if len(serverConfig.CookieSecret) == 0 {
+	server := ctx.Server
+	if len(server.Config.CookieSecret) == 0 {
 		return ErrMissingCookieSecret
 	}
-	if len(serverConfig.encKey) == 0 || len(serverConfig.signKey) == 0 {
+	if len(server.encKey) == 0 || len(server.signKey) == 0 {
 		return ErrInvalidKey
 	}
-	ciphertext, err := encrypt([]byte(val), serverConfig.encKey)
+	ciphertext, err := encrypt([]byte(val), server.encKey)
 	if err != nil {
 		return err
 	}
-	sig := sign(ciphertext, serverConfig.signKey)
+	sig := sign(ciphertext, server.signKey)
 	data := base64.StdEncoding.EncodeToString(ciphertext) + "|" + base64.StdEncoding.EncodeToString(sig)
 	ctx.SetCookie(NewCookie(name, data, age))
 	return nil
@@ -59,11 +59,11 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 		if err != nil {
 			return "", false
 		}
-		expectedSig := sign([]byte(ciphertext), ctx.Server.Config.signKey)
+		expectedSig := sign([]byte(ciphertext), ctx.Server.signKey)
 		if !bytes.Equal(expectedSig, sig) {
 			return "", false
 		}
-		plaintext, err := decrypt(ciphertext, ctx.Server.Config.encKey)
+		plaintext, err := decrypt(ciphertext, ctx.Server.encKey)
 		if err != nil {
 			return "", false
 		}

@@ -3,23 +3,15 @@
 package web
 
 import (
-	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
 	"crypto/tls"
-	"encoding/base64"
-	"fmt"
 	"golang.org/x/net/websocket"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"reflect"
-	"strconv"
 	"strings"
-	"time"
 )
 
 // A Context object is created for every incoming HTTP request, and is
@@ -115,61 +107,6 @@ func (ctx *Context) SetHeader(hdr string, val string, unique bool) {
 // SetCookie adds a cookie header to the response.
 func (ctx *Context) SetCookie(cookie *http.Cookie) {
 	ctx.SetHeader("Set-Cookie", cookie.String(), false)
-}
-
-func getCookieSig(key string, val []byte, timestamp string) string {
-	hm := hmac.New(sha1.New, []byte(key))
-
-	hm.Write(val)
-	hm.Write([]byte(timestamp))
-
-	return fmt.Sprintf("%02x", hm.Sum(nil))
-}
-
-func (ctx *Context) SetSecureCookie(name string, val string, age int64) {
-	if len(ctx.Server.Config.CookieSecret) == 0 {
-		ctx.Server.Logger.Println("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
-		return
-	}
-	encoded := base64.StdEncoding.EncodeToString([]byte(val))
-	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	sig := getCookieSig(ctx.Server.Config.CookieSecret, []byte(encoded), timestamp)
-	cookie := strings.Join([]string{encoded, timestamp, sig}, "|")
-	ctx.SetCookie(NewCookie(name, cookie, age))
-}
-
-func (ctx *Context) GetSecureCookie(name string) (string, bool) {
-	for _, cookie := range ctx.Request.Cookies() {
-		if cookie.Name != name {
-			continue
-		}
-
-		parts := strings.SplitN(cookie.Value, "|", 3)
-		if len(parts) != 3 {
-			return "", false
-		}
-
-		val := parts[0]
-		timestamp := parts[1]
-		sig := parts[2]
-
-		if getCookieSig(ctx.Server.Config.CookieSecret, []byte(val), timestamp) != sig {
-			return "", false
-		}
-
-		ts, _ := strconv.ParseInt(timestamp, 0, 64)
-
-		if time.Now().Unix()-31*86400 > ts {
-			return "", false
-		}
-
-		buf := bytes.NewBufferString(val)
-		encoder := base64.NewDecoder(base64.StdEncoding, buf)
-
-		res, _ := ioutil.ReadAll(encoder)
-		return string(res), true
-	}
-	return "", false
 }
 
 // small optimization: cache the context type instead of repeteadly calling reflect.Typeof

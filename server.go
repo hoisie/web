@@ -260,8 +260,8 @@ func requiresContext(handlerType reflect.Type) bool {
 // 3) The 'static' directory in the current working directory
 func (s *Server) tryServingFile(name string, req *http.Request, w http.ResponseWriter) bool {
 	//try to serve a static file
-	if len(c.Config.StaticDirs) > 0 {
-		for _, staticDir := range c.Config.StaticDirs {
+	if len(s.Config.StaticDirs) > 0 {
+		for _, staticDir := range s.Config.StaticDirs {
 			staticFile := path.Join(staticDir, name)
 			if fileExists(staticFile) {
 				http.ServeFile(w, req, staticFile)

@@ -29,7 +29,6 @@ func (ctx *Context) SetSecureCookie(name string, val string, age int64) error {
 	if len(serverConfig.CookieSecret) == 0 {
 		return ErrMissingCookieSecret
 	}
-
 	if len(serverConfig.encKey) == 0 || len(serverConfig.signKey) == 0 {
 		return ErrInvalidKey
 	}
@@ -48,12 +47,10 @@ func (ctx *Context) GetSecureCookie(name string) (string, bool) {
 		if cookie.Name != name {
 			continue
 		}
-
 		parts := strings.SplitN(cookie.Value, "|", 2)
 		if len(parts) != 2 {
 			return "", false
 		}
-
 		ciphertext, err := base64.StdEncoding.DecodeString(parts[0])
 		if err != nil {
 			return "", false

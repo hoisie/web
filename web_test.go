@@ -597,6 +597,26 @@ func TestNoColorOutput(t *testing.T) {
 	}
 }
 
+// test that output contains ASCII color codes by default
+func TestFilterParams(t *testing.T) {
+	s := NewServer()
+	var logOutput bytes.Buffer
+	logger := log.New(&logOutput, "", 0)
+	s.Logger = logger
+	s.initServer()
+	s.Post("/test", func() string {
+		return "test"
+	})
+	req := buildTestRequest("POST", "/test", "password=12345&password_confirm=12345", map[string][]string{"Content-Type": {"application/x-www-form-urlencoded"}}, nil)
+	var buf bytes.Buffer
+	iob := ioBuffer{input: nil, output: &buf}
+	c := scgiConn{wroteHeaders: false, req: req, headers: make(map[string][]string), fd: &iob}
+	s.Process(&c, req)
+	if strings.Contains(logOutput.String(), "12345") {
+		t.Fatalf("Params are not being filtered")
+	}
+}
+
 // a malformed SCGI request should be discarded and not cause a panic
 func TestMaformedScgiRequest(t *testing.T) {
 	var headerBuf bytes.Buffer
@@ -637,6 +657,16 @@ func TestCustomHandlerContentType(t *testing.T) {
 	if c.headers["Content-Type"] != nil {
 		t.Fatalf("A default Content-Type should not be present when using a custom HTTP handler")
 	}
+}
+
+func TestNewServerDoesNotInheritMainConfig(t *testing.T) {
+	s1 := NewServer()
+	mainServer.Config.RecoverPanic = !mainServer.Config.RecoverPanic
+	s2 := NewServer()
+	if s1.Config.RecoverPanic != s2.Config.RecoverPanic {
+		t.Fatalf("New servers are using the main package config")
+	}
+	mainServer.Config.RecoverPanic = !mainServer.Config.RecoverPanic
 }
 
 func BuildBasicAuthCredentials(user string, pass string) string {

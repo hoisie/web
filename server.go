@@ -28,6 +28,13 @@ type ServerConfig struct {
 	RecoverPanic bool
 	Profiler     bool
 	ColorOutput  bool
+	FilterParams []string
+}
+
+var defaultConfig = ServerConfig{
+	RecoverPanic: true,
+	ColorOutput:  true,
+	FilterParams: []string{"^password$", "^password_confirm.*$"},
 }
 
 // Server represents a web.go server.
@@ -37,14 +44,16 @@ type Server struct {
 	Logger *log.Logger
 	Env    map[string]interface{}
 	//save the listener so it can be closed
-	l       net.Listener
-	encKey  []byte
-	signKey []byte
+	l            net.Listener
+	encKey       []byte
+	signKey      []byte
+	filterParams []*regexp.Regexp
 }
 
 func NewServer() *Server {
+	var config = defaultConfig
 	return &Server{
-		Config: Config,
+		Config: &config,
 		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 		Env:    map[string]interface{}{},
 	}
@@ -63,6 +72,11 @@ func (s *Server) initServer() {
 		s.Logger.Println("Generating cookie encryption keys")
 		s.encKey = genKey(s.Config.CookieSecret, "encryption key salt")
 		s.signKey = genKey(s.Config.CookieSecret, "signature key salt")
+	}
+
+	s.filterParams = make([]*regexp.Regexp, len(s.Config.FilterParams))
+	for i, f := range s.Config.FilterParams {
+		s.filterParams[i] = regexp.MustCompile(f)
 	}
 }
 
@@ -294,27 +308,53 @@ func (s *Server) logRequest(ctx Context, sTime time.Time) {
 
 	var logEntry bytes.Buffer
 	logEntry.WriteString(client)
-	logEntry.WriteString(" - " + s.ttyGreen(req.Method+" "+requestPath))
+	logEntry.WriteString(" - " + s.ttyGreen() + req.Method + " " + requestPath + s.ttyReset())
 	logEntry.WriteString(" - " + duration.String())
 	if len(ctx.Params) > 0 {
-		logEntry.WriteString(" - " + s.ttyWhite(fmt.Sprintf("Params: %v\n", ctx.Params)))
+		s.logParams(&logEntry, ctx.Params)
 	}
 	ctx.Server.Logger.Print(logEntry.String())
 }
 
-func (s *Server) ttyGreen(msg string) string {
-	return s.ttyColor(msg, ttyCodes.green)
+func (s *Server) logParams(logEntry *bytes.Buffer, params map[string]string) {
+	logEntry.WriteString(" - ")
+	logEntry.WriteString(s.ttyWhite())
+	logEntry.WriteString("Params: {")
+	i := 0
+	for k, v := range params {
+		out := v
+		for _, r := range s.filterParams {
+			if r.MatchString(k) {
+				out = "[filtered]"
+			}
+		}
+		fmt.Fprintf(logEntry, "%q: %q", k, out)
+		i += 1
+		if i < len(params) {
+			logEntry.WriteString(", ")
+		}
+	}
+	logEntry.WriteString("}")
+	logEntry.WriteString(s.ttyReset())
 }
 
-func (s *Server) ttyWhite(msg string) string {
-	return s.ttyColor(msg, ttyCodes.white)
+func (s *Server) ttyGreen() string {
+	return s.ttyColor(ttyCodes.green)
 }
 
-func (s *Server) ttyColor(msg string, colorCode string) string {
+func (s *Server) ttyWhite() string {
+	return s.ttyColor(ttyCodes.white)
+}
+
+func (s *Server) ttyReset() string {
+	return s.ttyColor(ttyCodes.reset)
+}
+
+func (s *Server) ttyColor(code string) string {
 	if s.Config.ColorOutput {
-		return colorCode + msg + ttyCodes.reset
+		return code
 	} else {
-		return msg
+		return ""
 	}
 }
 

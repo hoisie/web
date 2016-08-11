@@ -30,6 +30,11 @@ type ServerConfig struct {
 	ColorOutput  bool
 }
 
+var defaultConfig = ServerConfig{
+	RecoverPanic: true,
+	ColorOutput:  true,
+}
+
 // Server represents a web.go server.
 type Server struct {
 	Config *ServerConfig
@@ -43,8 +48,9 @@ type Server struct {
 }
 
 func NewServer() *Server {
+	var config = defaultConfig
 	return &Server{
-		Config: Config,
+		Config: &config,
 		Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime),
 		Env:    map[string]interface{}{},
 	}

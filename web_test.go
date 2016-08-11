@@ -639,6 +639,16 @@ func TestCustomHandlerContentType(t *testing.T) {
 	}
 }
 
+func TestNewServerDoesNotInheritMainConfig(t *testing.T) {
+	s1 := NewServer()
+	mainServer.Config.RecoverPanic = !mainServer.Config.RecoverPanic
+	s2 := NewServer()
+	if s1.Config.RecoverPanic != s2.Config.RecoverPanic {
+		t.Fatalf("New servers are using the main package config")
+	}
+	mainServer.Config.RecoverPanic = !mainServer.Config.RecoverPanic
+}
+
 func BuildBasicAuthCredentials(user string, pass string) string {
 	s := user + ":" + pass
 	return "Basic " + base64.StdEncoding.EncodeToString([]byte(s))

@@ -388,7 +388,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 		ret, err := s.safelyCall(route.handler, args)
 		if err != nil {
 			//there was an error or panic while calling the handler
-			ctx.Abort(500, "Server Error")
+			ctx.Abort(INTERNAL_SERVER_ERROR, "Server Error")
 		}
 		if len(ret) == 0 {
 			return
@@ -419,7 +419,7 @@ func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused 
 			return
 		}
 	}
-	ctx.Abort(404, "Page not found")
+	ctx.Abort(NOT_FOUND, "Page not found")
 	return
 }
 

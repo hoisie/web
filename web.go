@@ -49,27 +49,27 @@ func (ctx *Context) Redirect(status int, url_ string) {
 
 //BadRequest writes a 400 HTTP response
 func (ctx *Context) BadRequest() {
-	ctx.ResponseWriter.WriteHeader(BAD_REQUEST)
+	ctx.ResponseWriter.WriteHeader(http.StatusBadRequest)
 }
 
 // Notmodified writes a 304 HTTP response
 func (ctx *Context) NotModified() {
-	ctx.ResponseWriter.WriteHeader(NOT_MODIFIED)
+	ctx.ResponseWriter.WriteHeader(http.StatusNotModified)
 }
 
 //Unauthorized writes a 401 HTTP response
 func (ctx *Context) Unauthorized() {
-	ctx.ResponseWriter.WriteHeader(UNAUTHORIZED)
+	ctx.ResponseWriter.WriteHeader(http.StatusUnauthorized)
 }
 
 //Forbidden writes a 403 HTTP response
 func (ctx *Context) Forbidden() {
-	ctx.ResponseWriter.WriteHeader(FORBIDDEN)
+	ctx.ResponseWriter.WriteHeader(http.StatusForbidden)
 }
 
 // NotFound writes a 404 HTTP response
 func (ctx *Context) NotFound(message string) {
-	ctx.ResponseWriter.WriteHeader(NOT_FOUND)
+	ctx.ResponseWriter.WriteHeader(http.StatusNotFound)
 	ctx.ResponseWriter.Write([]byte(message))
 }
 

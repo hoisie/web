@@ -131,12 +131,12 @@ func (s *Server) Match(method string, route string, handler interface{}) {
 	s.addRoute(route, method, handler)
 }
 
-// Add a custom http.Handler. Will have no effect when running as FCGI or SCGI.
+// Handle adds a custom http.Handler. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Handle(route string, method string, httpHandler http.Handler) {
 	s.addRoute(route, method, httpHandler)
 }
 
-//Adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
+// Websocket adds a handler for websockets. Only for webserver mode. Will have no effect when running as FCGI or SCGI.
 func (s *Server) Websocket(route string, httpHandler websocket.Handler) {
 	s.addRoute(route, "GET", httpHandler)
 }

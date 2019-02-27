@@ -43,7 +43,7 @@ func (buf *ioBuffer) Read(p []byte) (n int, err error) {
 	return buf.input.Read(p)
 }
 
-//noop
+// Close: noop
 func (buf *ioBuffer) Close() error {
 	buf.closed = true
 	return nil
@@ -547,7 +547,7 @@ func TestSlug(t *testing.T) {
 	}
 }
 
-// tests that we don't duplicate headers
+// TestDuplicateHeader tests that we don't duplicate headers
 func TestDuplicateHeader(t *testing.T) {
 	resp := testGet("/dupeheader", nil)
 	if len(resp.headers["Server"]) > 1 {
@@ -558,7 +558,7 @@ func TestDuplicateHeader(t *testing.T) {
 	}
 }
 
-// test that output contains ASCII color codes by default
+// TestColorOutputDefault tests that output contains ASCII color codes by default
 func TestColorOutputDefault(t *testing.T) {
 	s := NewServer()
 	var logOutput bytes.Buffer
@@ -577,7 +577,7 @@ func TestColorOutputDefault(t *testing.T) {
 	}
 }
 
-// test that output contains ASCII color codes by default
+// TestNoColorOutput tests that output contains ASCII color codes by default
 func TestNoColorOutput(t *testing.T) {
 	s := NewServer()
 	s.Config.ColorOutput = false
@@ -597,7 +597,7 @@ func TestNoColorOutput(t *testing.T) {
 	}
 }
 
-// a malformed SCGI request should be discarded and not cause a panic
+// TestMaformedScgiRequest: a malformed SCGI request should be discarded and not cause a panic
 func TestMaformedScgiRequest(t *testing.T) {
 	var headerBuf bytes.Buffer
 
@@ -625,7 +625,7 @@ type TestHandler struct{}
 func (t *TestHandler) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 }
 
-// When a custom HTTP handler is used, the Content-Type header should not be set to a default.
+// TestCustomHandlerContentType: When a custom HTTP handler is used, the Content-Type header should not be set to a default.
 // Go's FileHandler does not replace the Content-Type header if it is already set.
 func TestCustomHandlerContentType(t *testing.T) {
 	s := NewServer()

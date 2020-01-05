@@ -3,6 +3,7 @@
 package web
 
 import (
+	"context"
 	"crypto/tls"
 	"golang.org/x/net/websocket"
 	"log"
@@ -19,6 +20,7 @@ import (
 // about the request, including the http.Request object, the GET and POST params,
 // and acts as a Writer for the response.
 type Context struct {
+	context.Context
 	Request *http.Request
 	Params  map[string]string
 	Server  *Server

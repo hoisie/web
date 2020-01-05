@@ -326,7 +326,7 @@ func (s *Server) ttyColor(msg string, colorCode string) string {
 // with the returned route.
 func (s *Server) routeHandler(req *http.Request, w http.ResponseWriter) (unused *route) {
 	requestPath := req.URL.Path
-	ctx := Context{req, map[string]string{}, s, w}
+	ctx := Context{req.Context(), req, map[string]string{}, s, w}
 
 	//set some default headers
 	ctx.SetHeader("Server", "web.go", true)

@@ -45,7 +45,7 @@ func (conn *scgiConn) WriteHeader(status int) {
 		var buf bytes.Buffer
 		text := http.StatusText(status)
 
-		fmt.Fprintf(&buf, "HTTP/1.1 %d %s\r\n", status, text)
+		fmt.Fprintf(&buf, "Status: %d %s\r\n", status, text)
 
 		for k, v := range conn.headers {
 			for _, i := range v {
